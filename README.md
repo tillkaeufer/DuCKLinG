@@ -7,12 +7,39 @@ It can be run as a forward model or in retrieval with MultiNest or UltraNest.
 
 ## Install
 
-DuCKLinG is not installed, it is a Python object.
-There are several Python packages however, that need to be installed in your environment:
+DuCKLinG does not need any installation it is a Python object.
+There are several Python packages that need to be installed in your environment. Many of them might be installed already.  
+Here is a list of all packages:
 
-Additionally, it is recommended to install OpenMPI to run the retrieval in parallel.
+- numpy
+- matplotlib
+- pickle
+- glob
+- scipy
+- os
+- [spectres](https://pypi.org/project/spectres/)
+- json
+- uuid
+- [multiprocessing](https://pypi.org/project/multiprocess/)
+- PyAstronomy
+- corner
+- pymultinest
+- ast
+- sys
+- importlib
+- argparse
+
+Additionally, it is recommended to install [OpenMPI](https://www.open-mpi.org/) to run the retrieval in parallel.
+
+If you run the multinest retrievel you also need to install multinest for example [here](https://github.com/JohannesBuchner/MultiNest) or [here](https://github.com/farhanferoz/MultiNest).
+
+If you run the ultranest retrieval (recommended for high dimensional parameter spaces) install [UltraNest](https://johannesbuchner.github.io/UltraNest/installation.html)
+
+### Download the dust and gas files
+
 
 ## Getting started
+
 ### Forward model
 
 The notebook forward_model gives a quick introduction to the different functionalities of the model.  
@@ -23,7 +50,97 @@ You can run it and see how different molecular conditions and dust species chang
 There is an example input file in the Example folder.
 You can use this as a test ground if everything works.
 
+Run 
+> python retrieval_multinest.py ./path/to/inputfile
+
+or
+
+> python retrieval_ultranest.py ./path/to/inputfile
+
+to start the retrieval.
+
+If you want to run it on multiple (N) cores you can use
+
+> mpiexec -n N python retrieval_multinest.py ./path/to/inputfile  
+
+or  
+
+> mpiexec -n N python retrieval_ultranest.py ./path/to/inputfile
+
+but first run it once on a single core (see warning below).
+
 ## How to run
+
+
+| :exclamation:  Even if you run the retrieval in parallel make sure to first run everything in a single core till the retrieval part of the script starts. This makes sure that the slab grids are already binned to your observation and this is not done N times. |
+|-----------------------------------------|
+
+### Input file
+
+The input file provides all the information for the retrieval. You don't need to change anything in the python scripts.
+
+There are different sections in the input files that govern different things.
+
+#### Settings
+This is where the settings for background data are provided:
+
+- bayesian_folder: general folder where you want to save the output of your retrieval
+- subfold: The retrieval will be saved in bayesian_folder+subfold
+- run_number: Unique ID of the run you are about to start. All the files will be saved as 'test_'+run_numer
+  If bayesian_folder+subfold+'test_'+run_nubmer already exists, the retrieval will be continued at the point where you stopped it the last time
+- dust_path: path to your dust opacity files
+- slab_prefix: the number given to the slab grid. Number 12 is the one provided with this repository. This is the Slab grid by Arabhavi et al. (2024) binned to a spectral resolution of $R=3500,3000,2500,1500$ for channels 1 to 4 of MIRI, respectively.
+- use_ultranest: Set it to True if you are running a ultranest retrieval and to False if you run multinest (it is needed for the plotting routines to know how the output format looks like)
+ 
+  Optional settings:
+
+#### Parameters
+
+Here we define the setup of the model we want to use.
+
+-sample_all: If False, we are using the method described in the DuCKLinG paper to reduce the dimensionality of the parameter space. If you have a lot of spare time, feel free to set it to True and see what happens. This will sample also the linear parameters in a Bayesian way (and take a lot of time).
+-use_bb_star: If True a black body is used as the star. If False we load in the stellar spectrum set in the next variable.
+-stellar_file : path to the stellar file. For the file format have a look a the example file
+-rin_powerlaw: The inner rim is described by a black body. However, you can also opt to sample it as a temperature power law (be aware that you then need to set the parameters for that).
+- dust_species_list: This is a list with all the dust opacity files that you want to use. The files have to be located in dust_path.
+
+#### fixed parameters
+Setting the fixed parameters.  
+For some parameters, you might want to fix the value in the retrieval (e.g. distance).
+For doing to sett fixed_paras=True and provide a fixed_dict dictionary with the parameter names and corresponding values.
+
+### Priors
+
+Finally, we arrived at the heart of the input file.  
+In this section, you are setting the prior ranges for all the parameters you want to retrieve.    
+For the name of the molecules have a look at the slab data that you downloaded. It is important that you are using the names that the files have.  
+Files with molecular_name+'_I' or molecular_name+'_II' use a mix of the 12C and 13C isotopologues (see Arabhavi et al. 2024). 
+
+- prior_dict: Prior dictionary for all parameters that are not related to the slab grid (except for q_emis)
+- slab_prior_dict: Prior dictionary for all parameters related to the slab grid. If log_coldens=True to column densities are provided as their logarithm.
+  - If the molecule is supposed to emit along a temperature range, set tmin and tmin for that molecule. If you want to emit at a single temperature set t_emis.
+  - If the molecule is supposed to emit along a column density power law, set ColDens_tmin and ColDens_tmax, otherwise use ColDens.
+
+| :exclamation: Note that column density ranges are only possible if a temperature range is used, not for single temperatures. |
+|-----------------------------------------|
+
+#### code to load observations
+
+Here you provide a short Python script to load your observation.  
+In the end, it is important that flux_obs provided the fluxes in Jansky at the wavelength points lam_obs (in microns).  
+You can also provide the corresponding uncertainties as sig_obs.
+
+#### settings for the retrieval
+
+For UltraNest: 
+- length_ultra: We are using slice_sample for ultanest. Therefore, you need to provide how many steps you are taking. The integer here is multiplied by the number of parameters that you are using to derive the number of steps. 2 works fine in my case. If you want to check if everything converged, double the number, run it again, and see if anything changed.
+
+For MultiNest:
+
+There are two predefined settings that can be selected with 
+- fast_retrival: If True the settings are n_live_points = 1000, evidence_tolerance = 5.0, and sampling_efficiency = 0.8, otherwise the settings are n_live_points = 1000, evidence_tolerance = 0.5, and sampling_efficiency = 0.3
+
+Alternatively, you can set the settings yourself, by setting n_live_points, evidence_tolerance, and sampling_efficiency in the input file (remove the # in front of them)
 
 ## How to plot
 
