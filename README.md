@@ -5,6 +5,8 @@
 This repository gives you all the files to run the DuCKLinG model.  
 It can be run as a forward model or in retrieval with MultiNest or UltraNest.
 
+A description of the model can be seen in [Kaeufer et al. 2024](link) *link to be added*
+
 ## Install
 
 DuCKLinG does not need any installation it is a Python object.
@@ -23,7 +25,7 @@ Here is a list of all packages:
 - [multiprocessing](https://pypi.org/project/multiprocess/)
 - PyAstronomy
 - corner
-- pymultinest
+- pymultinest (only needed if MultiNest is run)
 - ast
 - sys
 - importlib
@@ -35,7 +37,12 @@ If you run the multinest retrievel you also need to install multinest for exampl
 
 If you run the ultranest retrieval (recommended for high dimensional parameter spaces) install [UltraNest](https://johannesbuchner.github.io/UltraNest/installation.html)
 
-### Download the dust and gas files
+### Download gas files
+
+The molecular emission in DuCKLinG is calculated from a grid of 0D ProDiMo-slab models calculated by Arabhavi et al. (2024).  
+The files are available *insert link*
+
+Be aware that this requires about 15 GB of storage. You can also choose to download only the data for the molecules you are interested in.
 
 
 ## Getting started
@@ -45,7 +52,7 @@ If you run the ultranest retrieval (recommended for high dimensional parameter s
 The notebook forward_model gives a quick introduction to the different functionalities of the model.  
 You can run it and see how different molecular conditions and dust species change the resulting output.
 
-### Retrieval
+### Retrieval example
 
 There is an example input file in the Example folder.
 You can use this as a test ground if everything works.
@@ -68,6 +75,12 @@ or
 > mpiexec -n N python retrieval_ultranest.py ./path/to/inputfile
 
 but first run it once on a single core (see warning below).
+
+After is (hopefully) finished, you can run:
+
+> python plot_retrieval_results.py ./path/to/inputfile
+
+and enjoy some plots.
 
 ## How to run
 
@@ -92,7 +105,15 @@ This is where the settings for background data are provided:
 - slab_prefix: the number given to the slab grid. Number 12 is the one provided with this repository. This is the Slab grid by Arabhavi et al. (2024) binned to a spectral resolution of $R=3500,3000,2500,1500$ for channels 1 to 4 of MIRI, respectively.
 - use_ultranest: Set it to True if you are running a ultranest retrieval and to False if you run multinest (it is needed for the plotting routines to know how the output format looks like)
  
-  Optional settings:
+
+Optional settings to investigate specific behaviours:  
+You can limit the integrated flux of a molecule to a value in $W/m^-2$.  
+This might be useful to eliminate quasi-continua of certain molecules.
+For doing so you have to set *limit_integrated_flux=True* and then for example *limit_flux_dict={'C4H2':4.5e-19}*
+
+Similarly, you can limit the maximum emitting area of a molecule.  
+This is done with *limit_radial_extent=True* and for example *limit_radius=2* (limiting radius in au)
+
 
 #### Parameters
 
@@ -149,7 +170,21 @@ The plot_retrieval_results program does that for you.
 
 You can run it with:  
 
-Additionally, it accepts a large range of options to specify your plotting needs:
+> python plot_retrieval_results.py ./path/to/inputfile [option]
 
+Additionally, it accepts a large range of options to specify your plotting needs. These options are simply added after the path to the input file with a space between every argument.
+
+- save: This saves the full posterior (retrieved parameters and linear parameters) as a numpy array
+- save_all: Saving the full posterior and the posterior of fluxes. 
+- custom_list: The output will create figures of the model fluxes compared to the observation. It will do one for the full wavelength region from $0.2\rm \mu m$ to $200 \rm \mu m$. Additionally, zoom_ins will be created to more specific wavelength regions (default is  $2\rm \mu m$ to $40\rm \mu m$). You can specify the regions in a list. use the option custom_list and add a list after that (separated by a space) e.g. [[4,20],[4,10],[10,20]]
+- plot_dust: This will plot all the different dust opacity curves individually. This requires a lot of memory and does not work for large retrievals.
+- reduce_post: If you want to have a quick look if the retrieval works and do not care about the exact retrieved values (or want to plot the dust individually but do not have the memory) you can provide reduce_post followed by an integer i (separated by a space). This will select i models for the posterior and calculate everything only for these models
+- no_spectrum: For only plotting the parameter posterior and ignoring the (memory-intensive and time-consuming) step of plotting the spectra add this option.
+
+Hopefully, this will plot/save you all the data you are interested in.  
+
+| :exclamation: For retrievals with many parameters it is common that plotting the last corner plot (with all parameters) takes ages and never finishes. Just interrupt the script at that point, all information should already be plotted in other ways.|
+|-----------------------------------------|
 
 ## Licence
+Tbd
