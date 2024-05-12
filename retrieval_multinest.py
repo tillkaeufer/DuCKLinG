@@ -88,6 +88,16 @@ else:
     globals().update({k: getattr(mdl, k) for k in names})
 
 
+        
+old_version=False
+continuum_penalty=False
+
+select_conti_like=False
+sum_sigma=True
+radial_version=True
+use_ultranest=False
+
+    
 try:
     log_coldens
     print('Log coldens')
@@ -96,54 +106,7 @@ except NameError:
     log_coldens=False
     print("log_coldens not set in input file")
     print('Default is false')
-try:
-    old_version
-    print('Old version')
-    print(old_version)
-except NameError:
-    old_version=True
-    print("old_version not set in input file")
-    print('Default is True')
-try:
-    continuum_penalty
-    print('continuum_penalty')
-    print(continuum_penalty)
-except NameError:
-    continuum_penalty=False
-    print("continuum_penalty not set in input file")
-    print('Default is False')
-try:
-    select_conti_like
-    print('select_conti_like')
-    print(select_conti_like)
-except NameError:
-    select_conti_like=False
-    print("select_conti_like not set in input file")
-    print('Default is False')
-try:
-    sum_sigma
-    print('sum_sigma')
-    print(sum_sigma)
-except NameError:
-    sum_sigma=False
-    print("sum_sigma not set in input file")
-    print('Default is False')
-try:
-    penalty_fact
-    print('penalty_fact')
-    print(penalty_fact)
-except NameError:
-    penalty_fact=1
-    print("penalty_fact not set in input file")
-    print('Default is 1')
-try:
-    radial_version
-    print('radial_version')
-    print(radial_version)
-except NameError:
-    radial_version=False
-    print("radial_version not set in input file")
-    print('Default is False')
+
 try:
     coldens_restriction
     print('coldens_restriction')

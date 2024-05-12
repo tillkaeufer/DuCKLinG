@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-import glob
 import numpy as np
 import time
 import os
@@ -12,25 +6,116 @@ from scipy.optimize import nnls
 import json
 import uuid
 import multiprocessing as mp
-
+import glob
 from PyAstronomy import pyasl
 import corner
+from matplotlib.lines import Line2D
+import pickle 
 
-import ultranest
-import ultranest.stepsampler
+from pymultinest.solve import solve, run
 import matplotlib.pyplot as plt
-
+from ast import literal_eval
 
 import sys
 import importlib
+import argparse
 
 from spectres.spectral_resampling_numba import spectres_numba  as spectres
 #from  matplotlib import colormaps as cmaps
 #cm = cmaps['viridis']
 
+filetype_fig='png'
+use_ultranest=False
+
+
+#default values that can be overwritten by input
+save_output=False
+save_flux=False
+load_output=False
+plot_dust_individual=False
+number_plotted_dust=0
+zoom_list=[[2,40]]
+reduce_posterior=False
+ignore_spectrum_plot=False
+
 if __name__ == "__main__":
     input_file=sys.argv[1]
+    
+    if len(sys.argv)>2:
+       
+        arg_list=sys.argv[1:]
+        
+        for i in range(len(arg_list)):
+            argument=arg_list[i]
+            if argument=='save':
+                save_output=True
+            elif argument=='load':
+                load_output=True
+            elif argument=='save_all':
+                save_output=True
+                save_flux=True   
+            elif argument=='standard':
+                zoom_list=[[2,40]]
+            elif argument=='prodimo_co2' or argument=='prodimo_CO2':
+                zoom_list=[[13,17]]            
+            elif argument=='prodimo_all':
+                zoom_list=[[5,30]]
+        
+            elif argument=='exlup_long':
+                zoom_list=[[13.5,17]]
+        
+            elif argument=='exlup_short':
+                zoom_list=[[4,8]]    
+            elif argument=='exlup_total':
+                zoom_list=[[4.5,8],[13.5,15.5],[13.5,17],[4,18]]
 
+            elif argument=='custom_list':
+                zoom_list=np.array(literal_eval(arg_list[int(i+1)]),dtype='float64')
+
+            elif argument=='custom':
+                zoom_min=float(arg_list[int(i+1)])
+                zoom_max=float(arg_list[int(i+2)])
+                zoom_list=[[zoom_min,zoom_max]]
+            elif argument=='plot_dust':
+                plot_dust_individual=True
+                if len(arg_list)-1!=i:
+                    number_plotted_dust=int(arg_list[i+1])
+                else:
+                    number_plotted_dust=0
+            elif argument=='ultranest':
+                
+                use_ultranest=True
+                run_folder=str(arg_list[int(i+1)])
+            elif argument=='reduce_post':
+                reduce_posterior=True
+                len_reduce_post=int(arg_list[i+1])
+            elif argument=='no_spectrum':
+                ignore_spectrum_plot=True
+            else:
+                print('--------------')
+                print('--------------')
+                print('Unkown argument')
+                print(argument)
+                print('--------------')
+                print('--------------')
+print('Zoom window')
+print(zoom_list)
+print('save output')
+print(save_output)
+print('save fluxes')
+print(save_flux)
+print('plot dust')
+print(plot_dust_individual)
+print(number_plotted_dust)
+
+print('Plot only the parameters and not the spectra')
+print(ignore_spectrum_plot)
+
+
+
+low_contribution=0.15
+high_contribution=0.85
+    
 if len(input_file)!=0:
     print(' ')
     print('----------------')
@@ -90,105 +175,38 @@ else:
 
 
 try:
-    slice_sampler
-    print('slice_sampler')
-    print(slice_sampler)
-except NameError:
-    slice_sampler=False
-    print("slice_sampler not set in input file")
-    print('Default is false')
-    
-    
-    
-try:
     log_coldens
-    print('Log coldens')
-    print(log_coldens)
 except NameError:
     log_coldens=False
     print("log_coldens not set in input file")
     print('Default is false')
-try:
-    old_version
-    print('Old version')
-    print(old_version)
-except NameError:
-    old_version=True
-    print("old_version not set in input file")
-    print('Default is True')
-try:
-    continuum_penalty
-    print('continuum_penalty')
-    print(continuum_penalty)
-except NameError:
-    continuum_penalty=False
-    print("continuum_penalty not set in input file")
-    print('Default is False')
-try:
-    select_conti_like
-    print('select_conti_like')
-    print(select_conti_like)
-except NameError:
-    select_conti_like=False
-    print("select_conti_like not set in input file")
-    print('Default is False')
-try:
-    sum_sigma
-    print('sum_sigma')
-    print(sum_sigma)
-except NameError:
-    sum_sigma=False
-    print("sum_sigma not set in input file")
-    print('Default is False')
-try:
-    penalty_fact
-    print('penalty_fact')
-    print(penalty_fact)
-except NameError:
-    penalty_fact=1
-    print("penalty_fact not set in input file")
-    print('Default is 1')
-try:
-    radial_version
-    print('radial_version')
-    print(radial_version)
-except NameError:
-    radial_version=False
-    print("radial_version not set in input file")
-    print('Default is False')
-try:
-    coldens_restriction
-    print('coldens_restriction')
-    print(coldens_restriction)
-except NameError:
-    coldens_restriction=False
-    print("coldens_restriction not set in input file")
-    print('Default is False')
+    
+old_version=False
+continuum_penalty=False
 
-try:
-    limit_integrated_flux
-    print('limit_integrated_flux')
-    print(limit_integrated_flux)
-except NameError:
-    limit_integrated_flux=False
-    print('limit_integrated_flux False by default')    
+select_conti_like=False
+sum_sigma=True
+radial_version=True
     
-try:
-    save_mol_flux
-    print('save_mol_flux')
-    print(save_mol_flux)
-except NameError:
-    if limit_integrated_flux:
-        save_mol_flux=True
+print('Save:',save_output)
+ 
     
-    else:
-        save_mol_flux=False
-    print('save_mol_flux set to:')
-    print(save_mol_flux)
     
+print('-----------------')                                     
+print('-----------------')
+print('Loading results from ')
+if use_ultranest:
+    print('UltraNest')
+else:
+    print('MultiNest')
+print('-----------------')
+print('-----------------')    
+# here you hav to set the path where you want to save all the runs (bayesian_folder) and the dust_path where your Q-files are
 
+   
 debug=False
 # here you have to set the path where you want to save all the runs (bayesian_folder) and the dust_path where your Q-files are
+
 
 def degree_to_cos(deg):
     return np.cos(np.pi/180*deg)
@@ -200,6 +218,7 @@ def powerlaw_density_temp(tmax,tmin,t,sigma_tmin,sigma_tmax):
     return (t/tmax)**p *sigma_max 
 def area(rmin,rmax):
     return np.pi*(rmax**2-rmin**2)
+
 
 def generate_grid(R=1,lambda_0=1,lambda_n=1):
     del_loglam=np.log10(1.0+1.0/R)
@@ -231,7 +250,6 @@ class complete_model:
         self.xnew=[]
         self.nwav=0
         self.freq=[]
-        self.freq_steps=[]
         
         self.compo_ar=[]
         self.scaleparas=[]
@@ -532,17 +550,6 @@ class complete_model:
 
         #converting it to frequencies
         self.freq = np.array((self.c*1e4)/(self.xnew))
-        
-        #calculating the widht of every freqency bin for calculating the intergrated line flux
-        freq_steps=[]
-
-        freq_steps.append(abs(self.freq[0]-self.freq[1]))
-        for i in range(1,len(self.freq)-1):
-            freq_steps.append(abs(self.freq[i-1]-self.freq[i+1])/2)
-
-        freq_steps.append(abs(self.freq[-2]-self.freq[-1]))
-        self.freq_steps=np.array(freq_steps)
-        
         
         
         # pasting the slab data at the indices that corrispond to the slab wavelength
@@ -2380,6 +2387,7 @@ class complete_model:
             
             
         max_values=np.array(max_values)
+        
         #to not devide by 0.0 we set the max value to 1.0 if it is 0.0
         # since the whole component is 0.0 is does't matter
         for i in range(len(max_values)):
@@ -2403,7 +2411,6 @@ class complete_model:
         for key in emission_flux_dict:
             if interp:
                 emission_flux_dict[key]=spline(self.xnew,emission_flux_dict[key],lam_obs)
-
             compo_ar[:,i]=emission_flux_dict[key]/max_values[i]
             i+=1
             
@@ -2440,12 +2447,7 @@ class complete_model:
                 plt.plot(self.xnew,scaleparas[i]*self.emission_flux_individual[key],label=key,alpha=0.7)
                 plt.plot(self.xnew,scaleparas[i]*emission_flux_dict[key],label=key,alpha=0.7)
 
-            if save_mol_flux:
-                scaled_flux=scaleparas[i]*emission_flux_dict[key]
-                self.emission_flux_individual_scaled[key]=scaled_flux
-                tot_flux+=scaled_flux
-            else:
-                tot_flux+=scaleparas[i]*emission_flux_dict[key]
+            tot_flux+=scaleparas[i]*emission_flux_dict[key]
             i+=1
 
         if debug:
@@ -2613,20 +2615,6 @@ class complete_model:
             plt.yscale('log')
         plt.show()
             
-            
-    def calc_integrated_flux(self,mol_name,wave_lims=[]):
-        flux_ar=self.emission_flux_individual_scaled[mol_name]*1e-26 #convert to w/m^2/Hz 
-        if len(wave_lims)==0:
-            freq_steps=self.freq_steps
-        else:
-            idx=np.where(self.xnew<=wave_lims[1])[0]
-            idx1=np.where(self.xnew[idx]>=wave_lims[0])[0]
-            flux_ar=flux_ar[idx[idx1]]
-            freq_steps=self.freq_steps[idx[idx1]]
-        int_flux=np.sum(flux_ar*freq_steps)
-
-        return int_flux           
-    
     def plot(self, plot_midplane=False):
         if plot_midplane:
             plt.figure()
@@ -2734,7 +2722,6 @@ def create_header(var_dict,abundance_dict,slab_dict,fit_obs_err,fit_conti_err):
     else:
         return header,header_para,header_abund,header_slab
 
-
 def cube_to_dict(data,header,fit_obs_err=False,fit_conti_err=False,log_coldens=log_coldens):
     var_dict={}
     slab_dict={}
@@ -2825,8 +2812,7 @@ def cube_to_dicts(data,header_para,header_abund,header_all,scale_prior,fit_obs_e
         return var_dict,abund_dict,slab_dict,sigma_dict
     else:
         return var_dict,abund_dict,slab_dict
-
-    
+ 
 def loglike(cube,debug=False,timeit=False,return_model=False):
     sigma_dict={}
     if timeit:
@@ -2884,35 +2870,22 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
     var_dict['bb_star']=use_bb_star
     
     #checking if the physics works out
-    penalty=float(-10**100.0)
-    sum_penalty=float(-10**100.0)
-    trigger_penalty=False
+    penalty=float(-10**20.0)
     if var_dict['tmin_s']>=var_dict['tmax_s']:
-        trigger_penalty=True
-        sum_penalty+=penalty*(var_dict['tmin_s']-var_dict['tmax_s'])
+        return penalty
     
     if var_dict['tmin_mp']>=var_dict['tmax_mp']:
-        trigger_penalty=True
-        sum_penalty+=penalty*(var_dict['tmin_mp']-var_dict['tmax_mp'])
+        return penalty
     
     if 't_rim' not in var_dict.keys():
         if var_dict['tmin_rim']>=var_dict['tmax_rim']:
-            trigger_penalty=True
-            sum_penalty+=penalty*(var_dict['tmin_rim']-var_dict['tmax_rim'])
+            return penalty
     
     for key in slab_dict:
-        if 'tmin' in slab_dict[key]: 
-            if slab_dict[key]['tmin']>=slab_dict[key]['tmax']:
-                trigger_penalty=True
-                sum_penalty+=penalty*(slab_dict[key]['tmin']-slab_dict[key]['tmax'])
-        if coldens_restriction:
-            if 'ColDens_tmin' in slab_dict[key]: 
-                if slab_dict[key]['ColDens_tmin']>slab_dict[key]['ColDens_tmax']:
-                    trigger_penalty=True
-                    sum_penalty+=penalty*(slab_dict[key]['ColDens_tmin']-slab_dict[key]['ColDens_tmax'])
-    if trigger_penalty:
-        return sum_penalty
+        if slab_dict[key]['tmin']>=slab_dict[key]['tmax']:
+            return penalty
 
+    
     if timeit:
         time_2=time()    
     if sample_all:
@@ -2927,15 +2900,6 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
                                                 slab_dict=slab_dict,
                                                 flux_obs=flux_obs,lam_obs=lam_obs)
 
-    if limit_integrated_flux:
-        for key in slab_dict:
-            if key in limit_flux_dict:
-                int_flux=con_model.calc_integrated_flux(key)
-                if int_flux>limit_flux_dict[key]:
-                    trigger_penalty=True
-                    sum_penalty+=penalty*(1+int_flux-limit_flux_dict[key])
-        if trigger_penalty:
-            return sum_penalty                   
     if timeit:
         time_3=time()
 
@@ -3082,13 +3046,9 @@ def loglike_run(cube,ndim,nparams,debug=False,timeit=False):
             return penalty
     
     for key in slab_dict:
-        if 'tmin' in slab_dict[key]: 
-            if slab_dict[key]['tmin']>=slab_dict[key]['tmax']:
-                return penalty
-        if coldens_restriction:
-            if 'ColDens_tmin' in slab_dict[key]: 
-                if slab_dict[key]['ColDens_tmin']>slab_dict[key]['ColDens_tmax']:
-                    return penalty
+        if slab_dict[key]['tmin']>=slab_dict[key]['tmax']:
+            return penalty
+
     
     if timeit:
         time_2=time()    
@@ -3181,6 +3141,7 @@ def loglike_run(cube,ndim,nparams,debug=False,timeit=False):
     else:
         return loglikelihood
     
+
 def prior_fast(cube):
     new_cube=(cube)*(upper_lim-lower_lim)+lower_lim
     return new_cube
@@ -3222,6 +3183,8 @@ def return_init_dict(use_bb_star,rin_powerlaw):
     return var_dict
 
 
+
+
 # # here starts the part where you have to adjust things
 # 
 
@@ -3254,12 +3217,6 @@ running=False
 fold_string=bayesian_folder
 if subfold!='':
     fold_string=fold_string+subfold
-if __name__ == "__main__":
-
-        if not os.path.exists(fold_string):
-            os.system(f'mkdir {fold_string}')
-        else:
-            print(f'Folder {fold_string} exists')
 
 
     # run MultiNest
@@ -3306,7 +3263,6 @@ if sample_all:
 
 # setting up the dictonaries and headers that will be used
 
-# In[19]:
 init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw)
 
 
@@ -3375,9 +3331,6 @@ upper_lim=np.array(upper_lim)
 lower_lim=np.array(lower_lim)
 
 
-print('Upper lim', upper_lim)
-print('Lower lim', lower_lim)
-
 # initializing the model and reading in the data
 
 # In[20]:
@@ -3390,8 +3343,6 @@ con_model.read_data(variables=init_dict,dust_species=init_abundance,
                     slab_dict=slab_prior_dict,slab_prefix=slab_prefix,
                     stellar_file=stellar_file,wavelength_points=lam_obs)
 
-if __name__ == "__main__":
-    print(con_model)
 
 
 # # Let's run
@@ -3417,42 +3368,1803 @@ print('n_live_points',n_live_points)
 print('evidence_tolerance',evidence_tolerance)   
 print('sampling_efficiency',sampling_efficiency)   
 
-if debug:
-    print('N dims',len(upper_lim))
-    test_vals=[]
-    for i in range(len(upper_lim)):
-        test_vals.append((upper_lim[i]+lower_lim[i])/2)
-    print(len(test_vals))
-    print(test_vals)
-    loglike(test_vals,debug=True,timeit=False)
-          
-if __name__ == "__main__":
-    if not os.path.isfile(f'{prefix}start.time'):
-        os.system(f'date > {prefix}start.time')
+
+try:
+    sample_all
+except NameError:
+    sample_all=False
+    print("Sample_all not set in multinest file")
+
+
+
+scatter_obs=False
+
+
+
+save_folder=f'{fold_string}figures/'
+
+if not os.path.exists(save_folder):
+    os.system(f'mkdir {save_folder}')
+else:
+    print(f'Folder {save_folder} exists')
+print('')
+print('')
+print('----------------------------------')
+print(f'saving figures in {save_folder}')
+print('----------------------------------')
+print('')
+print('')
+
+if not use_ultranest:
+    samples=np.loadtxt(f'{prefix}post_equal_weights.dat')[:,:-1]
+else:
+    try:    
+        samples=np.loadtxt(f'{prefix}/chains/equal_weighted_post.txt',skiprows=1,dtype='float32')
+    except:
+        samples=np.loadtxt(f'{prefix}/{run_folder}/chains/equal_weighted_post.txt',skiprows=1,dtype='float32')
     
-    sampler = ultranest.ReactiveNestedSampler(
-    complete_header,
-    loglike,
-    prior_fast,
-    log_dir=prefix,
-    resume=True)
-    if not slice_sampler:
-        result = sampler.run(min_num_live_points=400)
+print('Posterior shape:',np.shape(samples))
 
-    if slice_sampler:
-        nsteps = 2 * len(complete_header)
-        # create step sampler:
-        sampler.stepsampler = ultranest.stepsampler.SliceSampler(
-            nsteps=nsteps,
-            generate_direction=ultranest.stepsampler.generate_mixture_random_direction,
-            # adaptive_nsteps=False,
-            # max_nsteps=400
-        )
-        result = sampler.run(min_num_live_points=400)
-    sampler.print_results()
-    if not os.path.isfile(f'{prefix}end.time'):
-        os.system(f'date > {prefix}end.time')
-#sampler.plot_run()
-#sampler.plot_trace()
-#sampler.plot_corner()
+if reduce_posterior:
+    print('Reducing the posterior points to')
+    print(len_reduce_post)
+    indices=np.random.choice(np.arange(0,len(samples)),len_reduce_post,replace=False)
+    samples=samples[indices]
+    print('New shape')
+    print(np.shape(samples))
+    reduce_str='_reduced'
+else:
+    reduce_str=''
+    
+def scatter_obs_gaussian(flux_obs,sig_obs,lam_obs,plot=False):
+    new_flux=np.random.normal(flux_obs,sig_obs)
 
+    if plot:
+        plt.loglog(lam_obs,flux_obs)
+        plt.fill_between(lam_obs,y1=flux_obs-sig_obs,y2=flux_obs+sig_obs,alpha=0.7)
+        plt.scatter(lam_obs,new_flux,marker='+')
+        plt.xlabel(r'$\lambda\rm [\mu m]$', fontsize=20)
+        plt.ylabel(r'$F_\nu\rm [Jy]$', fontsize=20)
+        plt.savefig(f'{save_folder}/scattered_observation_{run_number}.png')
+        plt.show()
+    return new_flux
+
+#new_flux=scatter_obs_gaussian(flux_obs=flux_obs,sig_obs=sig_obs,lam_obs=lam_obs,plot=False)
+
+#creating new wavelength grid that combines the observational wavelength and the standard model points
+
+standard_wave=np.load('./standard_wave.npy')
+
+    
+# stiching part
+
+above=np.unique(np.clip(standard_wave,a_min=np.max(con_model.xnew),a_max=None))
+below=np.unique(np.clip(standard_wave,a_max=np.min(con_model.xnew),a_min=None))
+#print(above)
+out=np.append(above,below)
+wave_new=np.sort(np.unique(np.append(out,con_model.xnew)))
+
+
+scatter_obs=False
+
+array_flux=[]
+stellar_components=[]
+rim_components=[]
+midplane_components=[]
+surface_components=[]
+
+tot_samples=[]
+con_model_new=complete_model()
+con_model_new.read_data(variables=init_dict,wavelength_points=wave_new,dust_species=init_abundance,
+                    slab_dict=slab_prior_dict,slab_prefix=slab_prefix,
+                    stellar_file=stellar_file)
+#print(con_model)
+
+  
+print(con_model)
+
+  
+scatter_obs=False
+
+array_flux=[]
+stellar_components=[]
+rim_components=[]
+midplane_components=[]
+surface_components=[]
+
+tot_samples=[]
+con_model_new=complete_model()
+con_model_new.read_data(variables=init_dict,wavelength_points=wave_new,dust_species=init_abundance,
+                    slab_dict=slab_prior_dict,slab_prefix=slab_prefix,
+                    stellar_file=stellar_file)
+#print(con_model)
+
+  
+print(con_model)
+
+  
+def get_scales_parallel(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=False,debug=False):
+    samp=samples[idx]
+    dict_fluxes={}
+    sigma_dict={}
+    var_dict,slab_dict=cube_to_dict(samp,header=list(header_para)+list(header_slab))
+    
+
+    if fixed_paras:
+        for key in fixed_dict:
+            if debug:
+                print(f'Fixed {key}..')
+            if key in header_abund:
+                abundance_dict[key]=fixed_dict[key]
+                if debug:
+                    print('..added to abundance_dict')
+            elif key in init_dict or key=='distance':
+                var_dict[key]=fixed_dict[key]
+                if debug:
+                    print('..added to var_dict')
+            elif key =='sigma_obs':
+                sigma_dict['sigma_obs']=fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='log_sigma_obs':
+                sigma_dict['sigma_obs']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            else:
+                idx=key.find(':')
+                if key[:idx] not in slab_dict:
+                    slab_dict[key[:idx]]={}
+                if debug:
+                    print('..added to slab_dict')
+
+                slab_dict[key[:idx]][key[idx+1:]]=fixed_dict[key]
+  
+  
+    var_dict['bb_star']=use_bb_star
+    if debug:
+        print(var_dict)
+        if sample_all:
+            print(abundance_dict)
+        print(slab_dict)
+    if scatter_obs:
+        output=[]
+        for i in range(obs_per_model):
+            if corr_noise:
+                fact=np.random.normal(0.0,1.0)
+                new_flux=flux_obs+fact*sig_obs
+            else:
+                new_flux=scatter_obs_gaussian(flux_obs=flux_obs,sig_obs=sig_obs,lam_obs=lam_obs,plot=False)
+                
+            interp_flux=con_model.run_fitted_to_obs(variables=var_dict,dust_species=init_abundance,
+                                                    slab_dict=slab_dict,flux_obs=flux_obs,lam_obs=lam_obs)
+            scale_facs=con_model.scaleparas
+
+        #    tot_samples.append(np.append(samp,scale_facs))
+            abundance_dict=init_abundance.copy()
+            var_dict['sc_ir']=scale_facs[0]
+            var_dict['sc_mid']=scale_facs[1]
+            i=2
+            for key in abundance_dict:
+                abundance_dict[key]=scale_facs[i]
+                i+=1
+            for key in slab_dict:
+                scale_facs[i]=np.sqrt(scale_facs[i])
+                slab_dict[key]['radius']=scale_facs[i]
+                i+=1
+            
+            
+            tot_flux=con_model_new.run_model(variables=var_dict,dust_species=abundance_dict,
+                                             slab_dict=slab_dict,output_all=False)
+            
+            
+            #section to get retrieved parameters from mol
+            mol_results_dict=con_model.extract_emission_quantities(low_contribution=low_contribution,high_contribution=high_contribution)
+            list_mol_results=[]
+            
+            for species in mol_results_dict:
+                list_mol_results.append(mol_results_dict[species]['radius_eff'])
+                list_mol_results.append(mol_results_dict[species]['tmin,tmax'][0])
+                list_mol_results.append(mol_results_dict[species]['tmin,tmax'][1])
+                list_mol_results.append(np.log10(mol_results_dict[species]['cmin,cmax'][0]))
+                list_mol_results.append(np.log10(mol_results_dict[species]['cmin,cmax'][1]))
+                if radial_version:
+                    list_mol_results.append(mol_results_dict[species]['rout,rin'][0])
+                    list_mol_results.append(mol_results_dict[species]['rout,rin'][1])
+
+            list_mol_results=np.array(list_mol_results).flatten()
+            
+            
+            dust_mass_dict=con_model_new.calc_dust_masses(unit='msun')
+            dust_mass_ar=np.array(list(dust_mass_dict.values()))
+            if plot_dust_individual:
+                scale_components=con_model_new.trans_flux
+
+                con_model_new.set_surface(one_output=False)
+                if debug:
+                    for key in abundance_dict:
+                        print(abundance_dict[key],np.max(con_model_new.surface_flux_individual[key]))
+                    print('Max surface fluxes')
+
+                dict_fluxes['individual_surface']={}
+                for key in abundance_dict:    
+                    dict_fluxes['individual_surface'][key]=scale_components*con_model_new.surface_flux_individual[key]*abundance_dict[key]
+                    if debug:
+                        print(np.max(dict_fluxes['individual_surface'][key]))
+
+            if not ignore_spectrum_plot:
+                dict_fluxes['tot_flux']=tot_flux
+                dict_fluxes['rim_flux']=con_model_new.rim_flux
+                dict_fluxes['stellar_flux']=con_model_new.scaled_stellar_flux
+                dict_fluxes['midplane_flux']=con_model_new.midplane_flux
+                dict_fluxes['surface_flux']=con_model_new.surface_flux_tot
+                dict_fluxes['emission_flux']=con_model_new.emission_flux
+                dict_fluxes['interp_flux']=interp_flux
+            output.append([dict_fluxes, np.append(np.append(samp,scale_facs),list_mol_results),dust_mass_ar])
+        return output
+    else:
+        interp_flux=con_model.run_fitted_to_obs(variables=var_dict,dust_species=init_abundance,
+                                                slab_dict=slab_dict,flux_obs=flux_obs,lam_obs=lam_obs)
+        
+        scale_facs=con_model.scaleparas
+
+    #    tot_samples.append(np.append(samp,scale_facs))
+        abundance_dict=init_abundance.copy()
+        var_dict['sc_ir']=scale_facs[0]
+        var_dict['sc_mid']=scale_facs[1]
+        i=2
+        for key in abundance_dict:
+            abundance_dict[key]=scale_facs[i]
+            i+=1
+        for key in slab_dict:
+            
+            scale_facs[i]=np.sqrt(scale_facs[i])
+            slab_dict[key]['radius']=scale_facs[i]
+            i+=1
+        tot_flux=con_model_new.run_model(variables=var_dict,dust_species=abundance_dict,
+                                         slab_dict=slab_dict,output_all=False)
+        #section to get retrieved parameters from mol
+
+        mol_results_dict=con_model_new.extract_emission_quantities(low_contribution=low_contribution,high_contribution=high_contribution)
+        list_mol_results=[]
+
+        for species in mol_results_dict:
+            list_mol_results.append(mol_results_dict[species]['radius_eff'])
+            list_mol_results.append(mol_results_dict[species]['tmin,tmax'][0])
+            list_mol_results.append(mol_results_dict[species]['tmin,tmax'][1])
+            list_mol_results.append(np.log10(mol_results_dict[species]['cmin,cmax'][0]))
+            list_mol_results.append(np.log10(mol_results_dict[species]['cmin,cmax'][1]))
+            if radial_version:
+                list_mol_results.append(mol_results_dict[species]['rout,rin'][0])
+                list_mol_results.append(mol_results_dict[species]['rout,rin'][1])
+                
+        #print(list_mol_results)
+        list_mol_results=np.array(list_mol_results).flatten()
+        
+        dust_mass_dict=con_model_new.calc_dust_masses(unit='msun')
+        dust_mass_ar=np.array(list(dust_mass_dict.values()))
+        if debug:
+            print('Dust mass array')
+            print(dust_mass_ar)
+        if plot_dust_individual:
+            scale_components=con_model_new.trans_flux
+
+            con_model_new.set_surface(one_output=False)
+            if debug:
+                for key in abundance_dict:
+                    print(abundance_dict[key],np.max(con_model_new.surface_flux_individual[key]))
+                print('Max surface fluxes')
+
+            dict_fluxes['individual_surface']={}
+            for key in abundance_dict:    
+                dict_fluxes['individual_surface'][key]=scale_components*con_model_new.surface_flux_individual[key]*abundance_dict[key]
+                if debug:
+                    print(np.max(dict_fluxes['individual_surface'][key]))
+        if not ignore_spectrum_plot:
+            dict_fluxes['tot_flux']=tot_flux
+            dict_fluxes['rim_flux']=con_model_new.rim_flux
+            dict_fluxes['stellar_flux']=con_model_new.scaled_stellar_flux
+            dict_fluxes['midplane_flux']=con_model_new.midplane_flux
+            dict_fluxes['surface_flux']=con_model_new.surface_flux_tot
+            dict_fluxes['emission_flux']=con_model_new.emission_flux
+            dict_fluxes['interp_flux']=interp_flux
+
+        return dict_fluxes, np.append(np.append(samp,scale_facs),list_mol_results),dust_mass_ar
+  
+
+  
+
+  
+
+  
+
+
+
+def get_full_model(idx,dummy,debug=False):
+    samp=samples[idx]
+
+    dict_fluxes={}
+    sigma_dict={}
+    if sample_all:
+        var_dict,abundance_dict,slab_dict=cube_to_dicts(samp,header_para=header_para,header_abund=header_abund,header_all=complete_header,scale_prior=scale_prior)
+    
+    if debug:
+        print(var_dict)
+        if sample_all:
+            print(abundance_dict)
+        print(slab_dict)
+    if fixed_paras:
+        for key in fixed_dict:
+            if debug:
+                print(f'Fixed {key}..')
+            if key in header_abund:
+                abundance_dict[key]=fixed_dict[key]
+                if debug:
+                    print('..added to abundance_dict')
+            elif key in init_dict or key=='distance':
+                var_dict[key]=fixed_dict[key]
+                if debug:
+                    print('..added to var_dict')
+            elif key =='sigma_obs':
+                sigma_dict['sigma_obs']=fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='log_sigma_obs':
+                sigma_dict['sigma_obs']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            else:
+                idx=key.find(':')
+                if key[:idx] not in slab_dict:
+                    slab_dict[key[:idx]]={}
+                if debug:
+                    print('..added to slab_dict')
+
+                slab_dict[key[:idx]][key[idx+1:]]=fixed_dict[key]
+  
+  
+    if debug:
+        print('Slab dict',slab_dict)
+    var_dict['bb_star']=use_bb_star
+    
+    interp_flux,scales=con_model.run_model_normalized(variables=var_dict,dust_species=abundance_dict,
+                                                slab_dict=slab_dict,max_flux_obs=max_flux_obs,translate_scales=True,debug=False)
+
+    var_dict['sc_ir']=scales[0]
+    var_dict['sc_mid']=scales[1]
+    i=2
+    for key in abundance_dict:
+        abundance_dict[key]=scales[i]
+        i+=1
+
+
+    tot_flux=con_model_new.run_model(variables=var_dict,dust_species=abundance_dict,slab_dict=slab_dict)
+        #section to get retrieved parameters from mol
+    mol_results_dict=con_model.extract_emission_quantities(low_contribution=low_contribution,high_contribution=high_contribution)
+    list_mol_results=[]
+
+    for species in mol_results_dict:
+
+        list_mol_results.append(mol_results_dict[species]['radius_eff'])
+        list_mol_results.append(mol_results_dict[species]['tmin,tmax'][0])
+        list_mol_results.append(mol_results_dict[species]['tmin,tmax'][1])
+        list_mol_results.append(np.log10(mol_results_dict[species]['cmin,cmax'][0]))
+        list_mol_results.append(np.log10(mol_results_dict[species]['cmin,cmax'][1]))
+        if radial_version:
+            list_mol_results.append(mol_results_dict[species]['rout,rin'][0])
+            list_mol_results.append(mol_results_dict[species]['rout,rin'][1])
+    list_mol_results=np.array(list_mol_results).flatten()
+    
+    dust_mass_dict=con_model_new.calc_dust_masses(unit='msun')
+    dust_mass_ar=np.array(list(dust_mass_dict.values()))
+    if plot_dust_individual:
+        scale_components=con_model_new.trans_flux
+
+        con_model_new.set_surface(one_output=False)
+        if debug:
+            for key in abundance_dict:
+                print(abundance_dict[key],np.max(con_model_new.surface_flux_individual[key]))
+            print('Max surface fluxes')
+
+        dict_fluxes['individual_surface']={}
+        for key in abundance_dict:    
+            dict_fluxes['individual_surface'][key]=scale_components*con_model_new.surface_flux_individual[key]*abundance_dict[key]
+            if debug:
+                print(np.max(dict_fluxes['individual_surface'][key]))
+    if not ignore_spectrum_plot:
+        dict_fluxes['tot_flux']=tot_flux
+        dict_fluxes['rim_flux']=con_model_new.rim_flux
+        dict_fluxes['stellar_flux']=con_model_new.scaled_stellar_flux
+        dict_fluxes['midplane_flux']=con_model_new.midplane_flux
+        dict_fluxes['surface_flux']=con_model_new.surface_flux_tot
+        dict_fluxes['emission_flux']=con_model_new.emission_flux
+        dict_fluxes['interp_flux']=interp_flux
+    
+    samp_select=samp[:-len(scales)]
+    
+    
+    return dict_fluxes, np.append(np.append(samp_select,scales),list_mol_results),dust_mass_ar
+print('The next step takes a while')
+
+
+
+
+parallel=True
+if parallel:
+
+    pool =  mp.get_context('fork').Pool(int(16))
+    if sample_all:
+        results = [pool.apply_async(get_full_model, args=(i,1)) for i in range(len(samples))]
+        pool.close() 
+
+        
+    else:
+        obs_per_model=1 # how many scatter observations are calculated per model
+        results = [pool.apply_async(get_scales_parallel, args=(i,obs_per_model)) for i in range(len(samples))]
+        pool.close() 
+else:
+    if sample_all:
+        results = [get_full_model(i,1) for i in range(len(samples))]    
+
+    else:
+        obs_per_model=2 # how many scatter observations are calculated per model
+        results = [get_scales_parallel(i,obs_per_model) for i in range(len(samples))]    
+
+array_flux=[]
+stellar_components=[]
+rim_components=[]
+midplane_components=[]
+surface_components=[]
+emission_components=[]
+tot_samples=[]
+interp_fluxes=[]
+array_flux=[]
+tot_samples=[]
+dust_mass_master_ar=[]
+
+
+dict_individual_flux={}
+
+if scatter_obs:
+    
+    for i in range(len(results)):
+        if parallel:
+            result_list=results[i].get()
+        print(f'{np.round(i/len(results)*100,0)}%',end='\r',flush=True)
+        for j in range(obs_per_model):
+            if parallel:
+                dict_flux,samp,dust_mass_ar=result_list[j]
+            else:
+                dict_flux,samp,dust_mass_ar=np.array(results,dtype='object')[i,j,0],np.array(results,dtype='object')[i,j,1].flatten(),np.array(results,dtype='object')[i,j,2].flatten()
+            if not ignore_spectrum_plot:
+                array_flux.append(dict_flux['tot_flux'])
+
+                stellar_components.append(dict_flux['stellar_flux'])
+                rim_components.append(dict_flux['rim_flux']+dict_flux['stellar_flux'])
+                midplane_components.append(dict_flux['midplane_flux'])
+                surface_components.append(dict_flux['surface_flux'])
+                emission_components.append(dict_flux['emission_flux'])
+                interp_fluxes.append(dict_flux['interp_flux'])
+            tot_samples.append(samp)
+            dust_mass_master_ar.append(dust_mass_ar)
+            if not ignore_spectrum_plot:
+                if plot_dust_individual:
+                    for key in dict_flux['individual_surface']:
+                        if key not in dict_individual_flux:
+                            dict_individual_flux[key]=[]
+                        dict_individual_flux[key].append(dict_flux['individual_surface'][key])
+            
+else:
+    for i in range(len(results)):
+        if parallel:
+            dict_flux,samp,dust_mass_ar=results[i].get()
+        else:
+            dict_flux,samp,dust_mass_ar=np.array(results,dtype='object')[i,j,0],np.array(results,dtype='object')[i,j,1].flatten(),np.array(results,dtype='object')[i,j,2].flatten()
+        if plot_dust_individual:
+            for key in dict_flux['individual_surface']:
+                if key not in dict_individual_flux:
+                    dict_individual_flux[key]=[]
+                dict_individual_flux[key].append(dict_flux['individual_surface'][key])
+        
+        if not ignore_spectrum_plot:
+            array_flux.append(dict_flux['tot_flux'])
+
+            stellar_components.append(dict_flux['stellar_flux'])
+            rim_components.append(dict_flux['rim_flux']+dict_flux['stellar_flux'])
+            midplane_components.append(dict_flux['midplane_flux'])
+            surface_components.append(dict_flux['surface_flux'])
+            emission_components.append(dict_flux['emission_flux'])
+            interp_fluxes.append(dict_flux['interp_flux'])
+        tot_samples.append(samp)
+        dust_mass_master_ar.append(dust_mass_ar)
+
+
+if plot_dust_individual:
+    if save_flux:
+        with open(f'{prefix}dict_fluxes{reduce_str}.pkl', 'wb') as f:
+            pickle.dump(dict_individual_flux, f)
+        
+if not ignore_spectrum_plot:
+    array_flux=np.array(array_flux,dtype='float32')
+    interp_fluxes=np.array(interp_fluxes,dtype='float32')
+    stellar_components=np.array(stellar_components,dtype='float32')
+    rim_components=np.array(rim_components,dtype='float32')
+    midplane_components=np.array(midplane_components,dtype='float32')
+    surface_components=np.array(surface_components,dtype='float32')
+    emission_components=np.array(emission_components,dtype='float32')
+tot_samples=np.array(tot_samples)
+dust_mass_master_ar=np.array(dust_mass_master_ar)
+
+
+
+
+
+
+if save_output:
+    
+    print('Shape tot sample',np.shape(tot_samples))
+    print('Shape samples',np.shape(samples))
+    np.save(f'{prefix}complete_posterior{reduce_str}',tot_samples)
+    
+    np.save(f'{prefix}dust_masses{reduce_str}',dust_mass_master_ar)
+    #exit()
+
+if 'log_sigma_obs' in complete_header:
+    idx_sigma=np.where(complete_header=='log_sigma_obs')[0]
+    sig_obs=flux_obs*10**np.median(tot_samples[:,idx_sigma])
+
+elif 'sigma_obs' in complete_header:
+    idx_sigma=np.where(complete_header=='sigma_obs')[0]
+    sig_obs=flux_obs*np.median(tot_samples[:,idx_sigma])
+
+    
+if not ignore_spectrum_plot:
+    if save_flux:
+        
+        
+        np.save(f'{prefix}array_flux{reduce_str}',array_flux)
+        np.save(f'{prefix}interp_flux{reduce_str}',interp_fluxes)
+
+    
+def nicer_labels_single(lab,with_size=True):
+    new_lab=''
+    if 'Silica' in lab:
+        new_lab+='Silica '
+    elif 'Fo_Sogawa' in lab or 'Forsterite' in lab or 'Fo_Zeidler' in lab:
+        new_lab+='Forsterite '
+    elif 'En_Jaeger' in lab or 'Enstatite' in lab:
+        new_lab+='Enstatite  '
+    elif 'Mgolivine' in lab or 'MgOlivine' in lab :
+        new_lab+='Am Mgolivine '
+    elif 'Olivine' in lab:
+        new_lab+='Olivine '
+    elif 'Mgpyroxene' in lab or 'MgPyroxene' in lab:
+        new_lab+='Am Mgpyroxene '
+    elif 'Pyroxene' in lab:
+        new_lab+='Pyroxene '
+    elif 'Fayalite' in lab:
+        new_lab+='Fayalite '
+
+    if with_size:
+        idx=lab.find('_rv')
+        rv=lab[idx+3:idx+6]
+        new_lab+=rv
+    return new_lab    
+    
+
+if not ignore_spectrum_plot:    
+    min_wave=0
+    max_wave=' '
+    def plot_model_uncertainties_names(flux_obs,sig_obs,wave_obs,y_predict_set,model_wave,folder,save=False,
+                                       save_name='',min_wave=min_wave,ylim='',max_wave=max_wave,zoom=True,
+                                       obs_as_line=True, zoom_in_list=[[5,30]],
+                                       plot_components=True,stellar_components=stellar_components,
+                                       rim_components=rim_components,midplane_components=midplane_components,
+                                       surface_components=surface_components,emission_components=emission_components,
+                                       individual_surface={},
+                                       plot_individual_surface=False,number_plotted_dust=0,debug=True):
+        comp_dict={}
+        indi_dust_dict={}
+        fig = plt.figure(figsize=(9,6))
+        ax  = fig.add_subplot(1,1,1)
+        xmin = 0.07
+        xmax = np.amax(model_wave)*1.5
+
+        ax.set_xscale('log')
+        ax.set_xlim([xmin,xmax])
+        ax.set_xlabel(r'$\lambda\rm [\mu m]$', fontsize=20)
+        ax.set_ylabel(r'$F_\nu\rm [Jy]$', fontsize=20)
+        ax.tick_params(labelsize=15)
+        if max_wave!=' ':
+            idx=np.where(model_wave<=max_wave)[0]
+
+            x_model=model_wave[idx]
+            y_model=y_predict_set[:,idx]
+        else:
+            x_model=model_wave
+            y_model=y_predict_set
+        #print(np.shape(y_model))
+        y_median=np.median(y_model,axis=0)
+        y_std=np.percentile(y_model,50+68/2,axis=0)
+        y_2std=np.percentile(y_model,50+95/2,axis=0)
+        y_3std=np.percentile(y_model,50+99.9/2,axis=0)
+        y_std_min=np.percentile(y_model,50-68/2,axis=0)
+        y_2std_min=np.percentile(y_model,50-95/2,axis=0)
+        y_3std_min=np.percentile(y_model,50-99.9/2,axis=0)
+        #print(np.shape(y_3std_min),np.shape(y_3std_min),np.shape(x_model))
+        ax.fill_between(x_model,y_3std_min,y_3std,color='black',alpha=0.1,zorder=100)
+        ax.fill_between(x_model,y_2std_min,y_2std,color='black',alpha=0.3,zorder=100)
+        ax.fill_between(x_model,y_std_min,y_std,color='black',alpha=0.5,zorder=100)
+        ax.plot(x_model,y_median,label='Model',alpha=1,color='black',zorder=100)
+        min_val=np.min(y_median)
+        max_val=np.max(y_median)
+        if plot_components:
+            comp_names=['Stellar flux','Stellar + rim flux','Midplane flux','Surface flux','Emission flux']
+            comp_colors=['tab:orange','tab:green','tab:purple','tab:brown','tab:red']
+            comp_list=[stellar_components,rim_components,midplane_components,surface_components,emission_components]
+            for idx_comp in range(len(comp_list)):
+                print('Adding ',comp_names[idx_comp])
+                comp=comp_list[idx_comp]
+                y_median_comp=np.median(comp,axis=0)
+                y_std_comp=np.percentile(comp,50+68/2,axis=0)
+                y_2std_comp=np.percentile(comp,50+95/2,axis=0)
+                y_3std_comp=np.percentile(comp,50+99.9/2,axis=0)
+                y_std_min_comp=np.percentile(comp,50-68/2,axis=0)
+                y_2std_min_comp=np.percentile(comp,50-95/2,axis=0)
+                y_3std_min_comp=np.percentile(comp,50-99.9/2,axis=0)
+                comp_dict[comp_names[idx_comp]]={}
+                comp_dict[comp_names[idx_comp]]['median']=y_median_comp
+                comp_dict[comp_names[idx_comp]]['std']=y_std_comp
+                comp_dict[comp_names[idx_comp]]['std2']=y_2std_comp
+                comp_dict[comp_names[idx_comp]]['std3']=y_3std_comp
+                comp_dict[comp_names[idx_comp]]['std_min']=y_std_min_comp
+                comp_dict[comp_names[idx_comp]]['std2_min']=y_2std_min_comp
+                comp_dict[comp_names[idx_comp]]['std3_min']=y_3std_min_comp
+
+                ax.fill_between(x_model,comp_dict[comp_names[idx_comp]]['std3_min'],comp_dict[comp_names[idx_comp]]['std3'],color=comp_colors[idx_comp],alpha=0.1)
+                ax.fill_between(x_model,comp_dict[comp_names[idx_comp]]['std2_min'],comp_dict[comp_names[idx_comp]]['std2'],color=comp_colors[idx_comp],alpha=0.3)
+                ax.fill_between(x_model,comp_dict[comp_names[idx_comp]]['std_min'],comp_dict[comp_names[idx_comp]]['std'],color=comp_colors[idx_comp],alpha=0.5)
+                ax.plot(x_model,comp_dict[comp_names[idx_comp]]['median'],label=comp_names[idx_comp],alpha=1,color=comp_colors[idx_comp])
+            if plot_individual_surface:
+                comp_keys=list(individual_surface.keys())
+                comp_names_dust=[]
+                for lab in comp_keys:
+                    comp_names_dust.append(nicer_labels_single(lab))
+
+                comp_colors_dust=['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0',
+                             '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000',
+                             '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000']
+                comp_list_dust=[]
+                max_vals_dust=[]
+                for comp in comp_keys:
+                    comp_list_dust.append(individual_surface[comp])
+                for idx_comp in range(len(comp_list_dust)):
+                    comp=comp_list_dust[idx_comp]
+                    y_median_comp=np.median(comp,axis=0)
+                    y_std_comp=np.percentile(comp,50+68/2,axis=0)
+                    y_2std_comp=np.percentile(comp,50+95/2,axis=0)
+                    y_3std_comp=np.percentile(comp,50+99.9/2,axis=0)
+                    y_std_min_comp=np.percentile(comp,50-68/2,axis=0)
+                    y_2std_min_comp=np.percentile(comp,50-95/2,axis=0)
+                    y_3std_min_comp=np.percentile(comp,50-99.9/2,axis=0)
+                    indi_dust_dict[comp_names_dust[idx_comp]]={}
+                    indi_dust_dict[comp_names_dust[idx_comp]]['median']=y_median_comp
+                    indi_dust_dict[comp_names_dust[idx_comp]]['std']=y_std_comp
+                    indi_dust_dict[comp_names_dust[idx_comp]]['std2']=y_2std_comp
+                    indi_dust_dict[comp_names_dust[idx_comp]]['std3']=y_3std_comp
+                    indi_dust_dict[comp_names_dust[idx_comp]]['std_min']=y_std_min_comp
+                    indi_dust_dict[comp_names_dust[idx_comp]]['std2_min']=y_2std_min_comp
+                    indi_dust_dict[comp_names_dust[idx_comp]]['std3_min']=y_3std_min_comp
+                    max_vals_dust.append(np.max(y_median_comp))
+
+                max_vals_dust=np.array(max_vals_dust)
+                if number_plotted_dust!=0:
+                    sorted_values=np.flip(np.sort(max_vals_dust))
+                    comp_list_select=[]
+                    for i in range(number_plotted_dust):
+                        if debug:
+                            print('select dust species')
+                            print(i)
+                            print(max_vals_dust)
+                            print(sorted_values[i])
+
+                        comp_list_select.append(np.where(max_vals_dust==sorted_values[i])[0][0])
+                else:
+                    comp_list_select=np.arange(0,len(comp_list_dust),1)
+
+                for idx_comp in comp_list_select:
+
+                    if debug:
+                        print('idx comp', idx_comp)
+                        print('dust name',comp_names_dust[idx_comp])
+                    idx_comp_color=idx_comp
+                    while idx_comp_color>=len(comp_colors_dust):
+                        idx_comp_color-=len(comp_colors_dust)
+                        if debug:
+                            print('Adjust color to',idx_comp_color)
+                    ax.fill_between(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['std3_min'],indi_dust_dict[comp_names_dust[idx_comp]]['std3'],color=comp_colors_dust[idx_comp_color],alpha=0.1)
+                    ax.fill_between(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['std2_min'],indi_dust_dict[comp_names_dust[idx_comp]]['std2'],color=comp_colors_dust[idx_comp_color],alpha=0.3)
+                    ax.fill_between(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['std_min'],indi_dust_dict[comp_names_dust[idx_comp]]['std'],color=comp_colors_dust[idx_comp_color],alpha=0.5)
+                    ax.plot(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['median'],label=comp_names_dust[idx_comp],alpha=1,color=comp_colors_dust[idx_comp_color])
+        sig_obs=np.array(sig_obs)
+
+        if obs_as_line:
+
+            print('Adding  Observation')
+            ax.fill_between(wave_obs,flux_obs-sig_obs,flux_obs+sig_obs,alpha=0.5,color='tab:blue',zorder=1000)
+            ax.plot(wave_obs,flux_obs,label='Observation',color='tab:blue',alpha=0.7,zorder=1000)
+
+        else:
+            ax.errorbar(wave_obs,flux_obs,yerr=sig_obs, label='Observation',alpha=0.7,zorder=1000)    
+
+        axbox = ax.get_position()
+
+        if ylim!='':
+
+            ax.set_ylim(bottom=ylim[0],top=ylim[1])
+        else:
+            ax.set_ylim(bottom=min_val*0.9,top=max_val*1.1)
+
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        if max_wave!=' ':
+            ax.set_xlim(right=max_wave)
+        else:
+            ax.set_xlim(left=np.min(x_model),right=np.max(x_model))
+        legend = ax.legend(frameon=True,ncol=1,markerscale=0.7,scatterpoints=1,labelspacing=0.0,fancybox=True)
+        for label in legend.get_texts():
+            label.set_fontsize('large')
+
+        plt.tight_layout()
+        if save:
+            if plot_individual_surface:
+                plt.savefig(save_name+reduce_str+'_dust'+f'.{filetype_fig}',bbox_inches='tight')
+            else:
+                plt.savefig(save_name+reduce_str+f'.{filetype_fig}',bbox_inches='tight')
+
+        plt.show()
+
+        if zoom:
+            for zoom_in in zoom_in_list:
+                print('Plotting zoomed in')
+                print('at',zoom_in)
+
+                fig = plt.figure(figsize=(9,6))
+                ax  = fig.add_subplot(1,1,1)
+                xmin = zoom_in[0]
+                xmax = zoom_in[1]
+
+                ax.set_xlabel(r'$\lambda\rm [\mu m]$', fontsize=20)
+                ax.set_ylabel(r'$F_\nu\rm [Jy]$', fontsize=20)
+                ax.tick_params(labelsize=15)
+                idx=np.where(model_wave<=xmax)[0]
+                idx2=np.where(model_wave[idx]>=xmin)[0]
+
+                y_model_select=y_predict_set[:,idx[idx2]]
+
+                max_val=np.max(y_model_select)
+                min_val=np.min(y_model_select)
+
+                if obs_as_line:
+
+                    print('Adding  Observation')
+                    ax.fill_between(wave_obs,flux_obs-sig_obs,flux_obs+sig_obs,alpha=0.5,color='tab:blue',zorder=1000)
+                    ax.plot(wave_obs,flux_obs,label='Observation',color='tab:blue',alpha=0.7,zorder=1000)
+                else:
+                    ax.errorbar(wave_obs,flux_obs,yerr=sig_obs, label='Observation',alpha=0.7,zorder=1000)    
+
+
+                print('Adding  Full model')
+
+                ax.fill_between(x_model,y_3std_min,y_3std,color='black',alpha=0.1,zorder=100)
+                ax.fill_between(x_model,y_2std_min,y_2std,color='black',alpha=0.3,zorder=100)
+                ax.fill_between(x_model,y_std_min,y_std,color='black',alpha=0.5,zorder=100)
+                ax.plot(x_model,y_median,label='Model',alpha=1,color='black',zorder=100)
+
+
+
+
+                if plot_components:
+
+                    for idx_comp in range(len(comp_dict)):
+
+                        print('Adding ',comp_names[idx_comp])
+
+                        ax.fill_between(x_model,comp_dict[comp_names[idx_comp]]['std3_min'],comp_dict[comp_names[idx_comp]]['std3'],color=comp_colors[idx_comp],alpha=0.1)
+                        ax.fill_between(x_model,comp_dict[comp_names[idx_comp]]['std2_min'],comp_dict[comp_names[idx_comp]]['std2'],color=comp_colors[idx_comp],alpha=0.3)
+                        ax.fill_between(x_model,comp_dict[comp_names[idx_comp]]['std_min'],comp_dict[comp_names[idx_comp]]['std'],color=comp_colors[idx_comp],alpha=0.5)
+                        ax.plot(x_model,comp_dict[comp_names[idx_comp]]['median'],label=comp_names[idx_comp],alpha=1,color=comp_colors[idx_comp])
+                if plot_individual_surface:
+                    for idx_comp in range(len(comp_list_select)):
+
+                        idx_comp_color=idx_comp
+                        while idx_comp_color>=len(comp_colors_dust):
+                            idx_comp_color-=len(comp_colors_dust)
+                            if debug:
+                                print('Adjust color to',idx_comp_color)
+
+                        ax.fill_between(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['std3_min'],indi_dust_dict[comp_names_dust[idx_comp]]['std3'],color=comp_colors_dust[idx_comp_color],alpha=0.1)
+                        ax.fill_between(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['std2_min'],indi_dust_dict[comp_names_dust[idx_comp]]['std2'],color=comp_colors_dust[idx_comp_color],alpha=0.3)
+                        ax.fill_between(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['std_min'],indi_dust_dict[comp_names_dust[idx_comp]]['std'],color=comp_colors_dust[idx_comp_color],alpha=0.5)
+                        ax.plot(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['median'],label=comp_names_dust[idx_comp],alpha=1,color=comp_colors_dust[idx_comp_color])
+
+                axbox = ax.get_position()
+
+                #ax.set_xscale('log')
+                #ax.set_yscale('log')
+                ax.set_xlim(left=xmin,right=xmax)
+                ax.set_ylim(bottom=min_val*0.9,top=max_val*1.1)
+                legend = ax.legend(frameon=True,ncol=1,markerscale=0.7,scatterpoints=1,labelspacing=0.0,fancybox=True)
+                for label in legend.get_texts():
+                    label.set_fontsize('large')
+
+                plt.tight_layout()
+                if save:
+                    if plot_individual_surface:
+                        plt.savefig(f'{save_name}_zoom_{str(zoom_in[0])}_{str(zoom_in[1])}{reduce_str}_dust.{filetype_fig}',bbox_inches='tight')
+                    else:
+                        plt.savefig(f'{save_name}_zoom_{str(zoom_in[0])}_{str(zoom_in[1])}{reduce_str}.{filetype_fig}',bbox_inches='tight')
+
+                plt.show()
+
+
+    if fit_obs_err or 'sigma_obs' in fixed_dict or 'log_sigma_obs' in fixed_dict:
+        sig_obs=np.zeros_like(flux_obs)
+        print('Plot sig obs as 0')
+
+
+    print('Plotting component plot...')
+    print('Zoom list',zoom_list)
+
+    if plot_dust_individual:
+        print('Plotting dust version of the component plot')
+        plot_model_uncertainties_names(flux_obs,sig_obs,lam_obs,array_flux,con_model_new.xnew,
+                                   'folder',zoom_in_list=zoom_list,save=True,
+                                       save_name=save_folder+str(run_number)+'_Component_plot',
+                                       min_wave=min_wave,ylim='',max_wave=max_wave,
+                                       individual_surface=dict_individual_flux,
+                                       plot_individual_surface=True,number_plotted_dust=number_plotted_dust)
+
+
+    plot_model_uncertainties_names(flux_obs,sig_obs,lam_obs,array_flux,con_model_new.xnew,
+                                   'folder', zoom_in_list=zoom_list, save=True, save_name=save_folder+str(run_number)+'_Component_plot', min_wave=min_wave,ylim='',max_wave=max_wave)
+
+
+
+
+    print('...Saved')        
+
+
+if not ignore_spectrum_plot:
+    print('Plotting the residuals..')
+    def plot_residual(flux_obs,sig_obs,wave_obs,interp_fluxes,folder,save=False,
+                                       save_name='',percent=True):
+        # calculate the residual
+        diff=[]
+        for i in range(len(interp_fluxes)):
+            if percent:
+                diff.append(((interp_fluxes[i]-flux_obs)/interp_fluxes[i])*100) # difference in percent
+            else:
+
+                diff.append((interp_fluxes[i]-flux_obs)) # difference in Jy
+
+
+        y_median=np.median(diff,axis=0)
+        y_std=np.percentile(diff,50+68/2,axis=0)
+        y_2std=np.percentile(diff,50+95/2,axis=0)
+        y_3std=np.percentile(diff,50+99.9/2,axis=0)
+        y_std_min=np.percentile(diff,50-68/2,axis=0)
+        y_2std_min=np.percentile(diff,50-95/2,axis=0)
+        y_3std_min=np.percentile(diff,50-99.9/2,axis=0)
+
+
+        fig = plt.figure(figsize=(9,6))
+        ax  = fig.add_subplot(1,1,1)
+        ax.set_xscale('log')
+        ax.set_xlabel(r'$\lambda\rm [\mu m]$', fontsize=20)
+        if percent:
+            ax.set_ylabel(r'$(F_{\rm model}-F_{\rm obs})/F_{\rm model}\cdot100 \, \rm [\%]$', fontsize=20)
+
+        else:
+            ax.set_ylabel(r'$F_{\rm model}- F_{\rm obs} \, \rm [Jy]$', fontsize=20)
+        ax.tick_params(labelsize=15)
+
+        ax.plot(wave_obs,np.zeros(len(wave_obs)),label='Perfect prediction')
+        if not percent:
+            ax.fill_between(wave_obs,sig_obs,-sig_obs,color='tab:blue',alpha=0.5,label=r'$1\sigma_{\rm obs}$')
+
+        ax.fill_between(wave_obs,y_3std_min,y_3std,color='tab:orange',alpha=0.1)
+        ax.fill_between(wave_obs,y_2std_min,y_2std,color='tab:orange',alpha=0.3)
+        ax.fill_between(wave_obs,y_std_min,y_std,color='tab:orange',alpha=0.5)
+        ax.plot(wave_obs,y_median,label='Residual',alpha=1,color='tab:orange')
+
+
+        axbox = ax.get_position()
+        legend = ax.legend(frameon=True,ncol=2,markerscale=0.7,scatterpoints=1,labelspacing=0.0,loc=(axbox.x0-0.02, axbox.y0 - 0.02),fancybox=True)
+        for label in legend.get_texts():
+            label.set_fontsize('large')
+
+        plt.tight_layout()
+        if save:
+            plt.savefig(save_name,bbox_inches='tight')
+        plt.show()
+
+
+
+
+    plot_residual(flux_obs,sig_obs,lam_obs,interp_fluxes,'folder',
+                  save=True,save_name=save_folder+str(run_number)+f'_Residual_percent{reduce_str}.{filetype_fig}',percent=True)
+
+    plot_residual(flux_obs,sig_obs,lam_obs,interp_fluxes,'folder',
+                  save=True,save_name=save_folder+str(run_number)+f'_Residual_jansky{reduce_str}.{filetype_fig}',percent=False)
+
+
+    print('..Saved')
+
+
+
+
+print('Plotting cornerplot multinest...')
+lims=[]
+for i in range(len(header_para)):
+    lims.append([lower_lim[i],upper_lim[i]])  
+
+
+CORNER_KWARGS = dict(
+    smooth=.9,
+    label_kwargs=dict(fontsize=20,rotation=45),
+    title_kwargs=dict(fontsize=24,loc='left'),
+    levels=[0.68, 0.95],
+    quantiles=[0.5],
+    plot_density=False,
+    plot_datapoints=True,
+    fill_contours=True,
+    plot_contours=True,
+    show_titles=True,
+    title_quantiles=[0.16,0.5,0.84],
+    title_fmt='10.4e',
+#        truths=val_obj_conv,
+    range=lims)
+fig = corner.corner(samples[:,:len(header_para)], labels=header_para, color='tomato', **CORNER_KWARGS)
+
+plt.savefig(f'{save_folder}{str(run_number)}_Cornerplot_multinest_parameters{reduce_str}.{filetype_fig}',bbox_inches='tight')
+plt.show()
+
+header_para_slab=list(header_para)+list(header_slab)
+if fit_conti_err or fit_obs_err:
+    header_para_slab+=list(header_sigma)
+    
+lims=[]
+for i in range(len(header_para_slab)):
+    lims.append([lower_lim[i],upper_lim[i]])
+print(len(lims))
+print(np.shape(samples[:,:len(header_para_slab)]))
+
+
+
+CORNER_KWARGS = dict(
+    smooth=.9,
+    label_kwargs=dict(fontsize=20,rotation=45),
+    title_kwargs=dict(fontsize=24,loc='left'),
+    levels=[0.68, 0.95],
+    quantiles=[0.5],
+    plot_density=False,
+    plot_datapoints=True,
+    fill_contours=True,
+    plot_contours=True,
+    show_titles=True,
+    title_quantiles=[0.16,0.5,0.84],
+    title_fmt='10.4e',
+#        truths=val_obj_conv,
+    range=lims)
+fig = corner.corner(samples[:,:len(header_para_slab)], labels=header_para_slab, color='tomato', **CORNER_KWARGS)
+
+plt.savefig(f'{save_folder}{str(run_number)}_Cornerplot_multinest_parameters_all{reduce_str}.{filetype_fig}',bbox_inches='tight')
+plt.show()
+
+print('...Saved')
+
+def nicer_labels(init_abundance=init_abundance,with_size=True):
+    labels=list(init_abundance.keys())
+    new_labels=[]
+    for lab in labels:
+        new_lab=''
+        if 'Silica' in lab:
+            new_lab+='Silica '
+        elif 'Fo_Sogawa' in lab or 'Forsterite' in lab or 'Fo_Zeidler' in lab:
+            new_lab+='Forsterite '
+        elif 'En_Jaeger' in lab or 'Enstatite' in lab:
+            new_lab+='Enstatite  '
+        elif 'Mgolivine' in lab or 'MgOlivine' in lab :
+            new_lab+='Am Mg-olivine '
+        elif 'Olivine' in lab:
+            new_lab+='Olivine '
+        elif 'Mgpyroxene' in lab or 'MgPyroxene' in lab:
+            new_lab+='Am Mg-pyroxene '
+        elif 'Pyroxene' in lab:
+            new_lab+='Pyroxene '
+        elif 'Fayalite' in lab:
+            new_lab+='Fayalite '
+            
+        if with_size:
+            idx=lab.find('_rv')
+            rv=lab[idx+3:idx+6]
+            new_lab+=rv
+        new_labels.append(new_lab)
+    return new_labels
+
+def set_slab_labels(slab_prior_dict):
+    new_labels=[]
+    for key in slab_prior_dict:
+        label=key+': radius'
+        new_labels.append(label)
+    return new_labels
+slab_labels=set_slab_labels(slab_prior_dict=slab_prior_dict)
+
+nicer_labels_output=nicer_labels(init_abundance=init_abundance)
+header_all=list(header_para_slab)+['sc_ir']+['sc_mid']+nicer_labels_output+slab_labels
+ugly_header=list(header_para_slab)+['sc_ir']+['sc_mid']
+for key in init_abundance:
+    ugly_header.append(key)
+ugly_header=ugly_header+slab_labels
+
+
+if sample_all:
+    header_all=list(header_para_slab)+['sc_ir']+['sc_mid']+nicer_labels_output
+    ugly_header=list(header_para_slab)+['sc_ir']+['sc_mid']
+    for key in init_abundance:
+        ugly_header.append(key)
+    
+
+    
+    
+
+'''
+Converting the abundances from meaningless values to relative mass fractions
+If the curves are already given in Kappa, you can set q_curves=False
+'''
+q_curves=True
+# converting the scale factors in 
+if q_curves:
+    factor_dict={}
+    for key in init_abundance:
+
+        with open(dust_path+key,'r') as f:
+            lines=f.readlines()
+        old_data=True
+        for line in lines:
+            if 'density' in line:
+                dens=line.split()[3]
+                old_data=False
+                break
+         
+        idx_rv=key.find('rv')
+        rad=key[idx_rv+2:-4]
+        if old_data:
+            with open(dust_path+key,'r') as f:
+                rad,dens=f.readline().split()[1:3]
+        #print(key,rad,dens)
+        rad=float(rad)
+        dens=float(dens)
+        fact=dens*rad
+        factor_dict[key]=fact
+        for i in range(len(header_all)):
+            if header_all[i]==nicer_labels({key:None})[0]:
+                break
+        tot_samples[:,i]=tot_samples[:,i]*factor_dict[key]
+
+#getting all indices that have abundances
+idxs=[]
+for i in range(len(nicer_labels_output)):
+    idx=np.where(np.array(header_all)==nicer_labels_output[i])[0][0]                                
+    idxs.append(idx)
+#print(idxs)    
+
+tot_samples_rel=tot_samples.copy()
+for i in range(len(tot_samples)):
+    abund=tot_samples[i,idxs].copy()
+    tot=np.sum(abund)
+    rel_abund=abund/tot
+    tot_samples_rel[i,idxs]=rel_abund
+    
+    
+    
+
+
+'''
+Histogram of the dust abundances
+'''
+print('Plotting histograms...')
+
+
+dust_analysis={}
+for idx in idxs:
+    dust_array=tot_samples_rel[:,idx]
+    median=np.median(dust_array)
+    plus_std=np.percentile(dust_array,50+68/2)
+    minus_std=np.percentile(dust_array,50-68/2)
+    dust_analysis[ugly_header[idx]]=[median,plus_std,minus_std]
+
+
+
+dust_analysis_abs={}
+dust_fraction_used={}
+tot_model_number=len(dust_mass_master_ar)
+for i in range(len(idxs)):
+    dust_array=dust_mass_master_ar[:,i]
+    
+    median=np.median(dust_array)
+    plus_std=np.percentile(dust_array,50+68/2)
+    minus_std=np.percentile(dust_array,50-68/2)
+    dust_analysis_abs[ugly_header[idxs[i]]]=[median,plus_std,minus_std]
+    
+    
+    idx_used=np.where(dust_mass_master_ar[:,i]!=0.0)[0]
+    dust_fraction_used[ugly_header[idxs[i]]]=len(idx_used)/tot_model_number
+    
+def plot_histograms(dust_analysis,scale='linear',indicate_regions=True,debug=False):
+    colour_list=['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
+                'tab:brown','tab:pink','tab:gray','tab:olive','tab:cyan']
+    colour_count=0
+    medians=[]
+    plus_stds=[]
+    minus_stds=[]
+    first=True
+    i=0
+    
+    plt.figure()
+    for key in dust_analysis:
+        if debug:
+            print(key)
+        new_dust=False
+        if first:
+            key_old=key
+        if key[0]=='Q':
+            if not first and key[:10]!=key_old[:10]:
+                new_dust=True
+        else:
+            if not first and key[:5]!=key_old[:5]:
+                new_dust=True
+        if debug:
+            print(first,new_dust)
+        if new_dust:
+            x_range=np.arange(len(medians))+i-len(medians)+1
+            idx_key=key_old.find('rv')
+            label=nicer_labels({key_old:None},with_size=False)[0]
+            if debug:
+                print('Plotting..')
+                print(i)
+                print(key_old)
+                print(x_range)
+                print(medians)
+                print(plus_stds)
+                print(minus_stds)
+                print(key_old[:idx_key])
+                print(label)
+            
+            
+            while colour_count>=len(colour_list):
+                colour_count=colour_count-len(colour_list)
+            if indicate_regions:
+                plt.fill_between([x_range[0]-0.5,x_range[-1]+0.5],
+                                 y1=[1,1],y2=[0.95,0.95],alpha=0.7,color=colour_list[colour_count])
+            plt.bar(x_range, medians,label=label,color=colour_list[colour_count])
+            
+
+            plt.errorbar(x_range, medians,yerr=[minus_stds,plus_stds],color='black',linestyle='',capsize=2)
+            colour_count+=1    
+            new_dust=False  
+            medians=[]
+            plus_stds=[]
+            minus_stds=[]
+        key_old=key
+        if first:  first=False
+        medians.append(dust_analysis[key][0])
+        plus_stds.append(dust_analysis[key][1]-dust_analysis[key][0])
+        minus_stds.append(dust_analysis[key][0]-dust_analysis[key][2])
+        i+=1
+
+    x_range=np.arange(len(medians))+i-len(medians)+1
+    idx_key=key_old.find('rv')
+    label=nicer_labels({key_old:None},with_size=False)[0]
+    if debug:
+        print('Plotting..')
+        print(key_old)
+        print(x_range)
+        print(medians)
+        print(key_old[:idx_key])
+        print(label)
+
+    if indicate_regions:
+        plt.fill_between([x_range[0]-0.5,x_range[-1]+0.5],
+                         y1=[1,1],y2=[0.95,0.95],alpha=0.7,color=colour_list[colour_count])
+    plt.bar(x_range, medians,label=label,color=colour_list[colour_count])
+    plt.errorbar(x_range, medians,yerr=[minus_stds,plus_stds],color='black',linestyle='',capsize=2)
+    rvs=[]
+    count=0
+    for key in dust_analysis:
+        if debug:
+            print(key)
+        idx=key.find('rv')
+        rv=key[idx+2:-3]
+        rvs.append(rv)
+        count+=1
+    if debug:
+        print(rvs)
+        print(np.arange(1,count+1))
+    plt.xticks(np.arange(1,count+1),rvs)
+    if scale=='log':
+        plt.yscale('log')
+    plt.xlabel(r'Grain size ($\mu m$)')
+    plt.ylabel('Mass fraction')
+    if scale=='linear':
+        plt.ylim(bottom=0,top=1)
+    else:
+        plt.ylim(top=1)
+        
+    plt.legend()
+    if scale=='log':
+        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_fractions_log{reduce_str}.{filetype_fig}',bbox_inches='tight')
+    else:
+        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_fractions{reduce_str}.{filetype_fig}',bbox_inches='tight')
+        
+    plt.show()
+    
+def plot_histograms_abs(dust_analysis_abs,scale='linear',indicate_regions=True,debug=False):
+    colour_list=['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
+                'tab:brown','tab:pink','tab:gray','tab:olive','tab:cyan']
+    colour_count=0
+    medians=[]
+    plus_stds=[]
+    minus_stds=[]
+    first=True
+    i=0
+    
+    max_val=np.max(list(dust_analysis_abs.values()))*1.1
+    min_val=np.min(list(dust_analysis_abs.values()))*0.9
+    
+    plt.figure()
+    for key in dust_analysis_abs:
+        if debug:
+            print(key)
+        new_dust=False
+        if first:
+            key_old=key
+        if key[0]=='Q':
+            if not first and key[:10]!=key_old[:10]:
+                new_dust=True
+        else:
+            if not first and key[:5]!=key_old[:5]:
+                new_dust=True
+        if debug:
+            print(first,new_dust)
+        if new_dust:
+            x_range=np.arange(len(medians))+i-len(medians)+1
+            idx_key=key_old.find('rv')
+            label=nicer_labels({key_old:None},with_size=False)[0]
+            if debug:
+                print('Plotting..')
+                print(i)
+                print(key_old)
+                print(x_range)
+                print(medians)
+                print(plus_stds)
+                print(minus_stds)
+                print(key_old[:idx_key])
+                print(label)
+            
+            
+            while colour_count>=len(colour_list):
+                colour_count=colour_count-len(colour_list)
+            if indicate_regions:
+                plt.fill_between([x_range[0]-0.5,x_range[-1]+0.5],
+                                 y1=[max_val,max_val],y2=[max_val-(max_val-min_val)*0.05,max_val-(max_val-min_val)*0.05],alpha=0.7,color=colour_list[colour_count])
+            plt.bar(x_range, medians,label=label,color=colour_list[colour_count])
+            
+
+            plt.errorbar(x_range, medians,yerr=[minus_stds,plus_stds],color='black',linestyle='',capsize=2)
+            colour_count+=1    
+            new_dust=False  
+            medians=[]
+            plus_stds=[]
+            minus_stds=[]
+        key_old=key
+        if first:  first=False
+        medians.append(dust_analysis_abs[key][0])
+        plus_stds.append(dust_analysis_abs[key][1]-dust_analysis_abs[key][0])
+        minus_stds.append(dust_analysis_abs[key][0]-dust_analysis_abs[key][2])
+        i+=1
+
+    x_range=np.arange(len(medians))+i-len(medians)+1
+    idx_key=key_old.find('rv')
+    label=nicer_labels({key_old:None},with_size=False)[0]
+    if debug:
+        print('Plotting..')
+        print(key_old)
+        print(x_range)
+        print(medians)
+        print(key_old[:idx_key])
+        print(label)
+
+    if indicate_regions:
+        plt.fill_between([x_range[0]-0.5,x_range[-1]+0.5],
+                         y1=[max_val,max_val],y2=[max_val-(max_val-min_val)*0.05,max_val-(max_val-min_val)*0.05],alpha=0.7,color=colour_list[colour_count])
+    plt.bar(x_range, medians,label=label,color=colour_list[colour_count])
+    plt.errorbar(x_range, medians,yerr=[minus_stds,plus_stds],color='black',linestyle='',capsize=2)
+    rvs=[]
+    count=0
+    for key in dust_analysis_abs:
+        if debug:
+            print(key)
+        idx=key.find('rv')
+        rv=key[idx+2:-3]
+        rvs.append(rv)
+        count+=1
+    if debug:
+        print(rvs)
+        print(np.arange(1,count+1))
+    plt.xticks(np.arange(1,count+1),rvs)
+    if scale=='log':
+        plt.yscale('log')
+    plt.xlabel(r'Grain size [$\mu m$]')
+    plt.ylabel(r'$M_{\rm dust, thin} [\rm M_{\rm sun}]$')
+    plt.ylim(bottom=min_val,top=max_val)
+    if scale=='log':
+        plt.yscale('log')
+        
+    plt.legend()
+    if scale=='log':
+        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_abs_log{reduce_str}.{filetype_fig}',bbox_inches='tight')
+    else:
+        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_abs{reduce_str}.{filetype_fig}',bbox_inches='tight')
+        
+    plt.show()
+
+plot_histograms(dust_analysis=dust_analysis,scale='linear')
+
+
+
+plot_histograms_abs(dust_analysis_abs=dust_analysis_abs,scale='linear')
+#plot_histograms(dust_analysis=dust_analysis,scale='log')
+
+
+
+
+def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,scale='linear',scale2='linear',indicate_regions=True,debug=False):
+    colour_list=['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
+                'tab:brown','tab:pink','tab:gray','tab:olive','tab:cyan']
+    colour_count=0
+    medians=[]
+    plus_stds=[]
+    minus_stds=[]
+    used_fract=[]
+    
+
+    custom_lines = []
+    custom_labels= []
+    first=True
+    i=0
+    
+    fig,ax = plt.subplots(figsize=(12,6))
+    for key in dust_analysis:
+        if debug:
+            print(key)
+        new_dust=False
+        if first:
+            key_old=key
+        if key[0]=='Q':
+            if not first and key[:10]!=key_old[:10]:
+                new_dust=True
+        else:
+            if not first and key[:5]!=key_old[:5]:
+                new_dust=True
+        if debug:
+            print(first,new_dust)
+        if new_dust:
+            x_range=np.arange(len(medians))+i-len(medians)+1
+            idx_key=key_old.find('rv')
+            label=nicer_labels({key_old:None},with_size=False)[0]
+            if debug:
+                print('Plotting..')
+                print(i)
+                print(key_old)
+                print(x_range)
+                print(medians)
+                print(plus_stds)
+                print(minus_stds)
+                print(key_old[:idx_key])
+                print(label)
+                print(len(x_range),len(medians),len(used_fract))
+            
+            
+            while colour_count>=len(colour_list):
+                colour_count=colour_count-len(colour_list)
+            if indicate_regions:
+                ax.fill_between([x_range[0]-0.5,x_range[-1]+0.5],
+                                 y1=[1,1],y2=[0.95,0.95],alpha=0.7,color=colour_list[colour_count])
+            ax.bar(x_range, medians,label=label,color=colour_list[colour_count],align='edge',width=-0.48,
+                   linewidth=1,linestyle='dashed',edgecolor='black')
+            
+            ax.scatter(x_range,used_fract,marker='o',c=colour_list[colour_count],edgecolor='black')
+            ax.errorbar(x_range-0.24, medians,yerr=[minus_stds,plus_stds],color='black',linestyle='',capsize=2)
+            custom_lines.append(Line2D([0], [0], color=colour_list[colour_count], lw=4))
+            custom_labels.append(label)
+            colour_count+=1    
+            new_dust=False  
+            medians=[]
+            plus_stds=[]
+            minus_stds=[]
+            used_fract=[]
+        key_old=key
+        if first:  first=False
+        medians.append(dust_analysis[key][0])
+        plus_stds.append(dust_analysis[key][1]-dust_analysis[key][0])
+        minus_stds.append(dust_analysis[key][0]-dust_analysis[key][2])
+        used_fract.append(dust_fraction_used[key])
+        i+=1
+
+    x_range=np.arange(len(medians))+i-len(medians)+1
+    idx_key=key_old.find('rv')
+    label=nicer_labels({key_old:None},with_size=False)[0]
+    if debug:
+        print('Plotting..')
+        print(key_old)
+        print(x_range)
+        print(medians)
+        print(key_old[:idx_key])
+        print(label)
+
+    if indicate_regions:
+        ax.fill_between([x_range[0]-0.5,x_range[-1]+0.5],
+                         y1=[1,1],y2=[0.95,0.95],alpha=0.7,color=colour_list[colour_count])
+    ax.bar(x_range, medians,label=label,color=colour_list[colour_count],align='edge',width=-0.48,
+           linewidth=1,linestyle='dashed',edgecolor='black')
+    ax.errorbar(x_range-0.24, medians,yerr=[minus_stds,plus_stds],color='black',linestyle='',capsize=2)
+    ax.scatter(x_range,used_fract,marker='o',c=colour_list[colour_count],edgecolor='black')
+            
+    custom_lines.append(Line2D([0], [0], color=colour_list[colour_count], lw=4))
+    custom_labels.append(label)
+    if scale=='log':
+        plt.yscale('log')
+    ax.set_xlabel(r'Grain size [$\mu m$]')
+    ax.set_ylabel('$f_{\mathrm{mass}}$ \n $f_{ \mathrm{model}}$')
+    if scale=='linear':
+        ax.set_ylim(bottom=0,top=1)
+    else:
+        ax.set_ylim(top=1)
+        
+        
+        
+    ax2=ax.twinx()   
+    colour_count=0
+    medians=[]
+    plus_stds=[]
+    minus_stds=[]
+    first=True
+    i=0
+    
+    max_val=np.max(list(dust_analysis_abs.values()))*1.1
+    min_val=np.min(list(dust_analysis_abs.values()))*0.9
+    
+    for key in dust_analysis_abs:
+        if debug:
+            print(key)
+        new_dust=False
+        if first:
+            key_old=key
+        if key[0]=='Q':
+            if not first and key[:10]!=key_old[:10]:
+                new_dust=True
+        else:
+            if not first and key[:5]!=key_old[:5]:
+                new_dust=True
+        if debug:
+            print(first,new_dust)
+        if new_dust:
+            x_range=np.arange(len(medians))+i-len(medians)+1
+            idx_key=key_old.find('rv')
+            label=nicer_labels({key_old:None},with_size=False)[0]
+            if debug:
+                print('Plotting..')
+                print(i)
+                print(key_old)
+                print(x_range)
+                print(medians)
+                print(plus_stds)
+                print(minus_stds)
+                print(key_old[:idx_key])
+                print(label)
+            
+            
+            while colour_count>=len(colour_list):
+                colour_count=colour_count-len(colour_list)
+            ax2.bar(x_range, medians,color=colour_list[colour_count],align='edge',width=0.48,
+           linewidth=1,linestyle='dotted',edgecolor='black')
+            
+
+            ax2.errorbar(x_range+0.24, medians,yerr=[minus_stds,plus_stds],color='black',linestyle='',capsize=2)
+            colour_count+=1    
+            new_dust=False  
+            medians=[]
+            plus_stds=[]
+            minus_stds=[]
+        key_old=key
+        if first:  first=False
+        medians.append(dust_analysis_abs[key][0])
+        plus_stds.append(dust_analysis_abs[key][1]-dust_analysis_abs[key][0])
+        minus_stds.append(dust_analysis_abs[key][0]-dust_analysis_abs[key][2])
+        i+=1
+
+    x_range=np.arange(len(medians))+i-len(medians)+1
+    idx_key=key_old.find('rv')
+    label=nicer_labels({key_old:None},with_size=False)[0]
+    if debug:
+        print('Plotting..')
+        print(key_old)
+        print(x_range)
+        print(medians)
+        print(key_old[:idx_key])
+        print(label)
+
+    ax2.bar(x_range, medians,color=colour_list[colour_count],align='edge',width=0.48,
+           linewidth=1,linestyle='dotted',edgecolor='black')
+    ax2.errorbar(x_range+0.24, medians,yerr=[minus_stds,plus_stds],color='black',linestyle='',capsize=2)
+
+    if scale2=='log':
+        ax2.yscale('log')
+                
+    ax2.set_ylabel(r'$M_{\rm dust, thin} [\rm M_\odot]$')
+    ax2.set_ylim(bottom=min_val,top=max_val)    
+    
+    custom_lines.append(Line2D([0], [0], color='black',linestyle='dashed', lw=2))
+    custom_labels.append(r'$f_{\rm mass}$')
+    
+    custom_lines.append(Line2D([0], [0], color='black',linestyle='dotted', lw=2))
+    custom_labels.append(r'$M_{\rm dust, thin}$')
+    
+    
+    custom_lines.append(Line2D([0], [0], color='w',marker='o',markerfacecolor='black', lw=4))
+    custom_labels.append(r'$f_{\rm model}$')
+    ax.legend(custom_lines,custom_labels)   
+    
+    
+    rvs=[]
+    count=0
+    for key in dust_analysis:
+        if debug:
+            print(key)
+        idx=key.find('rv')
+        rv=key[idx+2:-4]
+        rvs.append(rv)
+        count+=1
+    if debug:
+        print(rvs)
+        print(np.arange(1,count+1))
+    ax.set_xticks(np.arange(1,count+1))
+    ax.set_xticklabels(rvs)
+    if scale=='log':
+        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_complete_plot_log{reduce_str}.{filetype_fig}',bbox_inches='tight')
+    else:
+        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_complete_plot{reduce_str}.{filetype_fig}',bbox_inches='tight')
+        
+    plt.show()
+    
+    
+
+
+
+    
+
+
+plot_histograms_both(dust_analysis=dust_analysis,dust_fraction_used=dust_fraction_used
+                     ,dust_analysis_abs=dust_analysis_abs,scale='linear',scale2='linear',
+                    debug=False)
+
+    
+
+
+
+print('Saved')
+print('Plot molecular cornerplot...')
+#adding header for derived molecular quantaties
+header_derived=[]
+for species in slab_prior_dict:
+    print(species)
+    header_derived.append(species+':\n'+r'$r_{eff}$')
+    header_derived.append(species+':\n'+'t at '+str(low_contribution))
+    header_derived.append(species+':\n'+'t at '+str(high_contribution))
+    header_derived.append(species+':\n'+'logDensCol at '+str(low_contribution))
+    header_derived.append(species+':\n'+'logDensCol at '+str(high_contribution))
+    if radial_version:
+        header_derived.append(species+':\n'+'rout')
+        header_derived.append(species+':\n'+'rin')
+    
+
+    
+# check if rin is 0  all the time
+#this will be the case if we have a single slab emission
+print('Checking if single slab was used and so some of the derived quantities make no sense')
+print('Shape derived header:',len(header_derived))
+print('Shape data array:',np.shape(tot_samples_rel))
+tot_samples_rel_new=tot_samples_rel[:,:-len(header_derived)].copy()
+header_derived_new=[]
+idxs_pop=[]
+for species in slab_prior_dict:
+      
+    idx_pop = np.where(np.array(header_derived)==species+':\n'+'rin')[0][0]
+    if np.min(tot_samples_rel[:,-len(header_derived)+idx_pop])==np.max(tot_samples_rel[:,-len(header_derived)+idx_pop]):
+        idxs_pop.append(idx_pop)
+        idx_pop = np.where(np.array(header_derived)==species+':\n'+'rout')[0][0]
+        idxs_pop.append(idx_pop)
+        
+
+for i in range(len(header_derived)):
+    if i not in idxs_pop:
+        header_derived_new.append(header_derived[i])
+        appendix=np.expand_dims(tot_samples_rel[:,-len(header_derived)+i],axis=1)
+        print('shape appendix',np.shape(appendix))
+        print('shape core',np.shape(tot_samples_rel_new))
+        
+        tot_samples_rel_new=np.append(tot_samples_rel_new,appendix,axis=1)
+header_derived=header_derived_new
+tot_samples_rel=tot_samples_rel_new
+print('Shape new derived header:',len(header_derived))
+print('Shape new data array:',np.shape(tot_samples_rel))
+
+CORNER_KWARGS = dict(
+    smooth=.9,
+    label_kwargs=dict(fontsize=20,rotation=45),
+    title_kwargs=dict(fontsize=24,loc='left'),
+    levels=[0.68, 0.95],
+    quantiles=[0.5],
+    plot_density=False,
+    plot_datapoints=True,
+    fill_contours=True,
+    plot_contours=True,
+    
+    title_quantiles=[0.16,0.5,0.84],
+    show_titles=True)
+#        truths=val_obj_conv,)
+fig = corner.corner(tot_samples_rel[:,-len(header_derived):], labels=header_derived, color='tomato', **CORNER_KWARGS)
+
+plt.savefig(f'{save_folder}{str(run_number)}_Cornerplot_derived_mol{reduce_str}.{filetype_fig}',bbox_inches='tight')
+plt.show()
+
+
+print('Done!')
+
+
+header_all=header_all+header_derived
+
+print(header_all)
+if save_output:
+    np.save(f'{prefix}header_complete_posterior',np.array(header_all))
+    
+print('Saved')
+print('Plot full cornerplot...')
+
+'''
+Here you can change the settings on how the scaling values are displayed
+This means: should they be on log scale and if so where do you cut them.
+
+'''
+display_scale_log=True
+clip_value=1e-25
+scale_ir_log=False  # should the inner rim scaling factor be on a log scale 
+clip_value_ir=1e-10
+scale_mid_log=False # should the midplane scaling factor be on a log scale
+clip_value_mid=1e-10
+
+
+
+if display_scale_log:
+    tot_samples_log_scale=[]
+    for i in range(np.shape(tot_samples_rel)[1]):
+        if header_all[i] in nicer_labels_output:
+
+
+            tot_samples_log_scale.append(np.log10(np.clip(tot_samples_rel[:,i],a_min=clip_value,a_max=None)))
+        elif header_all[i]=='sc_ir' and scale_ir_log:
+            tot_samples_log_scale.append(np.log10(np.clip(tot_samples_rel[:,i],a_min=clip_value_ir,a_max=None)))
+        elif header_all[i]=='sc_mid' and scale_mid_log:
+            tot_samples_log_scale.append(np.log10(np.clip(tot_samples_rel[:,i],a_min=clip_value_mid,a_max=None)))
+            
+        else:
+            tot_samples_log_scale.append(tot_samples_rel[:,i])
+    tot_samples_log_scale=np.array(tot_samples_log_scale).T
+    print(np.shape(tot_samples_log_scale))
+
+
+    
+
+
+selected_posterior=[]
+selected_header=[]
+for i in range(len(header_all)):
+    if all(tot_samples_rel[:,i]==np.max(tot_samples_rel[:,i])):
+        print('-------------------')
+        print('-------------------')
+        print(f'For {header_all[i]} all retrieved values are {np.mean(tot_samples_rel[:,i])}')
+        print(f'Therefore, there is no evidence for {header_all[i]}')
+        print('-------------------')
+        print('-------------------')
+    else:
+        if display_scale_log: 
+            if (header_all[i] in nicer_labels_output) or (header_all[i]=='sc_ir' and scale_ir_log) or(header_all[i]=='sc_mid' and scale_mid_log):
+                selected_header.append(f'log {header_all[i]}')
+            else:
+                selected_header.append(header_all[i])
+            selected_posterior.append(tot_samples_log_scale[:,i])
+        else:
+            selected_header.append(header_all[i])
+        
+            selected_posterior.append(tot_samples_rel[:,i])
+
+selected_posterior=np.array(selected_posterior).T
+print(np.shape(selected_posterior))
+
+
+
+
+print('Writing values to txt file')
+
+
+
+y_median=np.median(tot_samples_rel,axis=0)
+y_std=np.percentile(tot_samples_rel,50+68/2,axis=0)
+
+y_std_min=np.percentile(tot_samples_rel,50-68/2,axis=0)
+
+with open(f'{save_folder}{str(run_number)}_posterior_values{reduce_str}.txt','w') as f:
+    f.write('Parameter Median_value 1sigma_up 1sigma_down \n')
+    for i in range(len(header_all)):
+        name=header_all[i]
+        med=y_median[i]
+        minus=y_std_min[i]
+        plus=y_std[i]
+        if name not in nicer_labels_output:
+            f.write('%10s %.5e %.5e %.5e \n'%(name,med,plus,minus))
+    
+    f.write('-------------------------------------------- \n')
+    f.write('-------------------------------------------- \n')
+    f.write('DUST FRACTIONS \n')
+    f.write('Parameter Median_value 1sigma_up 1sigma_down \n')
+    for key in dust_analysis:
+        name=key
+        med=dust_analysis[key][0]
+        minus=dust_analysis[key][2]
+        plus=dust_analysis[key][1]
+        
+        f.write('%s %.5e %.5e %.5e \n'%(name,med,plus,minus))
+        
+    f.write('-------------------------------------------- \n')
+    f.write('-------------------------------------------- \n')
+    f.write('ABSOLUTE OPTICALLY THIN DUST MASSES [M_sun] \n')
+    f.write('Parameter Median_value 1sigma_up 1sigma_down \n')
+    for key in dust_analysis_abs:
+        name=key
+        med=dust_analysis_abs[key][0]
+        minus=dust_analysis_abs[key][2]
+        plus=dust_analysis_abs[key][1]
+        
+        f.write('%s %.5e %.5e %.5e \n'%(name,med,plus,minus))
+
+
+
+CORNER_KWARGS = dict(
+    smooth=.9,
+    label_kwargs=dict(fontsize=20,rotation=45),
+    title_kwargs=dict(fontsize=24,loc='left'),
+    levels=[0.68, 0.95],
+    quantiles=[0.5],
+    plot_density=False,
+    plot_datapoints=True,
+    fill_contours=True,
+    plot_contours=True,
+    title_quantiles=[0.16,0.5,0.84],
+    title_fmt='10.4e',
+    show_titles=True)
+fig = corner.corner(selected_posterior, labels=selected_header, color='tomato', **CORNER_KWARGS)
+
+plt.savefig(f'{save_folder}{str(run_number)}_Cornerplot_all_parameters{reduce_str}.{filetype_fig}',bbox_inches='tight')
+plt.show()
+print('Done!!')
