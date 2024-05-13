@@ -5,32 +5,31 @@
 This repository gives you all the files to run the DuCKLinG model.  
 It can be run as a forward model or in retrieval with MultiNest or UltraNest.
 
-A description of the model can be seen in [Kaeufer et al. 2024](link) *link to be added*
+A description of the model can be seen in [Kaeufer et al. 2024](https://arxiv.org/abs/2405.06486)
 
-## Install
+## Installation
 
 DuCKLinG does not need any installation it is a Python object.
 There are several Python packages that need to be installed in your environment. Many of them might be installed already.  
-Here is a list of all packages:
+Here is a list of all packages that are loaded in at the beginning of the scripts:
 
 - numpy
 - matplotlib
-- pickle
-- glob
+- pickleshare 
+- glob2 
 - scipy
-- os
 - [spectres](https://pypi.org/project/spectres/)
-- json
+- json5
 - uuid
-- [multiprocessing](https://pypi.org/project/multiprocess/)
+- [multiprocess](https://pypi.org/project/multiprocess/)
 - PyAstronomy
 - corner
 - pymultinest (only needed if MultiNest is run)
-- ast
-- sys
-- importlib
 - argparse
-
+- ultranest (if you want to run ultranest)
+- numba
+- h5py
+- 
 Additionally, it is recommended to install [OpenMPI](https://www.open-mpi.org/) to run the retrieval in parallel.
 
 If you run the multinest retrievel you also need to install multinest for example [here](https://github.com/JohannesBuchner/MultiNest) or [here](https://github.com/farhanferoz/MultiNest).
@@ -39,9 +38,9 @@ If you run the ultranest retrieval (recommended for high dimensional parameter s
 
 ### Download gas files
 
-The molecular emission in DuCKLinG is calculated from a grid of 0D ProDiMo-slab models calculated by Arabhavi et al. (2024).  
-The files are available *insert link*
-
+The molecular emission in DuCKLinG is calculated from a grid of 0D ProDiMo-slab models calculated by [Arabhavi et al. (2024)](https://doi.org/10.1126/science.adi8147).  
+The files are available in this [folder](https://drive.google.com/drive/folders/1XAEgrss9oupWWGo_nNQyHwQFsfMxEiKq?usp=sharing).  
+Download the folder and add it in DuCKLinG/LineData to have the example work without changing the paths.  
 Be aware that this requires about 15 GB of storage. You can also choose to download only the data for the molecules you are interested in.
 
 
@@ -84,9 +83,13 @@ and enjoy some plots.
 
 ## How to run
 
+The idea is that you create an input file that defines all the settings, priors, and observation that you want to use and then you simply execute it the same way as shown for the *retreival example*.
 
 | :exclamation:  Even if you run the retrieval in parallel make sure to first run everything in a single core till the retrieval part of the script starts. This makes sure that the slab grids are already binned to your observation and this is not done N times. |
 |-----------------------------------------|
+
+Below you find a detailed describtion of all the settings specified in the input file. I recommend that you copy the example input file and adjust it to your needs.  
+Start simple, see if it works and then you can make it more complicated.
 
 ### Input file
 
@@ -102,7 +105,8 @@ This is where the settings for background data are provided:
 - run_number: Unique ID of the run you are about to start. All the files will be saved as 'test_'+run_numer
   If bayesian_folder+subfold+'test_'+run_nubmer already exists, the retrieval will be continued at the point where you stopped it the last time
 - dust_path: path to your dust opacity files
-- slab_prefix: the number given to the slab grid. Number 12 is the one provided with this repository. This is the Slab grid by Arabhavi et al. (2024) binned to a spectral resolution of $R=3500,3000,2500,1500$ for channels 1 to 4 of MIRI, respectively.
+- slab_folder: path to the slab grid
+- slab_prefix: the number given to the slab grid. Number 12 is the one provided with this repository. This is the Slab grid by [Arabhavi et al. (2024)](https://doi.org/10.1126/science.adi8147) binned to a spectral resolution of $R=3500,3000,2500,1500$ for channels 1 to 4 of MIRI, respectively.
 - use_ultranest: Set it to True if you are running a ultranest retrieval and to False if you run multinest (it is needed for the plotting routines to know how the output format looks like)
  
 
@@ -119,10 +123,10 @@ This is done with *limit_radial_extent=True* and for example *limit_radius=2* (l
 
 Here we define the setup of the model we want to use.
 
--sample_all: If False, we are using the method described in the DuCKLinG paper to reduce the dimensionality of the parameter space. If you have a lot of spare time, feel free to set it to True and see what happens. This will sample also the linear parameters in a Bayesian way (and take a lot of time).
--use_bb_star: If True a black body is used as the star. If False we load in the stellar spectrum set in the next variable.
--stellar_file : path to the stellar file. For the file format have a look a the example file
--rin_powerlaw: The inner rim is described by a black body. However, you can also opt to sample it as a temperature power law (be aware that you then need to set the parameters for that).
+- sample_all: If False, we are using the method described in the DuCKLinG paper to reduce the dimensionality of the parameter space. If you have a lot of spare time, feel free to set it to True and see what happens. This will sample also the linear parameters in a Bayesian way (and take a lot of time).
+- use_bb_star: If True a black body is used as the star. If False we load in the stellar spectrum set in the next variable.
+- stellar_file : path to the stellar file. For the file format have a look a the example file
+- rin_powerlaw: The inner rim is described by a black body. However, you can also opt to sample it as a temperature power law (be aware that you then need to set the parameters for that).
 - dust_species_list: This is a list with all the dust opacity files that you want to use. The files have to be located in dust_path.
 
 #### fixed parameters
@@ -135,7 +139,8 @@ For doing to sett fixed_paras=True and provide a fixed_dict dictionary with the 
 Finally, we arrived at the heart of the input file.  
 In this section, you are setting the prior ranges for all the parameters you want to retrieve.    
 For the name of the molecules have a look at the slab data that you downloaded. It is important that you are using the names that the files have.  
-Files with molecular_name+'_I' or molecular_name+'_II' use a mix of the 12C and 13C isotopologues (see Arabhavi et al. 2024). 
+Files with molecular_name+'_I' or molecular_name+'_II' use a mix of the 12C and 13C isotopologues (see [Arabhavi et al. 2024](https://doi.org/10.1126/science.adi8147)).   
+If you want multiple components of the same molecule you can simply provide multiple priors for e.g. 'H2O', 'H2O_comp2', 'H2O_comp3'... 
 
 - prior_dict: Prior dictionary for all parameters that are not related to the slab grid (except for q_emis)
 - slab_prior_dict: Prior dictionary for all parameters related to the slab grid. If log_coldens=True to column densities are provided as their logarithm.
