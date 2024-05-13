@@ -23,7 +23,13 @@ from spectres.spectral_resampling_numba import spectres_numba  as spectres
 #from  matplotlib import colormaps as cmaps
 #cm = cmaps['viridis']
 
+
+
 filetype_fig='png'
+plot_last_corner_plot=False
+
+
+
 use_ultranest=False
 
 
@@ -5188,23 +5194,25 @@ with open(f'{save_folder}{str(run_number)}_posterior_values{reduce_str}.txt','w'
         
         f.write('%s %.5e %.5e %.5e \n'%(name,med,plus,minus))
 
+if plot_last_corner_plot:
+
+    CORNER_KWARGS = dict(
+        smooth=.9,
+        label_kwargs=dict(fontsize=20,rotation=45),
+        title_kwargs=dict(fontsize=24,loc='left'),
+        levels=[0.68, 0.95],
+        quantiles=[0.5],
+        plot_density=False,
+        plot_datapoints=True,
+        fill_contours=True,
+        plot_contours=True,
+        title_quantiles=[0.16,0.5,0.84],
+        title_fmt='10.4e',
+        show_titles=True)
 
 
-CORNER_KWARGS = dict(
-    smooth=.9,
-    label_kwargs=dict(fontsize=20,rotation=45),
-    title_kwargs=dict(fontsize=24,loc='left'),
-    levels=[0.68, 0.95],
-    quantiles=[0.5],
-    plot_density=False,
-    plot_datapoints=True,
-    fill_contours=True,
-    plot_contours=True,
-    title_quantiles=[0.16,0.5,0.84],
-    title_fmt='10.4e',
-    show_titles=True)
-fig = corner.corner(selected_posterior, labels=selected_header, color='tomato', **CORNER_KWARGS)
+    fig = corner.corner(selected_posterior, labels=selected_header, color='tomato', **CORNER_KWARGS)
 
-plt.savefig(f'{save_folder}{str(run_number)}_Cornerplot_all_parameters{reduce_str}.{filetype_fig}',bbox_inches='tight')
-plt.show()
+    plt.savefig(f'{save_folder}{str(run_number)}_Cornerplot_all_parameters{reduce_str}.{filetype_fig}',bbox_inches='tight')
+    plt.show()
 print('Done!!')
