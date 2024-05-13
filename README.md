@@ -29,7 +29,7 @@ Here is a list of all packages that are loaded in at the beginning of the script
 - ultranest (if you want to run ultranest)
 - numba
 - h5py
-- 
+  
 Additionally, it is recommended to install [OpenMPI](https://www.open-mpi.org/) to run the retrieval in parallel.
 
 If you run the multinest retrievel you also need to install multinest for example [here](https://github.com/JohannesBuchner/MultiNest) or [here](https://github.com/farhanferoz/MultiNest).
