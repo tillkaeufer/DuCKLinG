@@ -100,6 +100,8 @@ run_folder='run1'
 
 use_ultranest=True
 slice_sampler=True
+
+
     
 try:
     slice_sampler
@@ -108,7 +110,15 @@ try:
 except NameError:
     slice_sampler=False
     print("slice_sampler not set in input file")
-    print('Default is false')
+    print('Default is false')    
+try:
+    slab_folder
+    print('slab_folder')
+    print(slab_folder)
+except NameError:
+    slab_folder='./LineData/'
+    print("slab_folder not set in input file")
+    print('./LineData')
     
     
     
@@ -343,7 +353,7 @@ class complete_model:
     def read_data(self,variables={},dust_species={},slab_dict={},R=0,wavelength_points=[],
                   bb_temp_steps=10,bb_min_temp=10,bb_max_temp=10000,
                   stellar_file ='./MCMAXspec-hae.in',dust_path=dust_path,
-                  slab_folder='./LineData/', slab_only_mode=False,
+                  slab_folder=slab_folder, slab_only_mode=False,
                   slab_prefix='1_',save_binned_data=True,load_binned_data=True,
                   q_files=True,interp_bbody=False,debug=False):
         # loading all the data the model needs
@@ -2624,7 +2634,7 @@ class complete_model:
             plt.ylim(1e-5*max_val,max_val*10)
             plt.legend(loc='best')
             plt.title('disk surface layer')
-            plt.xlabel('wavelength ($\mu$m')
+            plt.xlabel(r'$\lambda$ [$\rm \mu m$]')
             plt.ylabel(r'$F_\nu$ [Jy]')
             plt.show()
         

@@ -1,21 +1,18 @@
 # -----------------------------
 # setting
 # -----------------------------
-bayesian_folder='/home/tkaeufer/LineFitting_project_data/' #folder in which the output of this program should be saved
-dust_path='../dust_model/Q-curves/fitting-Qcurves/Q_GRF/'    #path to the dust data
+bayesian_folder='./Example/' #folder in which the output of this program should be saved
+dust_path='./Q-curves/fitting-Qcurves/Q_GRF/'    #path to the dust data
 
-subfold='Sz28_limit_flux/' #subfolder where the retrieval run is saved
+subfold='test_run/' #subfolder where the retrieval run is saved
 
+
+slab_folder='/home/tkaeufer/LineFitting_project/gas_model/LineData/' # folder where the slab grids are saved
 slab_prefix='12_' #prefix of the slab grid that is used
-run_number=3 #Giving your run a unique ID
+run_number=2 #Giving your run a unique ID
 
 
-
-limit_integrated_flux=True
-limit_flux_dict={}
-limit_flux_dict['C4H2']=4.5e-19
-
-use_ultranest=True
+use_ultranest=False
 
 # -----------------------------
 # -----------------------------
@@ -26,8 +23,8 @@ use_ultranest=True
 #True does not work yet
 sample_all=False #do you want to sample the dust scaling factors in a the bayesian way, otherwise the faster linear scaling is used
 
-use_bb_star=False #Using a black body as the star? otherwise put the file path to your stellar spectrum in 'stellar_file'
-stellar_file ='../JWST_data/Sz28/star_data.txt' # path to the stellar spectrum
+use_bb_star=True #Using a black body as the star? otherwise put the file path to your stellar spectrum in 'stellar_file'
+stellar_file ='./Stellar_files/star_data.txt' # path to the stellar spectrum
 
 rin_powerlaw=False #using a temperature power law as the inner rim? otherwise it's a black body
 
@@ -75,17 +72,18 @@ dust_species_list=[
 
 
 fixed_paras=True
-fixed_dict={#'tstar':3060, #from adityas source SO THIS IS NOT A FINAL VALUE
-            #'rstar':0.616, #stefan-boltzman for 3060K and 0.03L same paper as above
-            'distance':192.245, #aditya
-            'incl':0.0} #because nothing found
+fixed_dict={'tstar':9000,
+            'rstar':2.5, 
+            'distance':140, 
+            'incl':0.0,
+            'log_sigma_obs':-1} 
 
 # -----------------------------
 # Priors
 # -----------------------------
 
 
-prior_dict={#'rstar':[0.1,3],
+prior_dict={
             't_rim': [800,1600],
             'tmin_s': [10,1000],
             'tmax_s': [50,1600],
@@ -93,71 +91,24 @@ prior_dict={#'rstar':[0.1,3],
             'tmax_mp': [300,1600],
             'q_mid': [-1,-0.1],
             'q_thin': [-1,-0.1],
-            'q_emis':[-1,-0.1],
-            'log_sigma_obs':[-5,-1]}
+            'q_emis':[-1,-0.1]}
 
 
 log_coldens=True
-slab_prior_dict={  
-           'NH3':{'ColDens_tmin':[14.00,24],
-                   'ColDens_tmax':[14.00,24],
-                    'tmax':[25,1500],
-                    'tmin':[25,1500]
-                    },                   
-           'CH4_I':{'ColDens_tmin':[14.00,24],
-                   'ColDens_tmax':[14.00,24],
-                    'tmax':[25,1500],
-                    'tmin':[25,1500]
-                    } ,                    
-           'C2H6':{'ColDens_tmin':[14.00,24],
-                   'ColDens_tmax':[14.00,24],
-                    'tmax':[25,1500],
-                    'tmin':[25,1500]
-                    },                    
-           'HCN':{'ColDens_tmin':[14.00,24],
-                   'ColDens_tmax':[14.00,24],
-                    'tmax':[25,1500],
-                    'tmin':[25,1500]
-                    },                     
-           'CH3':{'ColDens_tmin':[14.00,24],
-                   'ColDens_tmax':[14.00,24],
-                    'tmax':[25,600],
-                    'tmin':[25,600]
-                    },                     
-           'C4H2':{'ColDens_tmin':[14.00,24],
-                   'ColDens_tmax':[14.00,24],
-                    'tmax':[25,1500],
-                    'tmin':[25,1500]
-                    },                    
-           'C3H4':{'ColDens_tmin':[14.00,24],
-                   'ColDens_tmax':[14.00,24],
-                    'tmax':[25,600],
-                    'tmin':[25,600]
-                    },                     
-           'C2H2_I':{'ColDens_tmin':[14.00,24],
-                   'ColDens_tmax':[14.00,24],
-                    'tmax':[25,1500],
-                    'tmin':[25,1500]
-                    },                    
-           'C6H6':{'ColDens_tmin':[14.00,24],
-                   'ColDens_tmax':[14.00,24],
-                    'tmax':[25,600],
-                    'tmin':[25,600]
-                    },                  
-           'CO2_II':{'ColDens_tmin':[14.00,24],
-                   'ColDens_tmax':[14.00,24],
-                    'tmax':[25,1500],
+slab_prior_dict={                
+           'CO2':{'ColDens':[14.00,24], #CO2 will be retrieved with a constant column density
+                    'tmax':[25,1500], # and a temperature power law
                     'tmin':[25,1500]
                     },    
-           'HC3N':{'ColDens_tmin':[14.00,24],
+           'H2O':{'ColDens_tmin':[14.00,24], #H2O will be retrieved with a column density power law
                    'ColDens_tmax':[14.00,24],
-                    'tmax':[25,1500],
+                    'tmax':[25,1500], # and a temperature power law
                     'tmin':[25,1500]
                     }
 
 }
 
-            
+# These priors are only relevant if sample_all=True            
 prior_on_log=True #deciding if the prior should be on log or linear scale
                   # if on log scale the numbers should be between -inf and 0
                   # if on linear scale the numbers should be between 0 and 1
@@ -172,11 +123,11 @@ scale_prior={'sc_ir':[-5,0],
 # -----------------------------
 
 import numpy as np
-data=np.loadtxt('../JWST_data/Sz28/version8/spectrum_minds.csv',skiprows=1,dtype='object',delimiter=',')
-min_wave=0.0
-max_wave=17.0
-lam_obs=np.array(data[:,1],dtype='float64')
-flux_obs=np.array(data[:,2],dtype='float64')
+data=np.loadtxt('./Observations/mock_observation.dat',skiprows=1,dtype='object',delimiter=',')
+min_wave=4.9
+max_wave=28.0
+lam_obs=np.array(data[:,0],dtype='float64')
+flux_obs=np.array(data[:,1],dtype='float64')
 idx=np.where(lam_obs<=max_wave)[0]
 lam_obs=lam_obs[idx]
 flux_obs=flux_obs[idx]

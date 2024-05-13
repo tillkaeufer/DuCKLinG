@@ -12,7 +12,6 @@ import corner
 from matplotlib.lines import Line2D
 import pickle 
 
-from pymultinest.solve import solve, run
 import matplotlib.pyplot as plt
 from ast import literal_eval
 
@@ -31,6 +30,7 @@ use_ultranest=False
 #default values that can be overwritten by input
 save_output=False
 save_flux=False
+save_mol_flux=False
 load_output=False
 plot_dust_individual=False
 number_plotted_dust=0
@@ -180,7 +180,16 @@ except NameError:
     log_coldens=False
     print("log_coldens not set in input file")
     print('Default is false')
+
     
+try:
+    slab_folder
+    print('slab_folder')
+    print(slab_folder)
+except NameError:
+    slab_folder='./LineData/'
+    print("slab_folder not set in input file")
+    print('./LineData')   
 old_version=False
 continuum_penalty=False
 
@@ -199,6 +208,8 @@ if use_ultranest:
     print('UltraNest')
 else:
     print('MultiNest')
+    from pymultinest.solve import solve, run
+
 print('-----------------')
 print('-----------------')    
 # here you hav to set the path where you want to save all the runs (bayesian_folder) and the dust_path where your Q-files are
@@ -218,7 +229,6 @@ def powerlaw_density_temp(tmax,tmin,t,sigma_tmin,sigma_tmax):
     return (t/tmax)**p *sigma_max 
 def area(rmin,rmax):
     return np.pi*(rmax**2-rmin**2)
-
 
 def generate_grid(R=1,lambda_0=1,lambda_n=1):
     del_loglam=np.log10(1.0+1.0/R)
@@ -250,6 +260,7 @@ class complete_model:
         self.xnew=[]
         self.nwav=0
         self.freq=[]
+        self.freq_steps=[]
         
         self.compo_ar=[]
         self.scaleparas=[]
@@ -383,7 +394,7 @@ class complete_model:
     def read_data(self,variables={},dust_species={},slab_dict={},R=0,wavelength_points=[],
                   bb_temp_steps=10,bb_min_temp=10,bb_max_temp=10000,
                   stellar_file ='./MCMAXspec-hae.in',dust_path=dust_path,
-                  slab_folder='./LineData/', slab_only_mode=False,
+                  slab_folder=slab_folder, slab_only_mode=False,
                   slab_prefix='1_',save_binned_data=True,load_binned_data=True,
                   q_files=True,interp_bbody=False,debug=False):
         # loading all the data the model needs
@@ -550,6 +561,17 @@ class complete_model:
 
         #converting it to frequencies
         self.freq = np.array((self.c*1e4)/(self.xnew))
+        
+        #calculating the widht of every freqency bin for calculating the intergrated line flux
+        freq_steps=[]
+
+        freq_steps.append(abs(self.freq[0]-self.freq[1]))
+        for i in range(1,len(self.freq)-1):
+            freq_steps.append(abs(self.freq[i-1]-self.freq[i+1])/2)
+
+        freq_steps.append(abs(self.freq[-2]-self.freq[-1]))
+        self.freq_steps=np.array(freq_steps)
+        
         
         
         # pasting the slab data at the indices that corrispond to the slab wavelength
@@ -2387,7 +2409,6 @@ class complete_model:
             
             
         max_values=np.array(max_values)
-        
         #to not devide by 0.0 we set the max value to 1.0 if it is 0.0
         # since the whole component is 0.0 is does't matter
         for i in range(len(max_values)):
@@ -2411,6 +2432,7 @@ class complete_model:
         for key in emission_flux_dict:
             if interp:
                 emission_flux_dict[key]=spline(self.xnew,emission_flux_dict[key],lam_obs)
+
             compo_ar[:,i]=emission_flux_dict[key]/max_values[i]
             i+=1
             
@@ -2447,7 +2469,12 @@ class complete_model:
                 plt.plot(self.xnew,scaleparas[i]*self.emission_flux_individual[key],label=key,alpha=0.7)
                 plt.plot(self.xnew,scaleparas[i]*emission_flux_dict[key],label=key,alpha=0.7)
 
-            tot_flux+=scaleparas[i]*emission_flux_dict[key]
+            if save_mol_flux:
+                scaled_flux=scaleparas[i]*emission_flux_dict[key]
+                self.emission_flux_individual_scaled[key]=scaled_flux
+                tot_flux+=scaled_flux
+            else:
+                tot_flux+=scaleparas[i]*emission_flux_dict[key]
             i+=1
 
         if debug:
@@ -2615,6 +2642,20 @@ class complete_model:
             plt.yscale('log')
         plt.show()
             
+            
+    def calc_integrated_flux(self,mol_name,wave_lims=[]):
+        flux_ar=self.emission_flux_individual_scaled[mol_name]*1e-26 #convert to w/m^2/Hz 
+        if len(wave_lims)==0:
+            freq_steps=self.freq_steps
+        else:
+            idx=np.where(self.xnew<=wave_lims[1])[0]
+            idx1=np.where(self.xnew[idx]>=wave_lims[0])[0]
+            flux_ar=flux_ar[idx[idx1]]
+            freq_steps=self.freq_steps[idx[idx1]]
+        int_flux=np.sum(flux_ar*freq_steps)
+
+        return int_flux           
+    
     def plot(self, plot_midplane=False):
         if plot_midplane:
             plt.figure()
@@ -2634,7 +2675,7 @@ class complete_model:
             plt.ylim(1e-5*max_val,max_val*10)
             plt.legend(loc='best')
             plt.title('disk surface layer')
-            plt.xlabel('wavelength ($\mu$m')
+            plt.xlabel(r'$\lambda$ [$\rm \mu m$]')
             plt.ylabel(r'$F_\nu$ [Jy]')
             plt.show()
         
@@ -2667,7 +2708,6 @@ class complete_model:
         plt.xlabel(r'$\lambda$ [$\rm \mu$m]')
         plt.ylabel(r'$F_\nu$ [Jy]')
         plt.show()
-
 
 
 
@@ -4826,7 +4866,7 @@ def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,scal
     if scale=='log':
         plt.yscale('log')
     ax.set_xlabel(r'Grain size [$\mu m$]')
-    ax.set_ylabel('$f_{\mathrm{mass}}$ \n $f_{ \mathrm{model}}$')
+    ax.set_ylabel('$f_{mass}$ \n $f_{model}$')
     if scale=='linear':
         ax.set_ylim(bottom=0,top=1)
     else:
