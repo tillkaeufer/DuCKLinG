@@ -57,23 +57,25 @@ There is an example input file in the Example folder.
 You can use this as a test ground if everything works.
 
 Run 
-> python retrieval_multinest.py ./path/to/inputfile
+> python retrieval_multinest.py ./Input_files/example_input-multinest.txt
 
 or
 
-> python retrieval_ultranest.py ./path/to/inputfile
+> python retrieval_ultranest.py ./Input_files/example_input.txt
 
 to start the retrieval.
 
 If you want to run it on multiple (N) cores you can use
 
-> mpiexec -n N python retrieval_multinest.py ./path/to/inputfile  
+> mpiexec -n N python retrieval_multinest.py ./Input_files/example_input-multinest.txt  
 
 or  
 
-> mpiexec -n N python retrieval_ultranest.py ./path/to/inputfile
+> mpiexec -n N python retrieval_ultranest.py ./Input_files/example_input.txt
 
 but first run it once on a single core (see warning below).
+
+The example should be reasonable quick in a single core, but for real world problems multiple cores are highly recommended.
 
 After is (hopefully) finished, you can run:
 
@@ -188,8 +190,6 @@ Additionally, it accepts a large range of options to specify your plotting needs
 
 Hopefully, this will plot/save you all the data you are interested in.  
 
-| :exclamation: For retrievals with many parameters it is common that plotting the last corner plot (with all parameters) takes ages and never finishes. Just interrupt the script at that point, all information should already be plotted in other ways.|
-|-----------------------------------------|
 
 ## Licence
 Tbd
