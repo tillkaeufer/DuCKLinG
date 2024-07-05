@@ -470,6 +470,8 @@ class complete_model:
                         save_slab_string=folder
 
                         break
+                    else:
+                        ex_prebin=False     
             if not ex_prebin:
                 print('-----------------------------')
                 print('Found no pre-binned data folder!')
@@ -3509,24 +3511,6 @@ con_model_new.read_data(variables=init_dict,wavelength_points=wave_new,dust_spec
   
 print(con_model)
 
-  
-scatter_obs=False
-
-array_flux=[]
-stellar_components=[]
-rim_components=[]
-midplane_components=[]
-surface_components=[]
-
-tot_samples=[]
-con_model_new=complete_model()
-con_model_new.read_data(variables=init_dict,wavelength_points=wave_new,dust_species=init_abundance,
-                    slab_dict=slab_prior_dict,slab_prefix=slab_prefix,
-                    stellar_file=stellar_file)
-#print(con_model)
-
-  
-print(con_model)
 
   
 def get_scales_parallel(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=False,debug=False):

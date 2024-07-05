@@ -423,6 +423,9 @@ class complete_model:
                         save_slab_string=folder
 
                         break
+                    else:
+                        ex_prebin=False
+
             if not ex_prebin:
                 print('-----------------------------')
                 print('Found no pre-binned data folder!')
