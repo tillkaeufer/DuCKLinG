@@ -83,6 +83,11 @@ After is (hopefully) finished, you can run:
 
 and enjoy some plots.
 
+
+### Exploring the slab grid
+
+If you just want to have a look at the different slab models that are used as input for the model you can use the analysing_slab_grid notebook.
+
 ## How to run
 
 The idea is that you create an input file that defines all the settings, priors, and observation that you want to use and then you simply execute it the same way as shown for the *retreival example*.
