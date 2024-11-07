@@ -42,6 +42,7 @@ The molecular emission in DuCKLinG is calculated from a grid of 0D ProDiMo-slab 
 The files are available in this [folder](https://drive.google.com/drive/folders/1XAEgrss9oupWWGo_nNQyHwQFsfMxEiKq?usp=sharing).  
 Download the folder and add it in DuCKLinG/LineData to have the example work without changing the paths.  
 Be aware that this requires about 15 GB of storage. You can also choose to download only the data for the molecules you are interested in.
+If you want to download the folder using the terminal you can do this by installing gdown (`pip install gdown`) and executing the following command: `gdown --folder https://drive.google.com/drive/folders/1XAEgrss9oupWWGo_nNQyHwQFsfMxEiKq --remaining-ok`
 
 
 ## Getting started
