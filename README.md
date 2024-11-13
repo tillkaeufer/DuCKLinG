@@ -196,6 +196,11 @@ Additionally, it accepts a large range of options to specify your plotting needs
 
 Hopefully, this will plot/save you all the data you are interested in.  
 
+## Troubleshooting
+- It is important to delete MultiNest files when you re-run a model that was interrupted due to any kinds of errors.
+- Nov 13: When you use your own stellar files, comment out 'tstar' and 'rstar' in 'fixed_dict.'
+- If you have your own sigma of your data, comment out 'log_sigma_obs' and define 'sig_obs.'
+- If the path to output directory is too long, Multinest cannot save its output file names properly due to the limits on fortran.
 
 ## Licence
 Tbd
