@@ -196,6 +196,11 @@ Additionally, it accepts a large range of options to specify your plotting needs
 
 Hopefully, this will plot/save you all the data you are interested in.  
 
+## Note
+- sig_obs: you can use pre-calculated uncertainty of the data (same format as wave_obs and flux_obs)
+- 'log_sigma_obs' in 'fixed_dict' is a single uncertainty value in log for all data points
+- 'log_sigma_obs' in 'prior_dict' is prior that the code define to make the best fit to the observational data. The range can be provided as [-5,-2]
+  
 ## Troubleshooting
 - It is important to delete MultiNest files when you re-run a model that was interrupted due to any kinds of errors.
 - Nov 13: When you use your own stellar files, comment out 'tstar' and 'rstar' in 'fixed_dict'.
