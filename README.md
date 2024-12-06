@@ -29,6 +29,7 @@ Here is a list of all packages that are loaded in at the beginning of the script
 - ultranest (if you want to run ultranest)
 - numba
 - h5py
+- dust_extinction
   
 Additionally, it is recommended to install [OpenMPI](https://www.open-mpi.org/) and mpi4py to run the retrieval in parallel.
 
@@ -57,22 +58,18 @@ You can run it and see how different molecular conditions and dust species chang
 There is an example input file in the Example folder.
 You can use this as a test ground if everything works.
 
-Run 
-> python retrieval_multinest.py ./Input_files/example_input-multinest.txt
-
-or
-
-> python retrieval_ultranest.py ./Input_files/example_input.txt
+Run one of the following commands  
+> python retrieval-input.py ./Input_files/example_input-wo_extinction.txt
+> python retrieval-input.py ./Input_files/example_input-wo_extinction_multinest.txt
+> python retrieval-input.py ./Input_files/example_input-extinction.txt
 
 to start the retrieval.
 
 If you want to run it on multiple (N) cores you can use
 
-> mpiexec -n N python retrieval_multinest.py ./Input_files/example_input-multinest.txt  
+> mpiexec -n N python retrieval-input.py ./path/to/inputfile  
 
-or  
 
-> mpiexec -n N python retrieval_ultranest.py ./Input_files/example_input.txt
 
 but first run it once on a single core (see warning below).
 
@@ -115,7 +112,7 @@ This is where the settings for background data are provided:
 - dust_path: path to your dust opacity files
 - slab_folder: path to the slab grid
 - slab_prefix: the number given to the slab grid. Number 12 is the one provided with this repository. This is the Slab grid by [Arabhavi et al. (2024)](https://doi.org/10.1126/science.adi8147) binned to a spectral resolution of $R=3500,3000,2500,1500$ for channels 1 to 4 of MIRI, respectively.
-- use_ultranest: Set it to True if you are running a ultranest retrieval and to False if you run multinest (it is needed for the plotting routines to know how the output format looks like)
+
  
 
 Optional settings to investigate specific behaviours:  
@@ -136,7 +133,7 @@ Here we define the setup of the model we want to use.
 - stellar_file : path to the stellar file. For the file format have a look a the example file
 - rin_powerlaw: The inner rim is described by a black body. However, you can also opt to sample it as a temperature power law (be aware that you then need to set the parameters for that).
 - dust_species_list: This is a list with all the dust opacity files that you want to use. The files have to be located in dust_path.
-
+- if you are using extinction you can add a line that loads the extinction model you are using. An example is provided in the example input files. If you want to use extinction you have to define Rv and E(B-V) in either the fixed_dict or the prior_dict.
 #### fixed parameters
 Setting the fixed parameters.  
 For some parameters, you might want to fix the value in the retrieval (e.g. distance).
@@ -164,8 +161,9 @@ Here you provide a short Python script to load your observation.
 In the end, it is important that flux_obs provided the fluxes in Jansky at the wavelength points lam_obs (in microns).  
 You can also provide the corresponding uncertainties as sig_obs.
 
-#### settings for the retrieval
-
+#### settings for the retrieval  
+- use_ultranest: Set it to True if you are running a ultranest retrieval and to False if you run multinest (it is needed for the plotting routines to know how the output format looks like)
+  
 For UltraNest: 
 - length_ultra: We are using slice_sample for ultanest. Therefore, you need to provide how many steps you are taking. The integer here is multiplied by the number of parameters that you are using to derive the number of steps. 2 works fine in my case. If you want to check if everything converged, double the number, run it again, and see if anything changed.
 
@@ -198,7 +196,6 @@ Hopefully, this will plot/save you all the data you are interested in.
 
 ## Troubleshooting
 - It is important to delete MultiNest files when you re-run a model that was interrupted due to any kinds of errors.
-- Nov 13: When you use your own stellar files, comment out 'tstar' and 'rstar' in 'fixed_dict'.
 - If you have your own sigma of your data, comment out 'log_sigma_obs' and define 'sig_obs'.
 - If the path to output directory is too long, Multinest cannot save its output file names properly due to the limits on fortran.
 
