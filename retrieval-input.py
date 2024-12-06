@@ -16,8 +16,7 @@ import multiprocessing as mp
 from PyAstronomy import pyasl
 import corner
 
-import ultranest
-import ultranest.stepsampler
+
 import matplotlib.pyplot as plt
 
 
@@ -40,6 +39,7 @@ radial_version=True
 run_folder='run1'
 
 use_ultranest=True
+ext_model=None
 #slice_sampler=True
 
 if __name__ == "__main__":
@@ -115,7 +115,13 @@ if 'E(B-V)' in prior_dict or 'E(B-V)' in fixed_dict:
             from dust_extinction.parameter_averages import G23 as ext_model
             print("G23 is the default extinction model")    
 
-
+if use_ultranest:
+    print('UltraNest')
+    import ultranest
+    import ultranest.stepsampler
+else:
+    print('MultiNest')
+    from pymultinest.solve import solve, run
 
     
 try:
@@ -872,25 +878,48 @@ if __name__ == "__main__":
 # # Let's run
 
 # In[25]:
-
-try:
-    n_live_points
-    evidence_tolerance
-    sampling_efficiency
-except NameError:
-    print('Using fast_retrieval:',fast_retrival)
-
-    if fast_retrival:
-        n_live_points = 1000#50
-        evidence_tolerance = 5.0
-        sampling_efficiency = 0.8
-    else:
-        n_live_points = 1000
-        evidence_tolerance = 0.5
-        sampling_efficiency = 0.3
-print('n_live_points',n_live_points)
-print('evidence_tolerance',evidence_tolerance)   
-print('sampling_efficiency',sampling_efficiency)   
+if use_ultranest:
+    try:
+        slice_sampler
+        print('Slice_sampler')
+    except:
+        print('Slice_sampler not set default is True')
+        
+        slice_sampler=True
+        
+    if slice_sampler:
+        try:
+            length_ultra
+            print('length_ultra')
+        except:
+            print('length_ultra not set default is 2')
+            
+            length_ultra=2
+        try:
+            adaptive_nsteps
+            print('Adaptive_nsteps')
+        except:
+            print('Adaptive_nsteps is not set')
+            adaptive_nsteps=False
+else:
+    try:
+        n_live_points
+        evidence_tolerance
+        sampling_efficiency
+    except NameError:
+        print('Using fast_retrieval:',fast_retrival)
+    
+        if fast_retrival:
+            n_live_points = 1000#50
+            evidence_tolerance = 5.0
+            sampling_efficiency = 0.8
+        else:
+            n_live_points = 1000
+            evidence_tolerance = 0.5
+            sampling_efficiency = 0.3
+    print('n_live_points',n_live_points)
+    print('evidence_tolerance',evidence_tolerance)   
+    print('sampling_efficiency',sampling_efficiency)   
 
 if debug:
     print('N dims',len(upper_lim))
@@ -909,38 +938,49 @@ if __name__ == "__main__":
     if not os.path.isfile(f'{prefix}start.time'):
         os.system(f'date > {prefix}start.time')
     if fit_water_ratios:
-    
-        sampler = ultranest.ReactiveNestedSampler(
-        complete_header,
-        loglike_ratios,
-        prior_fast,
-        log_dir=prefix,
-        resume=True)
-    else:
-        sampler = ultranest.ReactiveNestedSampler(
-        complete_header,
-        loglike,
-        prior_fast,
-        log_dir=prefix,
-        resume=True)
-        
-    if not slice_sampler:
-        result = sampler.run(min_num_live_points=400)
+        if use_ultranest:
 
-    if slice_sampler:
-        nsteps = length_ultra * len(complete_header)
-        # create step sampler:
-        sampler.stepsampler = ultranest.stepsampler.SliceSampler(
-            nsteps=nsteps,
-            generate_direction=ultranest.stepsampler.generate_mixture_random_direction,
-            # adaptive_nsteps=False,
-            # max_nsteps=400
-        )
-        result = sampler.run(min_num_live_points=400)
-    sampler.print_results()
+            sampler = ultranest.ReactiveNestedSampler(
+            complete_header,
+            loglike_ratios,
+            prior_fast,
+            log_dir=prefix,
+            resume=True)
+        else:
+            result = solve(LogLikelihood=loglike_ratios, Prior=prior_fast, 
+               n_dims=len(upper_lim), outputfiles_basename=prefix, verbose=True,
+               n_live_points = n_live_points,evidence_tolerance = evidence_tolerance, 
+               sampling_efficiency = sampling_efficiency, importance_nested_sampling=False)
+    else:
+        if use_ultranest:
+    
+            sampler = ultranest.ReactiveNestedSampler(
+            complete_header,
+            loglike,
+            prior_fast,
+            log_dir=prefix,
+            resume=True)
+            
+            if not slice_sampler:
+                result = sampler.run(min_num_live_points=400)
+        
+            if slice_sampler:
+                nsteps = length_ultra * len(complete_header)
+                # create step sampler:
+                sampler.stepsampler = ultranest.stepsampler.SliceSampler(
+                    nsteps=nsteps,
+                    generate_direction=ultranest.stepsampler.generate_mixture_random_direction,
+                    adaptive_nsteps=adaptive_nsteps,
+                    # max_nsteps=400
+                )
+                result = sampler.run(min_num_live_points=400)
+            sampler.print_results()
+        else:
+            result = solve(LogLikelihood=loglike, Prior=prior_fast, 
+                           n_dims=len(upper_lim), outputfiles_basename=prefix, verbose=True,
+                           n_live_points = n_live_points,evidence_tolerance = evidence_tolerance, 
+                           sampling_efficiency = sampling_efficiency, importance_nested_sampling=False)
     if not os.path.isfile(f'{prefix}end.time'):
         os.system(f'date > {prefix}end.time')
-#sampler.plot_run()
-#sampler.plot_trace()
-#sampler.plot_corner()
+
 

@@ -1,18 +1,17 @@
 # -----------------------------
 # setting
 # -----------------------------
-bayesian_folder='./Example/' #folder in which the output of this program should be saved
+bayesian_folder='/data/tk502/DuCKLinG_output/' #folder in which the output of this program should be saved
 dust_path='./Q-curves/fitting-Qcurves/Q_GRF/'    #path to the dust data
 
-subfold='test_run/' #subfolder where the retrieval run is saved
+subfold='no_extinction/' #subfolder where the retrieval run is saved
 
 
-slab_folder='./LineData/' # folder where the slab grids are saved
+slab_folder='/data/tk502/LineData/' # folder where the slab grids are saved
 slab_prefix='12_' #prefix of the slab grid that is used
-run_number=2 #Giving your run a unique ID
+run_number=1 #Giving your run a unique ID
 
 
-use_ultranest=False
 
 # -----------------------------
 # -----------------------------
@@ -66,6 +65,7 @@ dust_species_list=[
                 #'Forsterite4.0.Combined.Kappa_rv4.0.dat',
                 'Forsterite5.0.Combined.Kappa_rv5.0.dat']
 
+
 # -----------------------------
 #fixed parameters
 # -----------------------------
@@ -75,8 +75,7 @@ fixed_paras=True
 fixed_dict={'tstar':9000,
             'rstar':2.5, 
             'distance':140, 
-            'incl':0.0,
-            'log_sigma_obs':-1} 
+            'incl':0.0} 
 
 # -----------------------------
 # Priors
@@ -100,8 +99,7 @@ slab_prior_dict={
                     'tmax':[25,1500], # and a temperature power law
                     'tmin':[25,1500]
                     },    
-           'H2O':{'ColDens_tmin':[14.00,24], #H2O will be retrieved with a column density power law
-                   'ColDens_tmax':[14.00,24],
+           'H2O':{'ColDens':[14.00,24], #H2O will be retrieved with a constant column density 
                     'tmax':[25,1500], # and a temperature power law
                     'tmin':[25,1500]
                     }
@@ -123,17 +121,9 @@ scale_prior={'sc_ir':[-5,0],
 # -----------------------------
 
 import numpy as np
-data=np.loadtxt('./Observations/mock_observation.dat',skiprows=1,dtype='object',delimiter=',')
-min_wave=4.9
-max_wave=28.0
-lam_obs=np.array(data[:,0],dtype='float64')
-flux_obs=np.array(data[:,1],dtype='float64')
-idx=np.where(lam_obs<=max_wave)[0]
-lam_obs=lam_obs[idx]
-flux_obs=flux_obs[idx]
-idx=np.where(lam_obs>=min_wave)[0]
-lam_obs=lam_obs[idx]
-flux_obs=flux_obs[idx]
+lam_obs=np.load('./Observations/mock_observation_wave.npy')
+flux_obs=np.load('./Observations/mock_observation_flux.npy')
+sig_obs=flux_obs*0.03
 
 
 # -----------------------------
@@ -141,10 +131,14 @@ flux_obs=flux_obs[idx]
 # -----------------------------
 
 #for ultranest
-length_ultra=2
+
+use_ultranest=False
+slice_sampler=True
+length_ultra=2 #only relevant if slice_sampler=True
+adaptive_nsteps=False #only relevant if slice_sampler=True e.g. 'move-distance'
 
 #for multinest
-fast_retrival=False #accuracy setting of multinest 
+fast_retrival=True #accuracy setting of multinest 
 #alternetavly you get set the specific settings
 #n_live_points = 400
 #evidence_tolerance = 0.5

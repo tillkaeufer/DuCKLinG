@@ -9,7 +9,7 @@ subfold='extinction/' #subfolder where the retrieval run is saved
 
 slab_folder='/data/tk502/LineData/' # folder where the slab grids are saved
 slab_prefix='12_' #prefix of the slab grid that is used
-run_number=1 #Giving your run a unique ID
+run_number=2 #Giving your run a unique ID
 
 
 
@@ -137,8 +137,9 @@ sig_obs=flux_obs*0.03
 #for ultranest
 
 use_ultranest=True
-slice_sampler=False
-length_ultra=2
+slice_sampler=True
+length_ultra=2 #only relevant if slice_sampler=True
+adaptive_nsteps=False #only relevant if slice_sampler=True e.g. 'move-distance'
 
 #for multinest
 fast_retrival=False #accuracy setting of multinest 

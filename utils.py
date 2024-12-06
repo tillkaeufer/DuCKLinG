@@ -2238,7 +2238,7 @@ class complete_model:
                     print('Summing up',time8-time7)
 
 
-            return tot_flux
+            return self.tot_flux
         
         
         
