@@ -147,7 +147,10 @@ Finally, we arrived at the heart of the input file.
 In this section, you are setting the prior ranges for all the parameters you want to retrieve.    
 For the name of the molecules have a look at the slab data that you downloaded. It is important that you are using the names that the files have.  
 Files with molecular_name+'_I' or molecular_name+'_II' use a mix of the 12C and 13C isotopologues (see [Arabhavi et al. 2024](https://doi.org/10.1126/science.adi8147)).   
-If you want multiple components of the same molecule you can simply provide multiple priors for e.g. 'H2O', 'H2O_comp2', 'H2O_comp3'... 
+If you want multiple components of the same molecule you can simply provide multiple priors for e.g. 'H2O', 'H2O_comp2', 'H2O_comp3'...   
+If you are using molecular absorption just call the molecules '_absorp' (e.g. 'H2O_absorp'). You can combine molecular emission and absorption to your liking. If you are using temperature power laws for the absorption the exponent will be the same as the emission exponent. If you need an independent parameter, please let me know.  
+Multiple absorption components of the same molecule can be introduced by combining '_absorp' and '_comp' (e.g. 'H2O_absorp_comp2').  
+
 
 - prior_dict: Prior dictionary for all parameters that are not related to the slab grid (except for q_emis)
 - slab_prior_dict: Prior dictionary for all parameters related to the slab grid. If log_coldens=True to column densities are provided as their logarithm.
