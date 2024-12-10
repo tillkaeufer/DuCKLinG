@@ -62,6 +62,7 @@ Run one of the following commands
 > python retrieval-input.py ./Input_files/example_input-wo_extinction.txt
 > python retrieval-input.py ./Input_files/example_input-wo_extinction_multinest.txt
 > python retrieval-input.py ./Input_files/example_input-extinction.txt
+> python retrieval-input.py ./Input_files/example_input-absorption.txt 
 
 to start the retrieval.
 
@@ -132,7 +133,8 @@ Here we define the setup of the model we want to use.
 - use_bb_star: If True a black body is used as the star. If False we load in the stellar spectrum set in the next variable.
 - stellar_file : path to the stellar file. For the file format have a look a the example file
 - rin_powerlaw: The inner rim is described by a black body. However, you can also opt to sample it as a temperature power law (be aware that you then need to set the parameters for that).
-- dust_species_list: This is a list with all the dust opacity files that you want to use. The files have to be located in dust_path.
+- dust_species_list: This is a list with all the dust opacity files that you want to use. The files have to be located in dust_path. If you don't want to use this option just delete the list and delete all the surface layer parameters from the dictionaries as well.
+- absorp_species_list: If you want to recreated dust absorption features instead of emission you can use this list to provide the dust opacity files that you want to use. The files have to be located in dust_path. Make sure that you use the absorption parameters then as well (e.g. tmax_abs, tmin_abs, and q_abs or 'temp_abs'). If you leave this list empty dust absorption will be ignored. 
 - if you are using extinction you can add a line that loads the extinction model you are using. An example is provided in the example input files. If you want to use extinction you have to define Rv and E(B-V) in either the fixed_dict or the prior_dict.
 #### fixed parameters
 Setting the fixed parameters.  
