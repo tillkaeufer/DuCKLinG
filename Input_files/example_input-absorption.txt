@@ -1,0 +1,145 @@
+# -----------------------------
+# setting
+# -----------------------------
+bayesian_folder='/data/tk502/DuCKLinG_output/' #folder in which the output of this program should be saved
+dust_path='./Q-curves/fitting-Qcurves/Q_GRF/'    #path to the dust data
+
+subfold='absorption/' #subfolder where the retrieval run is saved
+
+
+slab_folder='/data/tk502/LineData/' # folder where the slab grids are saved
+slab_prefix='12_' #prefix of the slab grid that is used
+run_number=1 #Giving your run a unique ID
+
+
+
+# -----------------------------
+# -----------------------------
+# Parameters
+# -----------------------------
+# -----------------------------
+
+#True does not work yet
+sample_all=False #do you want to sample the dust scaling factors in a the bayesian way, otherwise the faster linear scaling is used
+
+use_bb_star=True #Using a black body as the star? otherwise put the file path to your stellar spectrum in 'stellar_file'
+stellar_file ='./Stellar_files/star_data.txt' # path to the stellar spectrum
+
+rin_powerlaw=False #using a temperature power law as the inner rim? otherwise it's a black body
+
+absorp_species_list=[
+                'MgOlivine0.1.Combined.Kappa_rv0.1.dat',
+                #'MgOlivine1.0.Combined.Kappa_rv1.0.dat',
+                'MgOlivine2.0.Combined.Kappa_rv2.0.dat',
+                #'MgOlivine3.0.Combined.Kappa_rv3.0.dat',
+                #'MgOlivine4.0.Combined.Kappa_rv4.0.dat',
+                'MgOlivine5.0.Combined.Kappa_rv5.0.dat',
+                
+                
+                'MgPyroxene0.1.Combined.Kappa_rv0.1.dat',
+                #'MgPyroxene1.0.Combined.Kappa_rv1.0.dat',
+                'MgPyroxene2.0.Combined.Kappa_rv2.0.dat',
+                #'MgPyroxene3.0.Combined.Kappa_rv3.0.dat',
+                #'MgPyroxene4.0.Combined.Kappa_rv4.0.dat',
+                'MgPyroxene5.0.Combined.Kappa_rv5.0.dat',
+                
+                
+                'Silica0.1.Combined.Kappa_rv0.1.dat',
+                #'Silica1.0.Combined.Kappa_rv1.0.dat',
+                'Silica2.0.Combined.Kappa_rv2.0.dat',
+                #'Silica3.0.Combined.Kappa_rv3.0.dat',
+                #'Silica4.0.Combined.Kappa_rv4.0.dat',
+                'Silica5.0.Combined.Kappa_rv5.0.dat',
+
+                'Enstatite0.1.Combined.Kappa_rv0.1.dat',
+                #'Enstatite1.0.Combined.Kappa_rv1.0.dat',
+                'Enstatite2.0.Combined.Kappa_rv2.0.dat',
+                #'Enstatite3.0.Combined.Kappa_rv3.0.dat',
+                #'Enstatite4.0.Combined.Kappa_rv4.0.dat',
+                'Enstatite5.0.Combined.Kappa_rv5.0.dat',
+
+                'Forsterite0.1.Combined.Kappa_rv0.1.dat',
+                #'Forsterite1.0.Combined.Kappa_rv1.0.dat',
+                'Forsterite2.0.Combined.Kappa_rv2.0.dat',
+                #'Forsterite3.0.Combined.Kappa_rv3.0.dat',
+                #'Forsterite4.0.Combined.Kappa_rv4.0.dat',
+                'Forsterite5.0.Combined.Kappa_rv5.0.dat']
+
+# -----------------------------
+#fixed parameters
+# -----------------------------
+
+
+fixed_paras=True
+fixed_dict={'tstar':9000,
+            'rstar':2.5, 
+            'distance':140, 
+            'incl':0.0} 
+
+# -----------------------------
+# Priors
+# -----------------------------
+
+
+prior_dict={
+            't_rim': [800,1600],
+            'tmin_abs': [10,1000],
+            'tmax_abs': [50,1600],
+            'tmin_mp': [10,1000],
+            'tmax_mp': [300,1600],
+            'q_mid': [-1,-0.1],
+            'q_abs': [-1,-0.1],
+            'q_emis':[-1,-0.1]}
+
+
+log_coldens=True
+slab_prior_dict={                
+           'CO2':{'ColDens':[14.00,24], #CO2 will be retrieved with a constant column density
+                    'tmax':[25,1500], # and a temperature power law
+                    'tmin':[25,1500]
+                    },    
+           'H2O':{'ColDens':[14.00,24], #H2O will be retrieved with a constant column density 
+                    'tmax':[25,1500], # and a temperature power law
+                    'tmin':[25,1500]
+                    }
+
+}
+
+# These priors are only relevant if sample_all=True            
+prior_on_log=True #deciding if the prior should be on log or linear scale
+                  # if on log scale the numbers should be between -inf and 0
+                  # if on linear scale the numbers should be between 0 and 1
+prior_scaling_dust=[-5,0]
+scale_prior={'sc_ir':[-5,0],
+             'sc_mid':[-5,0]}
+             
+             
+             
+# -----------------------------
+#code to load observations
+# -----------------------------
+
+import numpy as np
+lam_obs=np.load('./Observations/mock_observation_dust_absorp_wave.npy')
+flux_obs=np.load('./Observations/mock_observation_dust_absorp_flux.npy')
+sig_obs=flux_obs*0.03
+
+
+# -----------------------------
+# Retrieval settings
+# -----------------------------
+
+#for ultranest
+
+use_ultranest=True
+slice_sampler=True
+length_ultra=2 #only relevant if slice_sampler=True
+adaptive_nsteps=False #only relevant if slice_sampler=True e.g. 'move-distance'
+
+#for multinest
+fast_retrival=False #accuracy setting of multinest 
+#alternetavly you get set the specific settings
+#n_live_points = 400
+#evidence_tolerance = 0.5
+#sampling_efficiency = 0.3
+

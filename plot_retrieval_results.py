@@ -45,6 +45,8 @@ reduce_posterior=False
 ignore_spectrum_plot=False
 fit_water_ratios=False
 ext_model=None
+sur_powerlaw=False
+abs_powerlaw=False
 
 if __name__ == "__main__":
     input_file=sys.argv[1]
@@ -194,7 +196,18 @@ if 'E(B-V)' in prior_dict or 'E(B-V)' in fixed_dict:
             from dust_extinction.parameter_averages import G23 as ext_model
             print("G23 is the default extinction model")  
 
-
+try:
+    absorp_species_list
+except NameError:
+    absorp_species_list=[]
+    print("absorp_species_list not set in input file")
+    print("and set to empty")
+try:
+    dust_species_list
+except NameError:
+    dust_species_list=[]
+    print("dust_species_list not set in input file")
+    print("and set to empty")
 try:
     log_coldens
 except NameError:
@@ -366,9 +379,9 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
     if sample_all:
         
         if fit_conti_err or fit_obs_err:
-            var_dict,abundance_dict,slab_dict,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
+            var_dict,abundance_dict,slab_dict,abundance_dict_absorp,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
         else:
-            var_dict,abundance_dict,slab_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,scale_prior=scale_prior)
+            var_dict,abundance_dict,slab_dict,abundance_dict_absorp=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior)
 
     else:    
         if fit_conti_err or fit_obs_err:
@@ -380,6 +393,8 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
         print(var_dict)
         if sample_all:
             print(abundance_dict)
+            print(abundance_dict_absorp)
+            
         print(slab_dict)
         if fit_conti_err or fit_obs_err:
             print(sigma_dict)
@@ -391,6 +406,12 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
                 abundance_dict[key]=fixed_dict[key]
                 if debug:
                     print('..added to abundance_dict')
+            elif key in header_absorp:
+                key_abs=key[:-7]
+                abundance_dict_absorp[key_abs]=fixed_dict[key]
+                if debug:
+                    print('..added to abundance_dict_absorp')
+               
             elif key in init_dict or key=='distance':
                 var_dict[key]=fixed_dict[key]
                 if debug:
@@ -422,9 +443,17 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
     penalty=float(-10**100.0)
     sum_penalty=float(-10**100.0)
     trigger_penalty=False
-    if var_dict['tmin_s']>=var_dict['tmax_s']:
-        trigger_penalty=True
-        sum_penalty+=penalty*(var_dict['tmin_s']-var_dict['tmax_s'])
+    if use_dust_emis:
+        if sur_powerlaw:
+            if var_dict['tmin_s']>=var_dict['tmax_s']:
+                trigger_penalty=True
+                sum_penalty+=penalty*(var_dict['tmin_s']-var_dict['tmax_s'])
+    
+    if use_dust_absorp:
+        if abs_powerlaw:
+            if var_dict['tmin_abs']>=var_dict['tmax_abs']:
+                trigger_penalty=True
+                sum_penalty+=penalty*(var_dict['tmin_abs']-var_dict['tmax_abs'])
     
     if var_dict['tmin_mp']>=var_dict['tmax_mp']:
         trigger_penalty=True
@@ -452,13 +481,14 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
         time_2=time()    
     if sample_all:
         interp_flux=con_model.run_model_normalized(variables=var_dict,dust_species=abundance_dict,
-                                                slab_dict=slab_dict,max_flux_obs=max_flux_obs)
+                                                slab_dict=slab_dict,absorp_species=abundance_dict_absorp,max_flux_obs=max_flux_obs)
 
 
         
     else:
         interp_flux=con_model.run_fitted_to_obs(variables=var_dict,
                                                 dust_species=init_abundance,
+                                                absorp_species=init_abundance_absorp,
                                                 slab_dict=slab_dict,
                                                 flux_obs=flux_obs,lam_obs=lam_obs)
 
@@ -555,9 +585,9 @@ def loglike_run(cube,ndim,nparams,debug=False,timeit=False):
     if sample_all:
         
         if fit_conti_err or fit_obs_err:
-            var_dict,abundance_dict,slab_dict,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
+            var_dict,abundance_dict,slab_dict,abundance_dict_absorp,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
         else:
-            var_dict,abundance_dict,slab_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,scale_prior=scale_prior)
+            var_dict,abundance_dict,slab_dict,abundance_dict_absorp=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior)
 
     else:    
         if fit_conti_err or fit_obs_err:
@@ -569,6 +599,8 @@ def loglike_run(cube,ndim,nparams,debug=False,timeit=False):
         print(var_dict)
         if sample_all:
             print(abundance_dict)
+            print(abundance_dict_absorp)
+            
         print(slab_dict)
         if fit_conti_err or fit_obs_err:
             print(sigma_dict)
@@ -580,6 +612,11 @@ def loglike_run(cube,ndim,nparams,debug=False,timeit=False):
                 abundance_dict[key]=fixed_dict[key]
                 if debug:
                     print('..added to abundance_dict')
+            elif key in header_absorp:
+                key_abs=key[:-7]
+                abundance_dict_absorp[key_abs]=fixed_dict[key]
+                if debug:
+                    print('..added to abundance_dict_absorp')
             elif key in init_dict or key=='distance':
                 var_dict[key]=fixed_dict[key]
                 if debug:
@@ -592,6 +629,7 @@ def loglike_run(cube,ndim,nparams,debug=False,timeit=False):
                 sigma_dict['sigma_obs']=10**fixed_dict[key]
                 if debug:
                     print('..added to sigma_dict')
+
             elif ':' in key:
                 idx=key.find(':')
                 if key[:idx] not in slab_dict:
@@ -601,45 +639,73 @@ def loglike_run(cube,ndim,nparams,debug=False,timeit=False):
 
                 slab_dict[key[:idx]][key[idx+1:]]=fixed_dict[key]
             else:
-                print(f'{key} is in fixed_dict but not used for the retrieval. Please check that.') 
+                print(f'{key} is in fixed_dict but not used for the retrieval. Please check that.')
+  
                 
     var_dict['bb_star']=use_bb_star
     
     #checking if the physics works out
-    penalty=float(-10**20.0)
-    if var_dict['tmin_s']>=var_dict['tmax_s']:
-        return penalty
+    penalty=float(-10**100.0)
+    sum_penalty=float(-10**100.0)
+    trigger_penalty=False
+    if use_dust_emis:
+        if sur_powerlaw:
+            if var_dict['tmin_s']>=var_dict['tmax_s']:
+                trigger_penalty=True
+                sum_penalty+=penalty*(var_dict['tmin_s']-var_dict['tmax_s'])
+    
+    if use_dust_absorp:
+        if abs_powerlaw:
+            if var_dict['tmin_abs']>=var_dict['tmax_abs']:
+                trigger_penalty=True
+                sum_penalty+=penalty*(var_dict['tmin_abs']-var_dict['tmax_abs'])
     
     if var_dict['tmin_mp']>=var_dict['tmax_mp']:
-        return penalty
+        trigger_penalty=True
+        sum_penalty+=penalty*(var_dict['tmin_mp']-var_dict['tmax_mp'])
     
     if 't_rim' not in var_dict.keys():
         if var_dict['tmin_rim']>=var_dict['tmax_rim']:
-            return penalty
+            trigger_penalty=True
+            sum_penalty+=penalty*(var_dict['tmin_rim']-var_dict['tmax_rim'])
     
     for key in slab_dict:
         if 'tmin' in slab_dict[key]: 
             if slab_dict[key]['tmin']>=slab_dict[key]['tmax']:
-                return penalty
+                trigger_penalty=True
+                sum_penalty+=penalty*(slab_dict[key]['tmin']-slab_dict[key]['tmax'])
         if coldens_restriction:
             if 'ColDens_tmin' in slab_dict[key]: 
                 if slab_dict[key]['ColDens_tmin']>slab_dict[key]['ColDens_tmax']:
-                    return penalty
-    
+                    trigger_penalty=True
+                    sum_penalty+=penalty*(slab_dict[key]['ColDens_tmin']-slab_dict[key]['ColDens_tmax'])
+    if trigger_penalty:
+        return sum_penalty
+
     if timeit:
         time_2=time()    
     if sample_all:
         interp_flux=con_model.run_model_normalized(variables=var_dict,dust_species=abundance_dict,
-                                                slab_dict=slab_dict,max_flux_obs=max_flux_obs)
+                                                slab_dict=slab_dict,absorp_species=abundance_dict_absorp,max_flux_obs=max_flux_obs)
 
 
         
     else:
         interp_flux=con_model.run_fitted_to_obs(variables=var_dict,
                                                 dust_species=init_abundance,
+                                                absorp_species=init_abundance_absorp,
                                                 slab_dict=slab_dict,
                                                 flux_obs=flux_obs,lam_obs=lam_obs)
 
+    if limit_integrated_flux:
+        for key in slab_dict:
+            if key in limit_flux_dict:
+                int_flux=con_model.calc_integrated_flux(key)
+                if int_flux>limit_flux_dict[key]:
+                    trigger_penalty=True
+                    sum_penalty+=penalty*(1+int_flux-limit_flux_dict[key])
+        if trigger_penalty:
+            return sum_penalty                   
     if timeit:
         time_3=time()
 
@@ -717,15 +783,6 @@ def loglike_run(cube,ndim,nparams,debug=False,timeit=False):
     else:
         return loglikelihood
 
-def prior_fast(cube):
-    new_cube=(cube)*(upper_lim-lower_lim)+lower_lim
-    return new_cube
-def prior_run_fast(cube,ndim,nparams):
-    
-    cube=(cube)*(upper_lim-lower_lim)+lower_lim
-    #return new_cube
-
-
 # In[9]:
 
 
@@ -775,6 +832,9 @@ prefix = fold_string+'test_'+str(run_number)
 init_abundance={}
 for entry in dust_species_list:
     init_abundance[entry]=None
+init_abundance_absorp={}
+for entry in absorp_species_list:
+    init_abundance_absorp[entry]=None
 
 # are there parameters that you want to fix to values instead of fitting them
 # 
@@ -806,13 +866,36 @@ if sample_all:
     prior_dict_dust=init_abundance.copy()
     for key in prior_dict_dust:
         prior_dict_dust[key]=prior_scaling_dust
-    #print(prior_dict_dust)
 
+
+
+    prior_dict_dust_abs=init_abundance_absorp.copy()
+    for key in prior_dict_dust_abs:
+        prior_dict_dust_abs[key]=prior_scaling_abs
+
+
+if 'tmax_s' in prior_dict or 'temp_s' in prior_dict:
+    use_dust_emis=True
+    if 'tmax_s' in prior_dict:
+        sur_powerlaw=True
+    else:
+        sur_powerlaw=False
+else:
+    use_dust_emis=False
+if 'tmax_abs' in prior_dict or 'temp_abs' in prior_dict:
+    use_dust_absorp=True
+    if 'tmax_abs' in prior_dict:
+        abs_powerlaw=True
+    else:
+        abs_powerlaw=False
+else:
+    use_dust_absorp=False
 
 # setting up the dictonaries and headers that will be used
 
 init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw,fit_water_ratios=fit_water_ratios,
-                           prior_dict=prior_dict,fixed_dict=fixed_dict,use_extinction=use_extinction)
+                           prior_dict=prior_dict,fixed_dict=fixed_dict,use_extinction=use_extinction,use_dust_emis=use_dust_emis,use_dust_absorp=use_dust_absorp,sur_powerlaw=sur_powerlaw,abs_powerlaw=abs_powerlaw)
+
 
 if 'log_sigma_obs' in prior_dict:
     fit_obs_err=True
@@ -823,18 +906,18 @@ if 'log_sigma_conti' in prior_dict:
 else:
     fit_conti_err=False
 if fit_conti_err or fit_obs_err:
-    header,header_para,header_abund,header_slab,header_sigma=create_header(var_dict=init_dict,
+    header,header_para,header_abund,header_slab,header_absorp,header_sigma=create_header(var_dict=init_dict,
                                                               abundance_dict=init_abundance,
                                                               slab_dict=slab_prior_dict,
                                                               fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,
-                                                              fixed_dict=fixed_dict,prior_dict=prior_dict)
+                                                              fixed_dict=fixed_dict,prior_dict=prior_dict,abundance_dict_absorption=init_abundance_absorp)
 
 else:
-    header,header_para,header_abund,header_slab=create_header(var_dict=init_dict,
+    header,header_para,header_abund,header_slab,header_absorp=create_header(var_dict=init_dict,
                                                               abundance_dict=init_abundance,
                                                               slab_dict=slab_prior_dict,
                                                               fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,
-                                                              fixed_dict=fixed_dict,prior_dict=prior_dict)
+                                                              fixed_dict=fixed_dict,prior_dict=prior_dict,abundance_dict_absorption=init_abundance_absorp)
 upper_lim=[]
 lower_lim=[]
 complete_header=[]
@@ -890,6 +973,7 @@ con_model=complete_model()
 
 if not fit_water_ratios:
     con_model.read_data(variables=init_dict,dust_species=init_abundance,
+                        absorp_species=init_abundance_absorp,
                         slab_dict=slab_prior_dict,slab_prefix=slab_prefix,
                         stellar_file=stellar_file,wavelength_points=lam_obs,
                         dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
@@ -1042,7 +1126,7 @@ surface_components=[]
 
 tot_samples=[]
 con_model_new=complete_model()
-con_model_new.read_data(variables=init_dict,wavelength_points=wave_new,dust_species=init_abundance,
+con_model_new.read_data(variables=init_dict,wavelength_points=wave_new,dust_species=init_abundance,absorp_species=init_abundance_absorp,
                     slab_dict=slab_prior_dict,slab_prefix=slab_prefix,
                     stellar_file=stellar_file,dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
 #print(con_model)
@@ -1054,6 +1138,13 @@ print('Is extinction applied?')
 print(con_model_new.use_extinction)
   
 def get_scales_parallel(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=False,debug=False):
+    if scatter_obs:
+        print('----------------')
+        print('----------------')
+        print('This option has been removed!')
+        print('----------------')
+        print('----------------')
+    
     samp=samples[idx]
     dict_fluxes={}
     sigma_dict={}
@@ -1068,6 +1159,11 @@ def get_scales_parallel(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=Fa
                 abundance_dict[key]=fixed_dict[key]
                 if debug:
                     print('..added to abundance_dict')
+            elif key in header_absorp:
+                key_abs=key[:-7]
+                abundance_dict_absorp[key_abs]=fixed_dict[key]
+                if debug:
+                    print('..added to abundance_dict_absorp')
             elif key in init_dict or key=='distance':
                 var_dict[key]=fixed_dict[key]
                 if debug:
@@ -1096,152 +1192,96 @@ def get_scales_parallel(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=Fa
         if sample_all:
             print(abundance_dict)
         print(slab_dict)
-    if scatter_obs:
-        output=[]
-        for i in range(obs_per_model):
-            if corr_noise:
-                fact=np.random.normal(0.0,1.0)
-                new_flux=flux_obs+fact*sig_obs
-            else:
-                new_flux=scatter_obs_gaussian(flux_obs=flux_obs,sig_obs=sig_obs,lam_obs=lam_obs,plot=False)
-                
-            interp_flux=con_model.run_fitted_to_obs(variables=var_dict,dust_species=init_abundance,
-                                                    slab_dict=slab_dict,flux_obs=flux_obs,lam_obs=lam_obs)
-            scale_facs=con_model.scaleparas
+    interp_flux=con_model.run_fitted_to_obs(variables=var_dict,dust_species=init_abundance,absorp_species=init_abundance_absorp,
+                                            slab_dict=slab_dict,flux_obs=flux_obs,lam_obs=lam_obs)
+    
+    scale_facs=con_model.scaleparas
 
-        #    tot_samples.append(np.append(samp,scale_facs))
-            abundance_dict=init_abundance.copy()
-            var_dict['sc_ir']=scale_facs[0]
-            var_dict['sc_mid']=scale_facs[1]
-            i=2
-            for key in abundance_dict:
-                abundance_dict[key]=scale_facs[i]
-                i+=1
-            for key in slab_dict:
-                scale_facs[i]=np.sqrt(scale_facs[i])
-                slab_dict[key]['radius']=scale_facs[i]
-                i+=1
-            
-            
-            tot_flux=con_model_new.run_model(variables=var_dict,dust_species=abundance_dict,
-                                             slab_dict=slab_dict,output_all=False)
-            
-            
-            #section to get retrieved parameters from mol
-            mol_results_dict=con_model.extract_emission_quantities(low_contribution=low_contribution,high_contribution=high_contribution)
-            list_mol_results=[]
-            
-            for species in mol_results_dict:
-                list_mol_results.append(mol_results_dict[species]['radius_eff'])
-                list_mol_results.append(mol_results_dict[species]['tmin,tmax'][0])
-                list_mol_results.append(mol_results_dict[species]['tmin,tmax'][1])
-                list_mol_results.append(np.log10(mol_results_dict[species]['cmin,cmax'][0]))
-                list_mol_results.append(np.log10(mol_results_dict[species]['cmin,cmax'][1]))
-                if radial_version:
-                    list_mol_results.append(mol_results_dict[species]['rout,rin'][0])
-                    list_mol_results.append(mol_results_dict[species]['rout,rin'][1])
-
-            list_mol_results=np.array(list_mol_results).flatten()
-            
-            
-            dust_mass_dict=con_model_new.calc_dust_masses(dust_path=dust_path,unit='msun')
-            dust_mass_ar=np.array(list(dust_mass_dict.values()))
-            if plot_dust_individual:
-                scale_components=con_model_new.trans_flux
-
-                con_model_new.set_surface(one_output=False)
-                if debug:
-                    for key in abundance_dict:
-                        print(abundance_dict[key],np.max(con_model_new.surface_flux_individual[key]))
-                    print('Max surface fluxes')
-
-                dict_fluxes['individual_surface']={}
-                for key in abundance_dict:    
-                    dict_fluxes['individual_surface'][key]=scale_components*con_model_new.surface_flux_individual[key]*abundance_dict[key]
-                    if debug:
-                        print(np.max(dict_fluxes['individual_surface'][key]))
-
-            if not ignore_spectrum_plot:
-                dict_fluxes['tot_flux']=tot_flux
-                dict_fluxes['rim_flux']=con_model_new.rim_flux
-                dict_fluxes['stellar_flux']=con_model_new.scaled_stellar_flux
-                dict_fluxes['midplane_flux']=con_model_new.midplane_flux
-                dict_fluxes['surface_flux']=con_model_new.surface_flux_tot
-                dict_fluxes['emission_flux']=con_model_new.emission_flux
-                dict_fluxes['interp_flux']=interp_flux
-            output.append([dict_fluxes, np.append(np.append(samp,scale_facs),list_mol_results),dust_mass_ar])
-        return output
-    else:
-        interp_flux=con_model.run_fitted_to_obs(variables=var_dict,dust_species=init_abundance,
-                                                slab_dict=slab_dict,flux_obs=flux_obs,lam_obs=lam_obs)
-        
-        scale_facs=con_model.scaleparas
-
-    #    tot_samples.append(np.append(samp,scale_facs))
-        abundance_dict=init_abundance.copy()
-        var_dict['sc_ir']=scale_facs[0]
-        var_dict['sc_mid']=scale_facs[1]
-        i=2
+#    tot_samples.append(np.append(samp,scale_facs))
+    abundance_dict=init_abundance.copy()
+    abundance_dict_absorp=init_abundance_absorp.copy()
+    var_dict['sc_ir']=scale_facs[0]
+    var_dict['sc_mid']=scale_facs[1]
+    i=2
+    if use_dust_emis:
         for key in abundance_dict:
             abundance_dict[key]=scale_facs[i]
             i+=1
-        for key in slab_dict:
-            
-            scale_facs[i]=np.sqrt(scale_facs[i])
-            slab_dict[key]['radius']=scale_facs[i]
+    if use_dust_absorp:
+        for key in abundance_dict_absorp:
+            abundance_dict_absorp[key]=scale_facs[i]
             i+=1
-        tot_flux=con_model_new.run_model(variables=var_dict,dust_species=abundance_dict,
-                                         slab_dict=slab_dict,output_all=False)
-        #section to get retrieved parameters from mol
 
-        mol_results_dict=con_model_new.extract_emission_quantities(low_contribution=low_contribution,high_contribution=high_contribution)
-        list_mol_results=[]
-
-        for species in mol_results_dict:
-            list_mol_results.append(mol_results_dict[species]['radius_eff'])
-            list_mol_results.append(mol_results_dict[species]['tmin,tmax'][0])
-            list_mol_results.append(mol_results_dict[species]['tmin,tmax'][1])
-            list_mol_results.append(np.log10(mol_results_dict[species]['cmin,cmax'][0]))
-            list_mol_results.append(np.log10(mol_results_dict[species]['cmin,cmax'][1]))
-            if radial_version:
-                list_mol_results.append(mol_results_dict[species]['rout,rin'][0])
-                list_mol_results.append(mol_results_dict[species]['rout,rin'][1])
-                
-        #print(list_mol_results)
-        list_mol_results=np.array(list_mol_results).flatten()
+    for key in slab_dict:
         
+        scale_facs[i]=np.sqrt(scale_facs[i])
+        slab_dict[key]['radius']=scale_facs[i]
+        i+=1
+    tot_flux=con_model_new.run_model(variables=var_dict,dust_species=abundance_dict,absorp_species=abundance_dict_absorp,
+                                     slab_dict=slab_dict,output_all=False)
+    #section to get retrieved parameters from mol
+
+    mol_results_dict=con_model_new.extract_emission_quantities(low_contribution=low_contribution,high_contribution=high_contribution)
+    list_mol_results=[]
+
+    for species in mol_results_dict:
+        list_mol_results.append(mol_results_dict[species]['radius_eff'])
+        list_mol_results.append(mol_results_dict[species]['tmin,tmax'][0])
+        list_mol_results.append(mol_results_dict[species]['tmin,tmax'][1])
+        list_mol_results.append(np.log10(mol_results_dict[species]['cmin,cmax'][0]))
+        list_mol_results.append(np.log10(mol_results_dict[species]['cmin,cmax'][1]))
+        if radial_version:
+            list_mol_results.append(mol_results_dict[species]['rout,rin'][0])
+            list_mol_results.append(mol_results_dict[species]['rout,rin'][1])
+            
+    #print(list_mol_results)
+    list_mol_results=np.array(list_mol_results).flatten()
+    dust_mass_ar=[]
+    dust_mass_absorp_ar=[]
+    if use_dust_emis:
         dust_mass_dict=con_model_new.calc_dust_masses(dust_path=dust_path,unit='msun')
         dust_mass_ar=np.array(list(dust_mass_dict.values()))
         if debug:
             print('Dust mass array')
             print(dust_mass_ar)
-        if plot_dust_individual:
-            scale_components=con_model_new.trans_flux
-
-            con_model_new.set_surface(one_output=False)
-            if debug:
-                for key in abundance_dict:
-                    print(abundance_dict[key],np.max(con_model_new.surface_flux_individual[key]))
-                print('Max surface fluxes')
-
+    if use_dust_absorp:
+        dust_mass_dict=con_model_new.calc_dust_masses(dust_path=dust_path,absorption=True,unit='msun')
+        dust_mass_absorp_ar=np.array(list(dust_mass_dict.values()))
+        if debug:
+            print('Dust mass absorption array')
+            print(dust_mass_absorp_ar)
+    if plot_dust_individual:
+        scale_components=con_model_new.trans_flux
+        if use_dust_emis:     
             dict_fluxes['individual_surface']={}
             for key in abundance_dict:    
                 dict_fluxes['individual_surface'][key]=scale_components*con_model_new.surface_flux_individual[key]*abundance_dict[key]
                 if debug:
                     print(np.max(dict_fluxes['individual_surface'][key]))
-        if not ignore_spectrum_plot:
-            dict_fluxes['tot_flux']=tot_flux
-            dict_fluxes['rim_flux']=con_model_new.rim_flux
-            dict_fluxes['stellar_flux']=con_model_new.scaled_stellar_flux
-            dict_fluxes['midplane_flux']=con_model_new.midplane_flux
-            dict_fluxes['surface_flux']=con_model_new.surface_flux_tot
-            dict_fluxes['emission_flux']=con_model_new.emission_flux
             dict_fluxes['interp_flux']=interp_flux
+        if use_dust_absorp:     
+            dict_fluxes['individual_absorp']={}
+            for key in abundance_dict_absorp:    
+                dict_fluxes['individual_absorp'][key]=scale_components*con_model_new.absorp_flux_individual[key]*abundance_dict_absorp[key]
+                if debug:
+                    print(np.max(dict_fluxes['individual_absorp'][key]))
 
-        return dict_fluxes, np.append(np.append(samp,scale_facs),list_mol_results),dust_mass_ar
-  
+    if not ignore_spectrum_plot:
+        dict_fluxes['tot_flux']=tot_flux
+        dict_fluxes['rim_flux']=con_model_new.rim_flux
+        dict_fluxes['stellar_flux']=con_model_new.scaled_stellar_flux
+        dict_fluxes['midplane_flux']=con_model_new.midplane_flux
+        if use_dust_emis:
+            dict_fluxes['surface_flux']=con_model_new.surface_flux_tot
+        if use_dust_absorp:
+            dict_fluxes['absorp_flux']=con_model_new.absorp_flux_tot
+        dict_fluxes['emission_flux']=con_model_new.emission_flux
+        dict_fluxes['interp_flux']=interp_flux
 
-  
+    return dict_fluxes, np.append(np.append(samp,scale_facs),list_mol_results),dust_mass_ar,dust_mass_absorp_ar
+
+
+
 
   
 
@@ -1255,7 +1295,7 @@ def get_full_model(idx,dummy,debug=False):
     dict_fluxes={}
     sigma_dict={}
     if sample_all:
-        var_dict,abundance_dict,slab_dict=cube_to_dicts(samp,header_para=header_para,header_abund=header_abund,header_all=complete_header,scale_prior=scale_prior)
+        var_dict,abundance_dict,slab_dict,abundance_dict_absorp=cube_to_dicts(samp,header_para=header_para,header_abund=header_abund,header_absorp=header_absorp,header_all=complete_header,scale_prior=scale_prior)
     
     if debug:
         print(var_dict)
@@ -1270,6 +1310,11 @@ def get_full_model(idx,dummy,debug=False):
                 abundance_dict[key]=fixed_dict[key]
                 if debug:
                     print('..added to abundance_dict')
+            elif key in header_absorp:
+                key_abs=key[:-7]
+                abundance_dict_absorp[key_abs]=fixed_dict[key]
+                if debug:
+                    print('..added to abundance_dict_absorp')
             elif key in init_dict or key=='distance':
                 var_dict[key]=fixed_dict[key]
                 if debug:
@@ -1296,18 +1341,24 @@ def get_full_model(idx,dummy,debug=False):
         print('Slab dict',slab_dict)
     var_dict['bb_star']=use_bb_star
     
-    interp_flux,scales=con_model.run_model_normalized(variables=var_dict,dust_species=abundance_dict,
+    interp_flux,scales=con_model.run_model_normalized(variables=var_dict,dust_species=abundance_dict,absorp_species=abundance_dict_absorp,
                                                 slab_dict=slab_dict,max_flux_obs=max_flux_obs,translate_scales=True,debug=False)
 
     var_dict['sc_ir']=scales[0]
     var_dict['sc_mid']=scales[1]
     i=2
-    for key in abundance_dict:
-        abundance_dict[key]=scales[i]
-        i+=1
+    if use_dust_emis:
+        for key in abundance_dict:
+            abundance_dict[key]=scales[i]
+            i+=1
+
+    if use_dust_absorp:
+        for key in abundance_dict_absorp:
+            abundance_dict_absorp[key]=scales[i]
+            i+=1
 
 
-    tot_flux=con_model_new.run_model(variables=var_dict,dust_species=abundance_dict,slab_dict=slab_dict)
+    tot_flux=con_model_new.run_model(variables=var_dict,dust_species=abundance_dict,slab_dict=slab_dict,absorp_species=abundance_dict_absorp)
         #section to get retrieved parameters from mol
     mol_results_dict=con_model.extract_emission_quantities(low_contribution=low_contribution,high_contribution=high_contribution)
     list_mol_results=[]
@@ -1323,36 +1374,53 @@ def get_full_model(idx,dummy,debug=False):
             list_mol_results.append(mol_results_dict[species]['rout,rin'][0])
             list_mol_results.append(mol_results_dict[species]['rout,rin'][1])
     list_mol_results=np.array(list_mol_results).flatten()
-    
-    dust_mass_dict=con_model_new.calc_dust_masses(dust_path=dust_path,unit='msun')
-    dust_mass_ar=np.array(list(dust_mass_dict.values()))
+    dust_mass_ar=[]
+    dust_mass_absorp_ar=[]
+    if use_dust_emis:
+        dust_mass_dict=con_model_new.calc_dust_masses(dust_path=dust_path,unit='msun')
+        dust_mass_ar=np.array(list(dust_mass_dict.values()))
+    if use_dust_absorp:
+        dust_mass_dict=con_model_new.calc_dust_masses(dust_path=dust_path,absorption=True,unit='msun')
+        dust_mass_absorp_ar=np.array(list(dust_mass_dict.values()))    
     if plot_dust_individual:
         scale_components=con_model_new.trans_flux
 
-        con_model_new.set_surface(one_output=False)
-        if debug:
-            for key in abundance_dict:
-                print(abundance_dict[key],np.max(con_model_new.surface_flux_individual[key]))
-            print('Max surface fluxes')
+        if use_dust_emis:
+            con_model_new.set_surface(one_output=False)
+        if use_dust_absorp:
+            con_model_new.set_surface(absorption=True,one_output=False)
 
-        dict_fluxes['individual_surface']={}
-        for key in abundance_dict:    
-            dict_fluxes['individual_surface'][key]=scale_components*con_model_new.surface_flux_individual[key]*abundance_dict[key]
-            if debug:
-                print(np.max(dict_fluxes['individual_surface'][key]))
+        if use_dust_emis:     
+            dict_fluxes['individual_surface']={}
+            for key in abundance_dict:    
+                dict_fluxes['individual_surface'][key]=scale_components*con_model_new.surface_flux_individual[key]*abundance_dict[key]
+                if debug:
+                    print(np.max(dict_fluxes['individual_surface'][key]))
+
+        if use_dust_absorp:     
+            dict_fluxes['individual_absorp']={}
+            for key in abundance_dict_absorp:    
+                dict_fluxes['individual_absorp'][key]=scale_components*con_model_new.absorp_flux_individual[key]*abundance_dict_absorp[key]
+                if debug:
+                    print(np.max(dict_fluxes['individual_absorp'][key]))
+
+
     if not ignore_spectrum_plot:
         dict_fluxes['tot_flux']=tot_flux
         dict_fluxes['rim_flux']=con_model_new.rim_flux
         dict_fluxes['stellar_flux']=con_model_new.scaled_stellar_flux
         dict_fluxes['midplane_flux']=con_model_new.midplane_flux
-        dict_fluxes['surface_flux']=con_model_new.surface_flux_tot
+        if use_dust_emis:
+            dict_fluxes['surface_flux']=con_model_new.surface_flux_tot
+        if use_dust_absorp:
+            dict_fluxes['absorp_flux']=con_model_new.absorp_flux_tot
         dict_fluxes['emission_flux']=con_model_new.emission_flux
         dict_fluxes['interp_flux']=interp_flux
     
     samp_select=samp[:-len(scales)]
     
     
-    return dict_fluxes, np.append(np.append(samp_select,scales),list_mol_results),dust_mass_ar
+    return dict_fluxes, np.append(np.append(samp_select,scales),list_mol_results),dust_mass_ar,dust_mass_absorp_ar
 print('The next step takes a while')
 
 
@@ -1384,6 +1452,7 @@ stellar_components=[]
 rim_components=[]
 midplane_components=[]
 surface_components=[]
+absorp_components=[]
 emission_components=[]
 tot_samples=[]
 interp_fluxes=[]
@@ -1392,48 +1461,33 @@ tot_samples=[]
 dust_mass_master_ar=[]
 
 
+
 dict_individual_flux={}
+dict_individual_flux_absorp={}
+dust_mass_master_ar=[]
+dust_mass_absorp_master_ar=[]
 
 if scatter_obs:
-    
-    for i in range(len(results)):
-        if parallel:
-            result_list=results[i].get()
-        print(f'{np.round(i/len(results)*100,0)}%',end='\r',flush=True)
-        for j in range(obs_per_model):
-            if parallel:
-                dict_flux,samp,dust_mass_ar=result_list[j]
-            else:
-                dict_flux,samp,dust_mass_ar=np.array(results,dtype='object')[i,j,0],np.array(results,dtype='object')[i,j,1].flatten(),np.array(results,dtype='object')[i,j,2].flatten()
-            if not ignore_spectrum_plot:
-                array_flux.append(dict_flux['tot_flux'])
-
-                stellar_components.append(dict_flux['stellar_flux'])
-                rim_components.append(dict_flux['rim_flux']+dict_flux['stellar_flux'])
-                midplane_components.append(dict_flux['midplane_flux'])
-                surface_components.append(dict_flux['surface_flux'])
-                emission_components.append(dict_flux['emission_flux'])
-                interp_fluxes.append(dict_flux['interp_flux'])
-            tot_samples.append(samp)
-            dust_mass_master_ar.append(dust_mass_ar)
-            if not ignore_spectrum_plot:
-                if plot_dust_individual:
-                    for key in dict_flux['individual_surface']:
-                        if key not in dict_individual_flux:
-                            dict_individual_flux[key]=[]
-                        dict_individual_flux[key].append(dict_flux['individual_surface'][key])
+    print('SCATTER_OBS has been removed!!!!!!')
             
 else:
     for i in range(len(results)):
         if parallel:
-            dict_flux,samp,dust_mass_ar=results[i].get()
+            dict_flux,samp,dust_mass_ar,dust_mass_absorp_ar=results[i].get()
         else:
-            dict_flux,samp,dust_mass_ar=np.array(results,dtype='object')[i,j,0],np.array(results,dtype='object')[i,j,1].flatten(),np.array(results,dtype='object')[i,j,2].flatten()
+            dict_flux,samp,dust_mass_ar,dust_mass_absorp_ar=np.array(results,dtype='object')[i,j,0],np.array(results,dtype='object')[i,j,1].flatten(),np.array(results,dtype='object')[i,j,2].flatten()
         if plot_dust_individual:
-            for key in dict_flux['individual_surface']:
-                if key not in dict_individual_flux:
-                    dict_individual_flux[key]=[]
-                dict_individual_flux[key].append(dict_flux['individual_surface'][key])
+            if use_dust_emis:
+                for key in dict_flux['individual_surface']:
+                    if key not in dict_individual_flux:
+                        dict_individual_flux[key]=[]
+                    dict_individual_flux[key].append(dict_flux['individual_surface'][key])            
+            if use_dust_absorp:
+                for key in dict_flux['individual_absorp']:
+                    key_abs=key[:-7]
+                    if key_abs not in dict_individual_flux_absorp:
+                        dict_individual_flux_absorp[key_abs]=[]
+                    dict_individual_flux_absorp[key_abs].append(dict_flux['individual_absorp'][key])
         
         if not ignore_spectrum_plot:
             array_flux.append(dict_flux['tot_flux'])
@@ -1441,17 +1495,28 @@ else:
             stellar_components.append(dict_flux['stellar_flux'])
             rim_components.append(dict_flux['rim_flux']+dict_flux['stellar_flux'])
             midplane_components.append(dict_flux['midplane_flux'])
-            surface_components.append(dict_flux['surface_flux'])
+            if use_dust_emis:
+                surface_components.append(dict_flux['surface_flux'])
+            if use_dust_absorp:
+                absorp_components.append(dict_flux['absorp_flux'])
             emission_components.append(dict_flux['emission_flux'])
             interp_fluxes.append(dict_flux['interp_flux'])
         tot_samples.append(samp)
-        dust_mass_master_ar.append(dust_mass_ar)
+        if use_dust_emis:
+            dust_mass_master_ar.append(dust_mass_ar)
+        if use_dust_absorp:
+            dust_mass_absorp_master_ar.append(dust_mass_absorp_ar)
 
 
 if plot_dust_individual:
-    if save_flux:
-        with open(f'{prefix}dict_fluxes{reduce_str}.pkl', 'wb') as f:
-            pickle.dump(dict_individual_flux, f)
+    if use_dust_emis:
+        if save_flux:
+            with open(f'{prefix}dict_fluxes{reduce_str}.pkl', 'wb') as f:
+                pickle.dump(dict_individual_flux, f)
+    if use_dust_absorp:
+        if save_flux:
+            with open(f'{prefix}dict_fluxes_absorp{reduce_str}.pkl', 'wb') as f:
+                pickle.dump(dict_individual_flux_absorp, f)
         
 if not ignore_spectrum_plot:
     array_flux=np.array(array_flux,dtype='float32')
@@ -1460,9 +1525,11 @@ if not ignore_spectrum_plot:
     rim_components=np.array(rim_components,dtype='float32')
     midplane_components=np.array(midplane_components,dtype='float32')
     surface_components=np.array(surface_components,dtype='float32')
+    absorp_components=np.array(absorp_components,dtype='float32')
     emission_components=np.array(emission_components,dtype='float32')
 tot_samples=np.array(tot_samples)
 dust_mass_master_ar=np.array(dust_mass_master_ar)
+dust_mass_absorp_master_ar=np.array(dust_mass_absorp_master_ar)
 
 
 
@@ -1474,8 +1541,10 @@ if save_output:
     print('Shape tot sample',np.shape(tot_samples))
     print('Shape samples',np.shape(samples))
     np.save(f'{prefix}complete_posterior{reduce_str}',tot_samples)
-    
-    np.save(f'{prefix}dust_masses{reduce_str}',dust_mass_master_ar)
+    if use_dust_emis:
+        np.save(f'{prefix}dust_masses{reduce_str}',dust_mass_master_ar)
+    if use_dust_absorp:
+        np.save(f'{prefix}dust_absorp_masses{reduce_str}',dust_mass_absorp_master_ar)
     #exit()
 
 if 'log_sigma_obs' in complete_header:
@@ -1529,8 +1598,8 @@ if not ignore_spectrum_plot:
                                        obs_as_line=True, zoom_in_list=[[5,30]],
                                        plot_components=True,stellar_components=stellar_components,
                                        rim_components=rim_components,midplane_components=midplane_components,
-                                       surface_components=surface_components,emission_components=emission_components,
-                                       individual_surface={},
+                                       surface_components=surface_components,absorp_components=absorp_components,emission_components=emission_components,
+                                       individual_surface=dict_individual_flux, individual_absorp=dict_individual_flux_absorp,
                                        plot_individual_surface=False,number_plotted_dust=0,debug=True):
         comp_dict={}
         indi_dust_dict={}
@@ -1568,9 +1637,20 @@ if not ignore_spectrum_plot:
         min_val=np.min(y_median)
         max_val=np.max(y_median)
         if plot_components:
-            comp_names=['Stellar flux','Stellar + rim flux','Midplane flux','Surface flux','Emission flux']
-            comp_colors=['tab:orange','tab:green','tab:purple','tab:brown','tab:red']
-            comp_list=[stellar_components,rim_components,midplane_components,surface_components,emission_components]
+            comp_names=['Stellar flux','Stellar + rim flux','Midplane flux']
+            if use_dust_emis:
+                comp_names.append('Surface flux')
+            if use_dust_absorp:
+                comp_names.append('Absorption flux x (-1)'),
+            comp_names.append('Emission flux')
+            comp_colors=['tab:orange','tab:green','tab:purple','tab:brown','tab:olive','tab:red']
+            
+            comp_list=[stellar_components,rim_components,midplane_components]
+            if use_dust_emis:
+                comp_list.append(surface_components)
+            if use_dust_absorp:
+                comp_list.append(absorp_components*(-1))
+            comp_list.append(emission_components)
             for idx_comp in range(len(comp_list)):
                 print('Adding ',comp_names[idx_comp])
                 comp=comp_list[idx_comp]
@@ -1970,108 +2050,204 @@ def set_slab_labels(slab_prior_dict):
     return new_labels
 slab_labels=set_slab_labels(slab_prior_dict=slab_prior_dict)
 
-nicer_labels_output=nicer_labels(init_abundance=init_abundance)
-header_all=list(header_para_slab)+['sc_ir']+['sc_mid']+nicer_labels_output+slab_labels
+
+header_all=list(header_para_slab)+['sc_ir']+['sc_mid']
 ugly_header=list(header_para_slab)+['sc_ir']+['sc_mid']
-for key in init_abundance:
-    ugly_header.append(key)
+
+if use_dust_emis:
+    nicer_labels_output=nicer_labels(init_abundance=init_abundance)
+    for lab in nicer_labels_output:
+        header_all.append(lab)
+    
+    for key in init_abundance:
+        ugly_header.append(key)
+if use_dust_absorp:
+    nicer_labels_output_absorp=nicer_labels(init_abundance=init_abundance_absorp)
+
+    for lab in nicer_labels_output_absorp:
+        header_all.append(lab+'_absorp')
+    
+    for key in init_abundance_absorp:
+        ugly_header.append(key+'_absorp')        
+header_all=header_all+slab_labels
 ugly_header=ugly_header+slab_labels
 
 
 if sample_all:
-    header_all=list(header_para_slab)+['sc_ir']+['sc_mid']+nicer_labels_output
+    header_all=list(header_para_slab)+['sc_ir']+['sc_mid']
     ugly_header=list(header_para_slab)+['sc_ir']+['sc_mid']
-    for key in init_abundance:
-        ugly_header.append(key)
+    if use_dust_emis:   
+        for lab in nicer_labels_output:
+            header_all.append(lab)
+        for key in init_abundance:
+            ugly_header.append(key)
+    if use_dust_absorp:        
+        for lab in nicer_labels_output_absorp:
+            header_all.append(lab+'_absorp')
+        for key in init_abundance_absorp:
+            ugly_header.append(key+'_absorp')
     
 
-    
-    
 
 '''
 Converting the abundances from meaningless values to relative mass fractions
 If the curves are already given in Kappa, you can set q_curves=False
 '''
-q_curves=True
-# converting the scale factors in 
-if q_curves:
-    factor_dict={}
-    for key in init_abundance:
 
-        with open(dust_path+key,'r') as f:
-            lines=f.readlines()
-        old_data=True
-        for line in lines:
-            if 'density' in line:
-                dens=line.split()[3]
-                old_data=False
-                break
-         
-        idx_rv=key.find('rv')
-        rad=key[idx_rv+2:-4]
-        if old_data:
+if use_dust_emis:
+    
+    q_curves=True
+    # converting the scale factors in 
+    if q_curves:
+        factor_dict={}
+        for key in init_abundance:
+    
             with open(dust_path+key,'r') as f:
-                rad,dens=f.readline().split()[1:3]
-        #print(key,rad,dens)
-        rad=float(rad)
-        dens=float(dens)
-        fact=dens*rad
-        factor_dict[key]=fact
-        for i in range(len(header_all)):
-            if header_all[i]==nicer_labels({key:None})[0]:
-                break
-        tot_samples[:,i]=tot_samples[:,i]*factor_dict[key]
-
-#getting all indices that have abundances
-idxs=[]
-for i in range(len(nicer_labels_output)):
-    idx=np.where(np.array(header_all)==nicer_labels_output[i])[0][0]                                
-    idxs.append(idx)
-#print(idxs)    
-
-tot_samples_rel=tot_samples.copy()
-for i in range(len(tot_samples)):
-    abund=tot_samples[i,idxs].copy()
-    tot=np.sum(abund)
-    rel_abund=abund/tot
-    tot_samples_rel[i,idxs]=rel_abund
+                lines=f.readlines()
+            old_data=True
+            for line in lines:
+                if 'density' in line:
+                    dens=line.split()[3]
+                    old_data=False
+                    break
+             
+            idx_rv=key.find('rv')
+            rad=key[idx_rv+2:-4]
+            if old_data:
+                with open(dust_path+key,'r') as f:
+                    rad,dens=f.readline().split()[1:3]
+            #print(key,rad,dens)
+            rad=float(rad)
+            dens=float(dens)
+            fact=dens*rad
+            factor_dict[key]=fact
+            for i in range(len(header_all)):
+                if header_all[i]==nicer_labels({key:None})[0]:
+                    break
+            tot_samples[:,i]=tot_samples[:,i]*factor_dict[key]
     
+    #getting all indices that have abundances
+    idxs=[]
+    for i in range(len(nicer_labels_output)):
+        idx=np.where(np.array(header_all)==nicer_labels_output[i])[0][0]                                
+        idxs.append(idx)
+    #print(idxs)    
     
+    tot_samples_rel=tot_samples.copy()
+    for i in range(len(tot_samples)):
+        abund=tot_samples[i,idxs].copy()
+        tot=np.sum(abund)
+        if tot==0.0:
+            rel_abund=0.0
+        else:        
+            rel_abund=abund/tot
+        tot_samples_rel[i,idxs]=rel_abund
+
+if use_dust_absorp:
+    q_curves=True
+    # converting the scale factors in 
+    if q_curves:
+        factor_dict={}
+        for key in init_abundance_absorp:
     
-
-
+            with open(dust_path+key,'r') as f:
+                lines=f.readlines()
+            old_data=True
+            for line in lines:
+                if 'density' in line:
+                    dens=line.split()[3]
+                    old_data=False
+                    break
+             
+            idx_rv=key.find('rv')
+            rad=key[idx_rv+2:-4]
+            if old_data:
+                with open(dust_path+key,'r') as f:
+                    rad,dens=f.readline().split()[1:3]
+            #print(key,rad,dens)
+            rad=float(rad)
+            dens=float(dens)
+            fact=dens*rad
+            factor_dict[key]=fact
+            for i in range(len(header_all)):
+                if header_all[i]==nicer_labels({key:None})[0]+'_absorp':
+                    break
+            tot_samples[:,i]=tot_samples[:,i]*factor_dict[key]
+    
+    #getting all indices that have abundances
+    idxs_absorp=[]
+    for i in range(len(nicer_labels_output_absorp)):
+        idx=np.where(np.array(header_all)==nicer_labels_output_absorp[i]+'_absorp')[0][0]                                
+        idxs_absorp.append(idx)
+    print(idxs_absorp)    
+    
+    tot_samples_rel=tot_samples.copy()
+    for i in range(len(tot_samples)):
+        abund=tot_samples[i,idxs_absorp].copy()
+        tot=np.sum(abund)
+        if tot==0.0:
+            rel_abund=0.0
+        else:        
+            rel_abund=abund/tot
+        tot_samples_rel[i,idxs_absorp]=rel_abund
+        
 '''
 Histogram of the dust abundances
 '''
 print('Plotting histograms...')
+if use_dust_emis:
+    dust_analysis={}
+    for idx in idxs:
+        dust_array=tot_samples_rel[:,idx]
+        median=np.median(dust_array)
+        plus_std=np.percentile(dust_array,50+68/2)
+        minus_std=np.percentile(dust_array,50-68/2)
+        dust_analysis[ugly_header[idx]]=[median,plus_std,minus_std]
+if use_dust_absorp:
+    dust_analysis_absorp={}
+    for idx in idxs_absorp:
+        dust_absorp_array=tot_samples_rel[:,idx]
+        median=np.median(dust_absorp_array)
+        plus_std=np.percentile(dust_absorp_array,50+68/2)
+        minus_std=np.percentile(dust_absorp_array,50-68/2)
+        dust_analysis_absorp[ugly_header[idx]]=[median,plus_std,minus_std]
 
-
-dust_analysis={}
-for idx in idxs:
-    dust_array=tot_samples_rel[:,idx]
-    median=np.median(dust_array)
-    plus_std=np.percentile(dust_array,50+68/2)
-    minus_std=np.percentile(dust_array,50-68/2)
-    dust_analysis[ugly_header[idx]]=[median,plus_std,minus_std]
-
-
-
-dust_analysis_abs={}
-dust_fraction_used={}
-tot_model_number=len(dust_mass_master_ar)
-for i in range(len(idxs)):
-    dust_array=dust_mass_master_ar[:,i]
+if use_dust_emis:
+    dust_analysis_abs={}
+    dust_fraction_used={}
+    tot_model_number=len(dust_mass_master_ar)
+    for i in range(len(idxs)):
+        dust_array=dust_mass_master_ar[:,i]
+        
+        median=np.median(dust_array)
+        plus_std=np.percentile(dust_array,50+68/2)
+        minus_std=np.percentile(dust_array,50-68/2)
+        dust_analysis_abs[ugly_header[idxs[i]]]=[median,plus_std,minus_std]
+        
+        
+        idx_used=np.where(dust_mass_master_ar[:,i]!=0.0)[0]
+        dust_fraction_used[ugly_header[idxs[i]]]=len(idx_used)/tot_model_number
+if use_dust_absorp:
+    dust_analysis_abs_absorp={}
+    dust_fraction_used_absorp={}
+    tot_model_number=len(dust_mass_absorp_master_ar)
+    for i in range(len(idxs_absorp)):
+        dust_absorp_array=dust_mass_absorp_master_ar[:,i]
+        
+        median=np.median(dust_absorp_array)
+        plus_std=np.percentile(dust_absorp_array,50+68/2)
+        minus_std=np.percentile(dust_absorp_array,50-68/2)
+        dust_analysis_abs_absorp[ugly_header[idxs_absorp[i]]]=[median,plus_std,minus_std]
+        
+        
+        idx_used=np.where(dust_mass_absorp_master_ar[:,i]!=0.0)[0]
+        dust_fraction_used_absorp[ugly_header[idxs_absorp[i]]]=len(idx_used)/tot_model_number
+        
     
-    median=np.median(dust_array)
-    plus_std=np.percentile(dust_array,50+68/2)
-    minus_std=np.percentile(dust_array,50-68/2)
-    dust_analysis_abs[ugly_header[idxs[i]]]=[median,plus_std,minus_std]
-    
-    
-    idx_used=np.where(dust_mass_master_ar[:,i]!=0.0)[0]
-    dust_fraction_used[ugly_header[idxs[i]]]=len(idx_used)/tot_model_number
-    
-def plot_histograms(dust_analysis,scale='linear',indicate_regions=True,debug=False):
+
+   
+
+def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True,debug=False):
     colour_list=['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
                 'tab:brown','tab:pink','tab:gray','tab:olive','tab:cyan']
     colour_count=0
@@ -2082,18 +2258,15 @@ def plot_histograms(dust_analysis,scale='linear',indicate_regions=True,debug=Fal
     i=0
     
     plt.figure()
-    for key in dust_analysis:
+    for key_run in dust_analysis:
+        key=key_run[:-7]
         if debug:
             print(key)
         new_dust=False
         if first:
             key_old=key
-        if key[0]=='Q':
-            if not first and key[:10]!=key_old[:10]:
-                new_dust=True
-        else:
-            if not first and key[:5]!=key_old[:5]:
-                new_dust=True
+        if not first and key[:5]!=key_old[:5]:
+            new_dust=True
         if debug:
             print(first,new_dust)
         if new_dust:
@@ -2128,9 +2301,9 @@ def plot_histograms(dust_analysis,scale='linear',indicate_regions=True,debug=Fal
             minus_stds=[]
         key_old=key
         if first:  first=False
-        medians.append(dust_analysis[key][0])
-        plus_stds.append(dust_analysis[key][1]-dust_analysis[key][0])
-        minus_stds.append(dust_analysis[key][0]-dust_analysis[key][2])
+        medians.append(dust_analysis[key_run][0])
+        plus_stds.append(dust_analysis[key_run][1]-dust_analysis[key_run][0])
+        minus_stds.append(dust_analysis[key_run][0]-dust_analysis[key_run][2])
         i+=1
 
     x_range=np.arange(len(medians))+i-len(medians)+1
@@ -2155,7 +2328,12 @@ def plot_histograms(dust_analysis,scale='linear',indicate_regions=True,debug=Fal
         if debug:
             print(key)
         idx=key.find('rv')
-        rv=key[idx+2:-3]
+        if '_absorp' in key:
+            idx_end=key.find('_absorp')
+        else:
+            idx_end=-3
+            
+        rv=key[idx+2:idx+5]
         rvs.append(rv)
         count+=1
     if debug:
@@ -2173,13 +2351,15 @@ def plot_histograms(dust_analysis,scale='linear',indicate_regions=True,debug=Fal
         
     plt.legend()
     if scale=='log':
-        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_fractions_log{reduce_str}.{filetype_fig}',bbox_inches='tight')
+        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_fractions_log{suffix}{reduce_str}.{filetype_fig}',bbox_inches='tight')
     else:
-        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_fractions{reduce_str}.{filetype_fig}',bbox_inches='tight')
+        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_fractions{suffix}{reduce_str}.{filetype_fig}',bbox_inches='tight')
         
     plt.show()
-    
-def plot_histograms_abs(dust_analysis_abs,scale='linear',indicate_regions=True,debug=False):
+
+
+
+def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regions=True,debug=False):
     colour_list=['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
                 'tab:brown','tab:pink','tab:gray','tab:olive','tab:cyan']
     colour_count=0
@@ -2199,12 +2379,8 @@ def plot_histograms_abs(dust_analysis_abs,scale='linear',indicate_regions=True,d
         new_dust=False
         if first:
             key_old=key
-        if key[0]=='Q':
-            if not first and key[:10]!=key_old[:10]:
-                new_dust=True
-        else:
-            if not first and key[:5]!=key_old[:5]:
-                new_dust=True
+        if not first and key[:5]!=key_old[:5]:
+            new_dust=True
         if debug:
             print(first,new_dust)
         if new_dust:
@@ -2266,7 +2442,12 @@ def plot_histograms_abs(dust_analysis_abs,scale='linear',indicate_regions=True,d
         if debug:
             print(key)
         idx=key.find('rv')
-        rv=key[idx+2:-3]
+        if '_absorp' in key:
+            idx_end=key.find('_absorp')
+        else:
+            idx_end=-3
+        rv=key[idx+2:idx+5]
+            
         rvs.append(rv)
         count+=1
     if debug:
@@ -2275,7 +2456,7 @@ def plot_histograms_abs(dust_analysis_abs,scale='linear',indicate_regions=True,d
     plt.xticks(np.arange(1,count+1),rvs)
     if scale=='log':
         plt.yscale('log')
-    plt.xlabel(r'Grain size [$\mu m$]')
+    plt.xlabel(r'Grain size ($\mu m$)')
     plt.ylabel(r'$M_{\rm dust, thin} [\rm M_{\rm sun}]$')
     plt.ylim(bottom=min_val,top=max_val)
     if scale=='log':
@@ -2283,23 +2464,23 @@ def plot_histograms_abs(dust_analysis_abs,scale='linear',indicate_regions=True,d
         
     plt.legend()
     if scale=='log':
-        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_abs_log{reduce_str}.{filetype_fig}',bbox_inches='tight')
+        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_abs_log{suffix}{reduce_str}.{filetype_fig}',bbox_inches='tight')
     else:
-        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_abs{reduce_str}.{filetype_fig}',bbox_inches='tight')
+        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_abs{suffix}{reduce_str}.{filetype_fig}',bbox_inches='tight')
         
     plt.show()
 
-plot_histograms(dust_analysis=dust_analysis,scale='linear')
 
+if use_dust_emis:
+    plot_histograms(dust_analysis=dust_analysis,scale='linear')
+    plot_histograms_abs(dust_analysis_abs=dust_analysis_abs,scale='linear')
+    #plot_histograms(dust_analysis=dust_analysis,scale='log')
 
+if use_dust_absorp:
+    plot_histograms(dust_analysis=dust_analysis_absorp,scale='linear',suffix='_absorp',debug=False)
+    plot_histograms_abs(dust_analysis_abs=dust_analysis_abs_absorp,scale='linear',suffix='_absorp')
 
-plot_histograms_abs(dust_analysis_abs=dust_analysis_abs,scale='linear')
-#plot_histograms(dust_analysis=dust_analysis,scale='log')
-
-
-
-
-def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,scale='linear',scale2='linear',indicate_regions=True,debug=False):
+def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,suffix='',scale='linear',scale2='linear',indicate_regions=True,debug=False):
     colour_list=['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
                 'tab:brown','tab:pink','tab:gray','tab:olive','tab:cyan']
     colour_count=0
@@ -2315,18 +2496,15 @@ def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,scal
     i=0
     
     fig,ax = plt.subplots(figsize=(12,6))
-    for key in dust_analysis:
+    for key_run in dust_analysis:
+        key=key_run[:-7]
         if debug:
             print(key)
         new_dust=False
         if first:
             key_old=key
-        if key[0]=='Q':
-            if not first and key[:10]!=key_old[:10]:
-                new_dust=True
-        else:
-            if not first and key[:5]!=key_old[:5]:
-                new_dust=True
+        if not first and key[:5]!=key_old[:5]:
+            new_dust=True
         if debug:
             print(first,new_dust)
         if new_dust:
@@ -2366,10 +2544,10 @@ def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,scal
             used_fract=[]
         key_old=key
         if first:  first=False
-        medians.append(dust_analysis[key][0])
-        plus_stds.append(dust_analysis[key][1]-dust_analysis[key][0])
-        minus_stds.append(dust_analysis[key][0]-dust_analysis[key][2])
-        used_fract.append(dust_fraction_used[key])
+        medians.append(dust_analysis[key_run][0])
+        plus_stds.append(dust_analysis[key_run][1]-dust_analysis[key_run][0])
+        minus_stds.append(dust_analysis[key_run][0]-dust_analysis[key_run][2])
+        used_fract.append(dust_fraction_used[key_run])
         i+=1
 
     x_range=np.arange(len(medians))+i-len(medians)+1
@@ -2396,7 +2574,7 @@ def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,scal
     if scale=='log':
         plt.yscale('log')
     ax.set_xlabel(r'Grain size [$\mu m$]')
-    ax.set_ylabel('$f_{mass}$ \n $f_{model}$')
+    ax.set_ylabel('$f_{\mathrm{mass}}$ \n $f_{ \mathrm{model}}$')
     if scale=='linear':
         ax.set_ylim(bottom=0,top=1)
     else:
@@ -2415,18 +2593,15 @@ def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,scal
     max_val=np.max(list(dust_analysis_abs.values()))*1.1
     min_val=np.min(list(dust_analysis_abs.values()))*0.9
     
-    for key in dust_analysis_abs:
+    for key_run in dust_analysis_abs:
+        key=key_run[:-7]
         if debug:
             print(key)
         new_dust=False
         if first:
             key_old=key
-        if key[0]=='Q':
-            if not first and key[:10]!=key_old[:10]:
-                new_dust=True
-        else:
-            if not first and key[:5]!=key_old[:5]:
-                new_dust=True
+        if not first and key[:5]!=key_old[:5]:
+            new_dust=True
         if debug:
             print(first,new_dust)
         if new_dust:
@@ -2459,9 +2634,9 @@ def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,scal
             minus_stds=[]
         key_old=key
         if first:  first=False
-        medians.append(dust_analysis_abs[key][0])
-        plus_stds.append(dust_analysis_abs[key][1]-dust_analysis_abs[key][0])
-        minus_stds.append(dust_analysis_abs[key][0]-dust_analysis_abs[key][2])
+        medians.append(dust_analysis_abs[key_run][0])
+        plus_stds.append(dust_analysis_abs[key_run][1]-dust_analysis_abs[key_run][0])
+        minus_stds.append(dust_analysis_abs[key_run][0]-dust_analysis_abs[key_run][2])
         i+=1
 
     x_range=np.arange(len(medians))+i-len(medians)+1
@@ -2503,7 +2678,7 @@ def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,scal
         if debug:
             print(key)
         idx=key.find('rv')
-        rv=key[idx+2:-4]
+        rv=key[idx+2:idx+5]
         rvs.append(rv)
         count+=1
     if debug:
@@ -2512,25 +2687,23 @@ def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,scal
     ax.set_xticks(np.arange(1,count+1))
     ax.set_xticklabels(rvs)
     if scale=='log':
-        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_complete_plot_log{reduce_str}.{filetype_fig}',bbox_inches='tight')
+        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_complete_plot_log{suffix}{reduce_str}.{filetype_fig}',bbox_inches='tight')
     else:
-        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_complete_plot{reduce_str}.{filetype_fig}',bbox_inches='tight')
+        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_complete_plot{suffix}{reduce_str}.{filetype_fig}',bbox_inches='tight')
         
     plt.show()
     
     
-
-
-
-    
-
-
-plot_histograms_both(dust_analysis=dust_analysis,dust_fraction_used=dust_fraction_used
-                     ,dust_analysis_abs=dust_analysis_abs,scale='linear',scale2='linear',
-                    debug=False)
-
-    
-
+if use_dust_emis:
+    plot_histograms_both(dust_analysis=dust_analysis,dust_fraction_used=dust_fraction_used
+                         ,dust_analysis_abs=dust_analysis_abs,scale='linear',scale2='linear',
+                        debug=False)
+if use_dust_absorp:
+    plot_histograms_both(dust_analysis=dust_analysis_absorp,dust_fraction_used=dust_fraction_used_absorp
+                         ,dust_analysis_abs=dust_analysis_abs_absorp,scale='linear',scale2='linear',
+                        debug=False,suffix='_absorp')
+ 
+     
 
 
 print('Saved')
@@ -2625,11 +2798,19 @@ scale_mid_log=False # should the midplane scaling factor be on a log scale
 clip_value_mid=1e-10
 
 
-
 if display_scale_log:
     tot_samples_log_scale=[]
     for i in range(np.shape(tot_samples_rel)[1]):
-        if header_all[i] in nicer_labels_output:
+        if use_dust_emis and use_dust_absorp:
+            check_list=nicer_labels_output+nicer_labels_output_absorp
+        elif use_dust_emis:
+            check_list=nicer_labels_output
+        elif use_dust_absorp:
+            check_list=nicer_labels_output_absorp
+        else:
+            check_list=[]
+            
+        if header_all[i] in check_list:
 
 
             tot_samples_log_scale.append(np.log10(np.clip(tot_samples_rel[:,i],a_min=clip_value,a_max=None)))
@@ -2649,6 +2830,7 @@ if display_scale_log:
 
 selected_posterior=[]
 selected_header=[]
+
 for i in range(len(header_all)):
     if all(tot_samples_rel[:,i]==np.max(tot_samples_rel[:,i])):
         print('-------------------')
@@ -2659,7 +2841,15 @@ for i in range(len(header_all)):
         print('-------------------')
     else:
         if display_scale_log: 
-            if (header_all[i] in nicer_labels_output) or (header_all[i]=='sc_ir' and scale_ir_log) or(header_all[i]=='sc_mid' and scale_mid_log):
+            if use_dust_emis and use_dust_absorp:
+                check_list=nicer_labels_output+nicer_labels_output_absorp
+            elif use_dust_emis:
+                check_list=nicer_labels_output
+            elif use_dust_absorp:
+                check_list=nicer_labels_output_absorp
+            else:
+                check_list=[]
+            if (header_all[i] in check_list) or (header_all[i]=='sc_ir' and scale_ir_log) or(header_all[i]=='sc_mid' and scale_mid_log):
                 selected_header.append(f'log {header_all[i]}')
             else:
                 selected_header.append(header_all[i])
@@ -2677,7 +2867,14 @@ print(np.shape(selected_posterior))
 
 print('Writing values to txt file')
 
-
+if use_dust_emis and use_dust_absorp:
+    check_list=nicer_labels_output+nicer_labels_output_absorp
+elif use_dust_emis:
+    check_list=nicer_labels_output
+elif use_dust_absorp:
+    check_list=nicer_labels_output_absorp
+else:
+    check_list=[]
 
 y_median=np.median(tot_samples_rel,axis=0)
 y_std=np.percentile(tot_samples_rel,50+68/2,axis=0)
@@ -2691,33 +2888,57 @@ with open(f'{save_folder}{str(run_number)}_posterior_values{reduce_str}.txt','w'
         med=y_median[i]
         minus=y_std_min[i]
         plus=y_std[i]
-        if name not in nicer_labels_output:
+        if name not in check_list:
             f.write('%10s %.5e %.5e %.5e \n'%(name,med,plus,minus))
-    
-    f.write('-------------------------------------------- \n')
-    f.write('-------------------------------------------- \n')
-    f.write('DUST FRACTIONS \n')
-    f.write('Parameter Median_value 1sigma_up 1sigma_down \n')
-    for key in dust_analysis:
-        name=key
-        med=dust_analysis[key][0]
-        minus=dust_analysis[key][2]
-        plus=dust_analysis[key][1]
-        
-        f.write('%s %.5e %.5e %.5e \n'%(name,med,plus,minus))
-        
-    f.write('-------------------------------------------- \n')
-    f.write('-------------------------------------------- \n')
-    f.write('ABSOLUTE OPTICALLY THIN DUST MASSES [M_sun] \n')
-    f.write('Parameter Median_value 1sigma_up 1sigma_down \n')
-    for key in dust_analysis_abs:
-        name=key
-        med=dust_analysis_abs[key][0]
-        minus=dust_analysis_abs[key][2]
-        plus=dust_analysis_abs[key][1]
-        
-        f.write('%s %.5e %.5e %.5e \n'%(name,med,plus,minus))
 
+    if use_dust_emis:
+        f.write('-------------------------------------------- \n')
+        f.write('-------------------------------------------- \n')
+        f.write('DUST FRACTIONS \n')
+        f.write('Parameter Median_value 1sigma_up 1sigma_down \n')
+        for key in dust_analysis:
+            name=key
+            med=dust_analysis[key][0]
+            minus=dust_analysis[key][2]
+            plus=dust_analysis[key][1]
+            
+            f.write('%s %.5e %.5e %.5e \n'%(name,med,plus,minus))
+            
+        f.write('-------------------------------------------- \n')
+        f.write('-------------------------------------------- \n')
+        f.write('ABSOLUTE OPTICALLY THIN DUST MASSES [M_sun] \n')
+        f.write('Parameter Median_value 1sigma_up 1sigma_down \n')
+        for key in dust_analysis_abs:
+            name=key
+            med=dust_analysis_abs[key][0]
+            minus=dust_analysis_abs[key][2]
+            plus=dust_analysis_abs[key][1]
+            
+            f.write('%s %.5e %.5e %.5e \n'%(name,med,plus,minus))
+    if use_dust_absorp:
+        f.write('-------------------------------------------- \n')
+        f.write('-------------------------------------------- \n')
+        f.write('DUST ABSORPTION FRACTIONS \n')
+        f.write('Parameter Median_value 1sigma_up 1sigma_down \n')
+        for key in dust_analysis_abs_absorp:
+            name=key
+            med=dust_analysis_absorp[key][0]
+            minus=dust_analysis_absorp[key][2]
+            plus=dust_analysis_absorp[key][1]
+            
+            f.write('%s %.5e %.5e %.5e \n'%(name,med,plus,minus))
+            
+        f.write('-------------------------------------------- \n')
+        f.write('-------------------------------------------- \n')
+        f.write('ABSOLUTE OPTICALLY THIN DUST ABSORPTION MASSES [M_sun] \n')
+        f.write('Parameter Median_value 1sigma_up 1sigma_down \n')
+        for key in dust_analysis_abs_absorp:
+            name=key
+            med=dust_analysis_abs_absorp[key][0]
+            minus=dust_analysis_abs_absorp[key][2]
+            plus=dust_analysis_abs_absorp[key][1]
+            
+            f.write('%s %.5e %.5e %.5e \n'%(name,med,plus,minus))
 if plot_last_corner_plot:
 
     CORNER_KWARGS = dict(

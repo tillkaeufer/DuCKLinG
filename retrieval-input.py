@@ -40,6 +40,8 @@ run_folder='run1'
 
 use_ultranest=True
 ext_model=None
+sur_powerlaw=False
+abs_powerlaw=False
 #slice_sampler=True
 
 if __name__ == "__main__":
@@ -114,6 +116,19 @@ if 'E(B-V)' in prior_dict or 'E(B-V)' in fixed_dict:
         except NameError:
             from dust_extinction.parameter_averages import G23 as ext_model
             print("G23 is the default extinction model")    
+
+try:
+    absorp_species_list
+except NameError:
+    absorp_species_list=[]
+    print("absorp_species_list not set in input file")
+    print("and set to empty")
+try:
+    dust_species_list
+except NameError:
+    dust_species_list=[]
+    print("dust_species_list not set in input file")
+    print("and set to empty")
 
 if use_ultranest:
     print('UltraNest')
@@ -257,7 +272,9 @@ prefix = fold_string+'test_'+str(run_number)
 init_abundance={}
 for entry in dust_species_list:
     init_abundance[entry]=None
-
+init_abundance_absorp={}
+for entry in absorp_species_list:
+    init_abundance_absorp[entry]=None
 # are there parameters that you want to fix to values instead of fitting them
 # 
 
@@ -288,14 +305,35 @@ if sample_all:
     prior_dict_dust=init_abundance.copy()
     for key in prior_dict_dust:
         prior_dict_dust[key]=prior_scaling_dust
-    #print(prior_dict_dust)
 
 
+
+    prior_dict_dust_abs=init_abundance_absorp.copy()
+    for key in prior_dict_dust_abs:
+        prior_dict_dust_abs[key]=prior_scaling_abs
+
+
+if 'tmax_s' in prior_dict or 'temp_s' in prior_dict:
+    use_dust_emis=True
+    if 'tmax_s' in prior_dict:
+        sur_powerlaw=True
+    else:
+        sur_powerlaw=False
+else:
+    use_dust_emis=False
+if 'tmax_abs' in prior_dict or 'temp_abs' in prior_dict:
+    use_dust_absorp=True
+    if 'tmax_abs' in prior_dict:
+        abs_powerlaw=True
+    else:
+        abs_powerlaw=False
+else:
+    use_dust_absorp=False
 # setting up the dictonaries and headers that will be used
 
 # In[19]:
 init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw,fit_water_ratios=fit_water_ratios,
-                           prior_dict=prior_dict,fixed_dict=fixed_dict,use_extinction=use_extinction)
+                           prior_dict=prior_dict,fixed_dict=fixed_dict,use_extinction=use_extinction,use_dust_emis=use_dust_emis,use_dust_absorp=use_dust_absorp,sur_powerlaw=sur_powerlaw,abs_powerlaw=abs_powerlaw)
 
 
 if 'log_sigma_obs' in prior_dict:
@@ -307,18 +345,18 @@ if 'log_sigma_conti' in prior_dict:
 else:
     fit_conti_err=False
 if fit_conti_err or fit_obs_err:
-    header,header_para,header_abund,header_slab,header_sigma=create_header(var_dict=init_dict,
+    header,header_para,header_abund,header_slab,header_absorp,header_sigma=create_header(var_dict=init_dict,
                                                               abundance_dict=init_abundance,
                                                               slab_dict=slab_prior_dict,
                                                               fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,
-                                                              fixed_dict=fixed_dict,prior_dict=prior_dict)
+                                                              fixed_dict=fixed_dict,prior_dict=prior_dict,abundance_dict_absorption=init_abundance_absorp)
 
 else:
-    header,header_para,header_abund,header_slab=create_header(var_dict=init_dict,
+    header,header_para,header_abund,header_slab,header_absorp=create_header(var_dict=init_dict,
                                                               abundance_dict=init_abundance,
                                                               slab_dict=slab_prior_dict,
                                                               fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,
-                                                              fixed_dict=fixed_dict,prior_dict=prior_dict)
+                                                              fixed_dict=fixed_dict,prior_dict=prior_dict,abundance_dict_absorption=init_abundance_absorp)
 upper_lim=[]
 lower_lim=[]
 complete_header=[]
@@ -493,9 +531,9 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
     if sample_all:
         
         if fit_conti_err or fit_obs_err:
-            var_dict,abundance_dict,slab_dict,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
+            var_dict,abundance_dict,slab_dict,abundance_dict_absorp,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
         else:
-            var_dict,abundance_dict,slab_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,scale_prior=scale_prior)
+            var_dict,abundance_dict,slab_dict,abundance_dict_absorp=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior)
 
     else:    
         if fit_conti_err or fit_obs_err:
@@ -507,6 +545,8 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
         print(var_dict)
         if sample_all:
             print(abundance_dict)
+            print(abundance_dict_absorp)
+            
         print(slab_dict)
         if fit_conti_err or fit_obs_err:
             print(sigma_dict)
@@ -518,6 +558,12 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
                 abundance_dict[key]=fixed_dict[key]
                 if debug:
                     print('..added to abundance_dict')
+            elif key in header_absorp:
+                key_abs=key[:-7]
+                abundance_dict_absorp[key_abs]=fixed_dict[key]
+                if debug:
+                    print('..added to abundance_dict_absorp')
+               
             elif key in init_dict or key=='distance':
                 var_dict[key]=fixed_dict[key]
                 if debug:
@@ -549,9 +595,17 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
     penalty=float(-10**100.0)
     sum_penalty=float(-10**100.0)
     trigger_penalty=False
-    if var_dict['tmin_s']>=var_dict['tmax_s']:
-        trigger_penalty=True
-        sum_penalty+=penalty*(var_dict['tmin_s']-var_dict['tmax_s'])
+    if use_dust_emis:
+        if sur_powerlaw:
+            if var_dict['tmin_s']>=var_dict['tmax_s']:
+                trigger_penalty=True
+                sum_penalty+=penalty*(var_dict['tmin_s']-var_dict['tmax_s'])
+    
+    if use_dust_absorp:
+        if abs_powerlaw:
+            if var_dict['tmin_abs']>=var_dict['tmax_abs']:
+                trigger_penalty=True
+                sum_penalty+=penalty*(var_dict['tmin_abs']-var_dict['tmax_abs'])
     
     if var_dict['tmin_mp']>=var_dict['tmax_mp']:
         trigger_penalty=True
@@ -579,13 +633,14 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
         time_2=time()    
     if sample_all:
         interp_flux=con_model.run_model_normalized(variables=var_dict,dust_species=abundance_dict,
-                                                slab_dict=slab_dict,max_flux_obs=max_flux_obs)
+                                                slab_dict=slab_dict,absorp_species=abundance_dict_absorp,max_flux_obs=max_flux_obs)
 
 
         
     else:
         interp_flux=con_model.run_fitted_to_obs(variables=var_dict,
                                                 dust_species=init_abundance,
+                                                absorp_species=init_abundance_absorp,
                                                 slab_dict=slab_dict,
                                                 flux_obs=flux_obs,lam_obs=lam_obs)
 
@@ -682,9 +737,9 @@ def loglike_run(cube,ndim,nparams,debug=False,timeit=False):
     if sample_all:
         
         if fit_conti_err or fit_obs_err:
-            var_dict,abundance_dict,slab_dict,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
+            var_dict,abundance_dict,slab_dict,abundance_dict_absorp,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
         else:
-            var_dict,abundance_dict,slab_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,scale_prior=scale_prior)
+            var_dict,abundance_dict,slab_dict,abundance_dict_absorp=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior)
 
     else:    
         if fit_conti_err or fit_obs_err:
@@ -696,6 +751,8 @@ def loglike_run(cube,ndim,nparams,debug=False,timeit=False):
         print(var_dict)
         if sample_all:
             print(abundance_dict)
+            print(abundance_dict_absorp)
+            
         print(slab_dict)
         if fit_conti_err or fit_obs_err:
             print(sigma_dict)
@@ -707,6 +764,11 @@ def loglike_run(cube,ndim,nparams,debug=False,timeit=False):
                 abundance_dict[key]=fixed_dict[key]
                 if debug:
                     print('..added to abundance_dict')
+            elif key in header_absorp:
+                key_abs=key[:-7]
+                abundance_dict_absorp[key_abs]=fixed_dict[key]
+                if debug:
+                    print('..added to abundance_dict_absorp')
             elif key in init_dict or key=='distance':
                 var_dict[key]=fixed_dict[key]
                 if debug:
@@ -719,6 +781,7 @@ def loglike_run(cube,ndim,nparams,debug=False,timeit=False):
                 sigma_dict['sigma_obs']=10**fixed_dict[key]
                 if debug:
                     print('..added to sigma_dict')
+
             elif ':' in key:
                 idx=key.find(':')
                 if key[:idx] not in slab_dict:
@@ -728,45 +791,73 @@ def loglike_run(cube,ndim,nparams,debug=False,timeit=False):
 
                 slab_dict[key[:idx]][key[idx+1:]]=fixed_dict[key]
             else:
-                print(f'{key} is in fixed_dict but not used for the retrieval. Please check that.') 
+                print(f'{key} is in fixed_dict but not used for the retrieval. Please check that.')
+  
                 
     var_dict['bb_star']=use_bb_star
     
     #checking if the physics works out
-    penalty=float(-10**20.0)
-    if var_dict['tmin_s']>=var_dict['tmax_s']:
-        return penalty
+    penalty=float(-10**100.0)
+    sum_penalty=float(-10**100.0)
+    trigger_penalty=False
+    if use_dust_emis:
+        if sur_powerlaw:
+            if var_dict['tmin_s']>=var_dict['tmax_s']:
+                trigger_penalty=True
+                sum_penalty+=penalty*(var_dict['tmin_s']-var_dict['tmax_s'])
+    
+    if use_dust_absorp:
+        if abs_powerlaw:
+            if var_dict['tmin_abs']>=var_dict['tmax_abs']:
+                trigger_penalty=True
+                sum_penalty+=penalty*(var_dict['tmin_abs']-var_dict['tmax_abs'])
     
     if var_dict['tmin_mp']>=var_dict['tmax_mp']:
-        return penalty
+        trigger_penalty=True
+        sum_penalty+=penalty*(var_dict['tmin_mp']-var_dict['tmax_mp'])
     
     if 't_rim' not in var_dict.keys():
         if var_dict['tmin_rim']>=var_dict['tmax_rim']:
-            return penalty
+            trigger_penalty=True
+            sum_penalty+=penalty*(var_dict['tmin_rim']-var_dict['tmax_rim'])
     
     for key in slab_dict:
         if 'tmin' in slab_dict[key]: 
             if slab_dict[key]['tmin']>=slab_dict[key]['tmax']:
-                return penalty
+                trigger_penalty=True
+                sum_penalty+=penalty*(slab_dict[key]['tmin']-slab_dict[key]['tmax'])
         if coldens_restriction:
             if 'ColDens_tmin' in slab_dict[key]: 
                 if slab_dict[key]['ColDens_tmin']>slab_dict[key]['ColDens_tmax']:
-                    return penalty
-    
+                    trigger_penalty=True
+                    sum_penalty+=penalty*(slab_dict[key]['ColDens_tmin']-slab_dict[key]['ColDens_tmax'])
+    if trigger_penalty:
+        return sum_penalty
+
     if timeit:
         time_2=time()    
     if sample_all:
         interp_flux=con_model.run_model_normalized(variables=var_dict,dust_species=abundance_dict,
-                                                slab_dict=slab_dict,max_flux_obs=max_flux_obs)
+                                                slab_dict=slab_dict,absorp_species=abundance_dict_absorp,max_flux_obs=max_flux_obs)
 
 
         
     else:
         interp_flux=con_model.run_fitted_to_obs(variables=var_dict,
                                                 dust_species=init_abundance,
+                                                absorp_species=init_abundance_absorp,
                                                 slab_dict=slab_dict,
                                                 flux_obs=flux_obs,lam_obs=lam_obs)
 
+    if limit_integrated_flux:
+        for key in slab_dict:
+            if key in limit_flux_dict:
+                int_flux=con_model.calc_integrated_flux(key)
+                if int_flux>limit_flux_dict[key]:
+                    trigger_penalty=True
+                    sum_penalty+=penalty*(1+int_flux-limit_flux_dict[key])
+        if trigger_penalty:
+            return sum_penalty                   
     if timeit:
         time_3=time()
 
@@ -843,7 +934,6 @@ def loglike_run(cube,ndim,nparams,debug=False,timeit=False):
         return penalty
     else:
         return loglikelihood
-    
 
 # initializing the model and reading in the data
 
@@ -853,7 +943,8 @@ def loglike_run(cube,ndim,nparams,debug=False,timeit=False):
 con_model=complete_model()
 
 if not fit_water_ratios:
-    con_model.read_data(variables=init_dict,dust_species=init_abundance,
+    con_model.read_data(variables=init_dict,dust_species=init_abundance, 
+                        absorp_species=init_abundance_absorp, 
                         slab_dict=slab_prior_dict,slab_prefix=slab_prefix,
                         stellar_file=stellar_file,wavelength_points=lam_obs,
                         dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
@@ -861,8 +952,7 @@ if not fit_water_ratios:
 else:
     try:
         print(len(lam_obs))
-        con_model.read_data(variables=init_dict,dust_species=init_abundance,
-                            slab_dict=slab_prior_dict,slab_prefix=slab_prefix,
+        con_model.read_data(variables=init_dict,dust_species=init_abundance,slab_dict=slab_prior_dict,slab_prefix=slab_prefix,
                             stellar_file=stellar_file,wavelength_points=lam_obs,slab_only_mode=True,
                             dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
     except NameError:

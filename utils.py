@@ -64,7 +64,9 @@ class complete_model:
     def __init__(self):
         self.variables=None
         self.abundance_dict=None
+        self.abundance_dict_absorp=None
         self.data_dict={}
+        self.data_absorp_dict={}
         #self.plotting=plotting
         #self.timeit=timeit
         #self.printing=printing
@@ -112,7 +114,9 @@ class complete_model:
         self.emission_flux=[]
         self.emission_flux_individual={}
         self.emission_flux_individual_scaled={}
-        
+        self.absorp_flux_tot=[]
+        self.absorp_flux_individual={}
+        self.absorp_flux_individual_scaled={}
         self.run_tzones=False
           
         self.bb_array=[]
@@ -125,9 +129,14 @@ class complete_model:
         self.bb_temp_list=[]
         
         self.rim_powerlaw=False
+        self.sur_powerlaw=True        
+        self.absorp_powerlaw=True
+        
         self.cosi=False
         self.single_slab=False
         self.radial_version=radial_version
+        self.use_dust_emis=True
+        self.use_dust_absorp=False
         self.use_extinction=False
         
     def __str__(self):
@@ -139,15 +148,35 @@ class complete_model:
             string+= key +': '
             string+=str(self.variables[key])+'\n'
         string+='\n'
-        string+='-----------------\n'
-        string+='Used data:\n'
-        if self.data_dict!={}:
-            for key in self.data_dict:
-                string+=key+'\n'
+        if self.use_dust_emis:
+            string+='-----------------\n'
+            string+='Used dust emission data:\n'
+            if self.data_dict!={}:
+                for key in self.data_dict:
+                    string+=key+'\n'
+            else:
+                string+='Not loaded\n'
+            
+            string+='-----------------\n'
         else:
-            string+='Not loaded\n'
-        
-        string+='-----------------\n'
+            string+='Optically thin dust emission is not used in this model\n'
+        if self.use_dust_absorp:
+            string+='-----------------\n'
+            string+='Used dust absorption data:\n'
+            if self.data_absorp_dict!={}:
+                for key in self.data_absorp_dict:
+                    string+=key+'\n'
+            else:
+                string+='Not loaded\n'
+            
+            string+='-----------------\n'
+
+        else:
+            string+='Dust absorption is not used in this model\n'
+        if self.use_extinction:
+            string+='Extinction will be applied to the model output\n'
+        if self.slab_only_mode:
+            string+='Only the gas component is used\n'
         return string    
     
     # defining how a black body
@@ -156,10 +185,10 @@ class complete_model:
         # there are two options
         
         # not from array:
-        # calculating the black body useing the formular
+        # calculating the black body using the formula
         
         # from array:
-        # using the precalucated arrays of black body to interpolate
+        # using the precalculated arrays of black body to interpolate
         
         if from_array:
             idx=np.argmin(np.abs(self.bb_temp_list-t))
@@ -184,7 +213,7 @@ class complete_model:
             return (2*self.h*(freq*freq*freq)/(self.c*self.c))*(1.0/((np.exp((self.h*freq/(self.kboltz*t))) - 1.0)))
 
     def bbody_temp_powerlaw(self,t,exp):
-        # calculating a black body aith t**exp factor
+        # calculating a black body with t**exp factor
         # Replaced with precomputation -1 because of starting
         idx=np.argmin(np.abs(self.bb_temp_list-t))
         if self.bb_temp_list[idx]<=t:
@@ -207,7 +236,7 @@ class complete_model:
     def create_extinction_grid(self,ext_model,wave,rv_range=[2.31,5.59,0.1],ebv_range=[0.0,1.5,0.02],output=False):
         ''''
         This function creates a grid of extinction curves that can be later used to interpolate
-        We are restricting the creating of curves to the wavelength region for which the given model
+        We are restricting thecreationg of curves to the wavelength region for which the given model
         is valid: https://dust-extinction.readthedocs.io/en/latest/dust_extinction/choose_model.html
         This is 0.0912 - 32.0 micron if this does not work for you, you have to add another model
         Input:  wave give the wavelength points in micron
@@ -229,6 +258,7 @@ class complete_model:
             print('Be aware that not the whole wavelength range can be extinct')
             print('Extinction is valid between 0.0912 and 32 micron')
             print('If you loaded a custom extinction curve these limits might be different')
+            print('You have to change them in the code then')
             print('--------------')
             print('--------------')
         
@@ -260,7 +290,7 @@ class complete_model:
             return output_grid,rv_grid,ebv_grid
 
     
-    def read_data(self,variables={},dust_species={},slab_dict={},R=0,wavelength_points=[],ext_model=None,
+    def read_data(self,variables={},dust_species={},absorp_species={},slab_dict={},R=0,wavelength_points=[],ext_model=None,
                   bb_temp_steps=10,bb_min_temp=10,bb_max_temp=10000,
                   stellar_file ='./MCMAXspec-hae.in',dust_path='./Q-curves/fitting-Qcurves/Q_GRF/',
                   slab_folder='./LineData/', slab_only_mode=False,
@@ -285,8 +315,21 @@ class complete_model:
         if not slab_only_mode:
             self.abundance_dict=dust_species
 
+            self.abundance_dict_absorp=absorp_species
             if 'incl' in self.variables:
                 self.cosi=True
+                
+            if len(dust_species)>=1:
+                self.use_dust_emis=True
+            else:
+                self.use_dust_emis=False
+    
+            
+            if len(absorp_species)>=1:
+                self.use_dust_absorp=True
+            else:
+                self.use_dust_absorp=False
+                
 
             self.interp_bbody=interp_bbody
         if len(wavelength_points)==0:
@@ -497,7 +540,32 @@ class complete_model:
                 if debug:
                     print('interp')
                     print('absorbtion min max',np.min(self.data_dict[key]),np.max(self.data_dict[key]))
-
+            # loading all dust absorption species
+            # they are linearly interpolated to the wavelength grid
+            # they are saved in a dictionary (self.data_absorp_dict) under the name of the species
+            for key in self.abundance_dict_absorp:
+                if debug: print('Load '+key+'...')
+                if '/' in key:
+                    print('Make sure not to mix up dust species from different opacity mechanisms!!')
+                    print(key)
+                if q_files:
+                    wavelength,kabs = np.loadtxt(dust_path+key,skiprows=1,usecols=(0,1),unpack=True)  
+    
+                else:
+                    wavelength,kabs = np.loadtxt(dust_path+key, comments="#", skiprows=0,
+                                                          usecols=(0,1), unpack=True) 
+                if debug:
+                    print('wavelength min max',np.min(wavelength),np.max(wavelength))
+                    print('absorbtion min max',np.min(kabs),np.max(kabs))
+                    
+                # IS IT OKAY TO LIMIT IT T POSITIVE NUMBER??!?!?!?!
+                kabs=np.clip(kabs,a_min=0.0,a_max=None)
+                self.data_absorp_dict[key]=interpolate.interp1d(wavelength,kabs,kind='linear',bounds_error=False,fill_value=0.0)(self.xnew)*-1.0 #the minus one makes it absorption
+                if debug:
+                    print('interp')
+                    print('absorbtion min max',np.min(self.data_absorp_dict[key]),np.max(self.data_absorp_dict[key]))
+                
+     
             # loading the stellar spectrum if we don't assume a black body
             # we interplate it again linearly to the wavelength grid
             if not self.variables['bb_star']:
@@ -553,7 +621,35 @@ class complete_model:
                         print('There are not all parameters for the inner rim set!!!')
                         print(f'{var} is not defined')
                         print('-------')
-
+            # checking if the surface layer should be a powerlaw or single temperature          
+            if 'temp_s' in self.variables:
+                self.sur_powerlaw=False
+            else:
+                self.sur_powerlaw=True
+                #this of course means you need to set
+                # all other relevant variables
+                list_sur=['tmax_s','tmin_s','q_thin']
+                for var in list_sur:
+                    if var not in self.variables:
+                        print('-------')
+                        print('There are not all parameters for the surface layer set!!!')
+                        print(f'{var} is not defined')
+                        print('-------')
+    
+            # checking if the absorption layer should be a powerlaw or single temperature          
+            if 'temp_abs' in self.variables:
+                self.abs_powerlaw=False
+            else:
+                self.abs_powerlaw=True
+                #this of course means you need to set
+                # all other relevant variables
+                list_abs=['tmax_abs','tmin_abs','q_abs']
+                for var in list_abs:
+                    if var not in self.variables:
+                        print('-------')
+                        print('There are not all parameters for the absorp layer set!!!')
+                        print(f'{var} is not defined')
+                        print('-------')
 
             #precalculating black bodys for temperature grid
 
@@ -768,173 +864,226 @@ class complete_model:
 
 
 
-    def set_surface(self,one_output=False,new_surface=True,small_window=False,timeit=False):
+    def set_surface(self,one_output=False,new_surface=True,small_window=False,timeit=False,absorption=False):
 
         '''
         The surface is in general:
-        A black body temperature powerlaw multiplyed by the dust opacity times dust abundance 
+        A black body temperature powerlaw multiplied by the dust opacity times dust abundance 
 
         New implementation that is faster
         This implementation makes use of the precomputed black bodies.
         The idea is the same as for the midplane.
-        Additionally, the result is multiplyed by the dust opacity times abundance.
-        Note that also the older version is a debugged version of the previous iteration.
+        Additionally, the result is multiplied by the dust opacity times abundance.
+        
+        Now it is also possible to set a single temperature in the surface layer
         '''
 
-        tmin,tmax=self.variables['tmin_s'],self.variables['tmax_s']
-        if timeit: time1=time()
-        if new_surface:
-            idx_min=np.argmin(np.abs(self.bb_temp_list-tmin))
-            if self.bb_temp_list[idx_min]<=tmin:
-                idx_tmin=idx_min
+        
+        if self.sur_powerlaw: # using a power law for the temperature distribution in the surface layer
+            if not absorption:
+                tmin,tmax=self.variables['tmin_s'],self.variables['tmax_s']
+                used_exp=self.variables['exp_surface']
             else:
-                idx_tmin=idx_min-1
-            idx_max=np.argmin(np.abs(self.bb_temp_list-tmax))
-            if self.bb_temp_list[idx_max]<=tmax:
-                idx_tmax=idx_max
+                tmin,tmax=self.variables['tmin_abs'],self.variables['tmax_abs']
+                used_exp=self.variables['exp_abs']
+                
+            if timeit: time1=time()
+            if new_surface:
+                idx_min=np.argmin(np.abs(self.bb_temp_list-tmin))
+                if self.bb_temp_list[idx_min]<=tmin:
+                    idx_tmin=idx_min
+                else:
+                    idx_tmin=idx_min-1
+                idx_max=np.argmin(np.abs(self.bb_temp_list-tmax))
+                if self.bb_temp_list[idx_max]<=tmax:
+                    idx_tmax=idx_max
+                else:
+                    idx_tmax=idx_max-1
+
+
+                tmin_below=self.bb_temp_list[idx_tmin]
+                tmax_below=self.bb_temp_list[idx_tmax]
+
+                if (int(tmax)-int(tmin))<3:
+                    small_window==True
+                if small_window:
+
+                    num_points=int(tmax)-int(tmin)
+                    if num_points<10:
+                        num_points=10
+
+
+
+                    ar_temp=list(np.linspace(tmin,tmax,num_points))
+                    #ar_temp.insert(0,tmin)
+                    #ar_temp.insert(len(ar_temp),tmax)
+                    ar_temp=np.array(ar_temp)
+                    fluxes=[]
+                    for t in ar_temp:
+
+                        fluxes.append(self.bbody(t,self.freq,from_array=True)*t**used_exp)
+                    fluxes=np.array(fluxes)
+                    tot_bb_exp=np.trapz(fluxes,ar_temp,axis=0)
+                    dust_abs=np.zeros_like(tot_bb_exp)
+
+                    for key in self.abundance_dict:
+                        if one_output:
+                            dust_abs+=self.abundance_dict[key]*self.data_dict[key] 
+                        else:
+                            self.surface_flux_individual[key]=self.data_dict[key]*tot_bb_exp
+
+                    if one_output:
+                        flux_surface_tot=tot_bb_exp*dust_abs
+                        return flux_surface_tot
+
+
+                else:
+
+                    if timeit: time2=time()
+                    bb_points=self.bb_array[idx_tmin+2:idx_tmax].copy()
+
+                    if timeit: time3=time()
+
+
+                    bb_temps=np.arange(tmin_below+2*self.bb_temp_steps,tmax_below,self.bb_temp_steps)**used_exp
+
+                    if timeit: time4=time()
+                    for i in range(len(bb_temps)):
+                        bb_points[i]*=bb_temps[i]
+
+                    if timeit: time5=time()
+
+
+                    upper_bb_in=self.bb_array[idx_tmax]
+                    lower_bb_in=self.bb_array[idx_tmin+1]
+
+                    upper_bb_out=self.bb_array[idx_tmax+1]
+                    lower_bb_out=self.bb_array[idx_tmin]
+
+                    upper_edge=(upper_bb_in+(upper_bb_out-upper_bb_in)*(tmax-tmax_below)/self.bb_temp_steps)*(tmax)**used_exp
+                    lower_edge=(lower_bb_out+(lower_bb_in-lower_bb_out)*(tmin-tmin_below)/self.bb_temp_steps)*(tmin)**used_exp
+
+
+
+                    upper_bb_in_exp=self.bb_array[idx_tmax]*(tmax_below)**used_exp
+                    lower_bb_in_exp=self.bb_array[idx_tmin+1]*(tmin_below+self.bb_temp_steps)**used_exp
+
+
+
+                    num_points=int(tmax)-int(tmin)+1
+
+                    if timeit: time6=time()
+
+                    inner_part=np.sum(bb_points,axis=0)*self.bb_temp_steps
+                    lower_in=lower_bb_in_exp*1/2*self.bb_temp_steps
+                    upper_in=upper_bb_in_exp*1/2*self.bb_temp_steps
+
+                    lower_out=(lower_edge+lower_bb_in_exp)*(tmin_below+self.bb_temp_steps-tmin)/2
+                    upper_out=(upper_bb_in_exp+upper_edge)*(tmax-tmax_below)/2
+
+
+                    if timeit: time7=time()
+                    #print(inner_part)
+                    tot_bb_exp=(inner_part+lower_in+upper_in+upper_out+lower_out).copy()
+                    dust_abs=np.zeros_like(tot_bb_exp)
+                    if not absorption:
+                        for key in self.abundance_dict:
+                            if one_output:
+                                dust_abs+=self.abundance_dict[key]*self.data_dict[key] 
+                            else:
+                                self.surface_flux_individual[key]=self.data_dict[key]*tot_bb_exp
+                    else:
+                        for key in self.abundance_dict_absorp:
+                            if one_output:
+                                dust_abs+=self.abundance_dict_absorp[key]*self.data_absorp_dict[key] 
+                            else:
+                                self.absorp_flux_individual[key]=self.data_absorp_dict[key]*tot_bb_exp
+
+                    if one_output:
+                        flux_surface_tot=tot_bb_exp*dust_abs
+                        return flux_surface_tot
+
+                    if timeit: 
+                                    time8=time()
+                                    print('--------------')
+                                    print('Surface time')
+                                    print('Init',time2-time1)
+                                    print('Call array',time3-time2)
+                                    print('BB times exp',time4-time3)
+                                    print('Multiplying',time5-time4)
+                                    print('First and last point',time6-time5)
+                                    print('Multiplying with dust opacity',time7-time6)
+                                    print('Summing up',time8-time7)
+
+                                    print('--------------')
+
             else:
-                idx_tmax=idx_max-1
 
 
-            tmin_below=self.bb_temp_list[idx_tmin]
-            tmax_below=self.bb_temp_list[idx_tmax]
+                if one_output:
+                    flux_surface_tot = np.zeros((self.nwav))
 
-            if (int(tmax)-int(tmin))<3:
-                small_window==True
-            if small_window:
-
-                num_points=int(tmax)-int(tmin)
+                num_points=int((tmax-tmin))+1
                 if num_points<10:
                     num_points=10
-
-                    
-                    
-                ar_temp=list(np.linspace(tmin,tmax,num_points))
-                #ar_temp.insert(0,tmin)
-                #ar_temp.insert(len(ar_temp),tmax)
-                ar_temp=np.array(ar_temp)
-                fluxes=[]
+                ar_temp=np.linspace(tmin,tmax,num_points,endpoint='False')
+                flux=np.zeros((num_points,len(self.xnew)))
+                i=0
                 for t in ar_temp:
-
-                    fluxes.append(self.bbody(t,self.freq,from_array=True)*t**self.variables['exp_surface'])
-                fluxes=np.array(fluxes)
-                tot_bb_exp=np.trapz(fluxes,ar_temp,axis=0)
-                dust_abs=np.zeros_like(tot_bb_exp)
-
-                for key in self.abundance_dict:
-                    if one_output:
-                        dust_abs+=self.abundance_dict[key]*self.data_dict[key] 
+                    if i==0 or i==len(ar_temp)-1:
+                        flux[i]=self.bbody_temp_powerlaw(t,used_exp)*(tmax-tmin)/(num_points-1)/2
                     else:
-                        self.surface_flux_individual[key]=self.data_dict[key]*tot_bb_exp
-         
-                if one_output:
-                    flux_surface_tot=tot_bb_exp*dust_abs
-                    return flux_surface_tot
+                        flux[i]=self.bbody_temp_powerlaw(t,used_exp)*(tmax-tmin)/(num_points-1)
+                    i+=1
+                flux_sur=np.sum(flux,axis=0)
 
+                if absorption:
+                    for key in self.abundance_dict:
+                        dust_abs=self.data_dict[key] 
+                        dust_flux=dust_abs*flux_sur
+                        self.surface_flux_individual[key]=dust_flux
+                        if one_output:
+                            flux_surface_tot+=self.abundance_dict[key]*self.surface_flux_individual[key]
+                    if one_output:        
+                        return flux_surface_tot
+                else:
+                    for key in self.abundance_dict_absorp:
+                        dust_abs=self.data_absorp_dict[key] 
+                        dust_flux=dust_abs*flux_sur
+                        self.absorp_flux_individual[key]=dust_flux
+                        if one_output:
+                            flux_surface_tot+=self.abundance_dict_absorp[key]*self.absorp_flux_individual[key]
+                    if one_output:
+                        return flux_surface_tot
 
+        
+        else: #surface layer of a single temperature
+            if absorption:
+                used_temp=self.variables['temp_s']
             else:
-
-                if timeit: time2=time()
-                bb_points=self.bb_array[idx_tmin+2:idx_tmax].copy()
-
-                if timeit: time3=time()
-
-
-                bb_temps=np.arange(tmin_below+2*self.bb_temp_steps,tmax_below,self.bb_temp_steps)**self.variables['exp_surface']
-
-                if timeit: time4=time()
-                for i in range(len(bb_temps)):
-                    bb_points[i]*=bb_temps[i]
-
-                if timeit: time5=time()
-
-
-                upper_bb_in=self.bb_array[idx_tmax]
-                lower_bb_in=self.bb_array[idx_tmin+1]
-
-                upper_bb_out=self.bb_array[idx_tmax+1]
-                lower_bb_out=self.bb_array[idx_tmin]
-
-                upper_edge=(upper_bb_in+(upper_bb_out-upper_bb_in)*(tmax-tmax_below)/self.bb_temp_steps)*(tmax)**self.variables['exp_surface']
-                lower_edge=(lower_bb_out+(lower_bb_in-lower_bb_out)*(tmin-tmin_below)/self.bb_temp_steps)*(tmin)**self.variables['exp_surface']
-
-
-
-                upper_bb_in_exp=self.bb_array[idx_tmax]*(tmax_below)**self.variables['exp_surface']
-                lower_bb_in_exp=self.bb_array[idx_tmin+1]*(tmin_below+self.bb_temp_steps)**self.variables['exp_surface']
-
-
-
-                num_points=int(tmax)-int(tmin)+1
-
-                if timeit: time6=time()
-
-                inner_part=np.sum(bb_points,axis=0)*self.bb_temp_steps
-                lower_in=lower_bb_in_exp*1/2*self.bb_temp_steps
-                upper_in=upper_bb_in_exp*1/2*self.bb_temp_steps
-
-                lower_out=(lower_edge+lower_bb_in_exp)*(tmin_below+self.bb_temp_steps-tmin)/2
-                upper_out=(upper_bb_in_exp+upper_edge)*(tmax-tmax_below)/2
-
-
-                if timeit: time7=time()
-                #print(inner_part)
-                tot_bb_exp=(inner_part+lower_in+upper_in+upper_out+lower_out).copy()
-                dust_abs=np.zeros_like(tot_bb_exp)
-
-                for key in self.abundance_dict:
-                    if one_output:
-                        dust_abs+=self.abundance_dict[key]*self.data_dict[key] 
-                    else:
-                        self.surface_flux_individual[key]=self.data_dict[key]*tot_bb_exp
-         
-                if one_output:
-                    flux_surface_tot=tot_bb_exp*dust_abs
-                    return flux_surface_tot
-
-                if timeit: 
-                                time8=time()
-                                print('--------------')
-                                print('Surface time')
-                                print('Init',time2-time1)
-                                print('Call array',time3-time2)
-                                print('BB times exp',time4-time3)
-                                print('Multiplying',time5-time4)
-                                print('First and last point',time6-time5)
-                                print('Multiplying with dust opacity',time7-time6)
-                                print('Summing up',time8-time7)
-
-                                print('--------------')
-
-        else:
-
-
+                used_temp=self.variables['temp_abs']
+                
+            flux_sur=self.bbody(used_temp,from_array=True)
             if one_output:
                 flux_surface_tot = np.zeros((self.nwav))
-
-            num_points=int((tmax-tmin))+1
-            if num_points<10:
-                num_points=10
-            ar_temp=np.linspace(tmin,tmax,num_points,endpoint='False')
-            flux=np.zeros((num_points,len(self.xnew)))
-            i=0
-            for t in ar_temp:
-                if i==0 or i==len(ar_temp)-1:
-                    flux[i]=self.bbody_temp_powerlaw(t,self.variables['exp_surface'])*(tmax-tmin)/(num_points-1)/2
-                else:
-                    flux[i]=self.bbody_temp_powerlaw(t,self.variables['exp_surface'])*(tmax-tmin)/(num_points-1)
-                i+=1
-            flux_sur=np.sum(flux,axis=0)
-
-
-            for key in self.abundance_dict:
-                dust_abs=self.data_dict[key] 
-                dust_flux=dust_abs*flux_sur
-                self.surface_flux_individual[key]=dust_flux
-                if one_output:
-                    flux_surface_tot+=self.abundance_dict[key]*self.surface_flux_individual[key]
+            if absorption:
+                for key in self.abundance_dict:
+                    dust_abs=self.data_dict[key] 
+                    dust_flux=dust_abs*flux_sur
+                    self.surface_flux_individual[key]=dust_flux
+                    if one_output:
+                        flux_surface_tot+=self.abundance_dict[key]*self.surface_flux_individual[key]
+            else:
+                for key in self.abundance_dict_absorp:
+                    dust_abs=self.data_absorp_dict[key] 
+                    dust_flux=dust_abs*flux_sur
+                    self.absorp_flux_individual[key]=dust_flux
+                    if one_output:
+                        flux_surface_tot+=self.abundance_dict_absorp[key]*self.absorp_flux_individual[key]
+                
             if one_output:
                 return flux_surface_tot
+
 
     def set_emission_lines(self,LTE=True,one_output=False,scaled=True,output_quantities=False,debug=False,
                            fast_norm=True,debug_interp=False):
@@ -2094,17 +2243,24 @@ class complete_model:
         ext_curve=(fact_a*a+fact_b*b+fact_c*c+fact_d*d)/delta
         return ext_curve
         
-    def run_model(self,variables,dust_species,slab_dict,output_all=False,scaled_emission=True,timeit=False,debug=False):
+    def run_model(self,variables,dust_species,slab_dict,absorp_species=[],output_all=False,scaled_emission=True,timeit=False,debug=False):
         
         if timeit: time1=time()
         self.variables=variables
         if not self.slab_only_mode:
-            self.abundance_dict=dust_species
+            if self.use_dust_emis:
+                self.abundance_dict=dust_species
+                q_thin=self.variables['q_thin']
+                self.variables['exp_surface'] = (2.0 - q_thin)/q_thin
+
+            if self.use_dust_absorp:
+                self.abundance_dict_absorp=absorp_species
+                q_abs=self.variables['q_abs']
+                self.variables['exp_abs'] = (2.0 - q_abs)/q_abs
+                
             q=self.variables['q_mid']
-            q_thin=self.variables['q_thin']
             self.variables['exp_midplane'] = (2.0 - q)/q
 
-            self.variables['exp_surface'] = (2.0 - q_thin)/q_thin
 
         self.slab_dict=slab_dict
         
@@ -2151,8 +2307,11 @@ class complete_model:
 
                 midplane_flux=self.set_midplane()
 
+                if self.use_dust_emis:
+                    self.set_surface(timeit=timeit,absorption=False)
+                if self.use_dust_absorp:
+                    self.set_surface(timeit=timeit,absorption=True)
 
-                self.set_surface(timeit=timeit)
 
             self.set_emission_lines(one_output=False,scaled=False)
             
@@ -2169,17 +2328,31 @@ class complete_model:
 
                 #self.emission_flux=emission_flux #without the scaling because this is already applied
 
+                if self.use_dust_emis:
+                    for key in self.surface_flux_individual:
+                        if old_version:
+                            self.surface_flux_individual_scaled[key]=scale*self.surface_flux_individual[key]*ext_curve
+                        else:
+                            self.surface_flux_individual_scaled[key]=self.trans_flux*self.surface_flux_individual[key]*ext_curve
 
-                for key in self.surface_flux_individual:
-                    if old_version:
-                        self.surface_flux_individual_scaled[key]=scale*self.surface_flux_individual[key]*ext_curve
-                    else:
-                        self.surface_flux_individual_scaled[key]=self.trans_flux*self.surface_flux_individual[key]*ext_curve
+                if self.use_dust_absorp:
+                    for key in self.absorp_flux_individual:
+                        if old_version:
+                            self.absorp_flux_individual_scaled[key]=scale*self.absorp_flux_individual[key]*ext_curve
+                        else:
+                            self.absorp_flux_individual_scaled[key]=self.trans_flux*self.absorp_flux_individual[key]*ext_curve
 
                 for key in self.emission_flux_individual:
                     self.emission_flux_individual[key]*=ext_curve
-
-                return self.scaled_stellar_flux, self.rim_flux, self.midplane_flux, self.surface_flux_individual_scaled,self.emission_flux_individual.copy()
+                if self.use_dust_emis and self.use_dust_absorp:
+                    return self.scaled_stellar_flux, self.rim_flux, self.midplane_flux, self.surface_flux_individual_scaled,self.emission_flux_individual.copy(), self.absorp_flux_individual_scaled
+                
+                elif self.use_dust_emis and not self.use_dust_absorp:
+                    return self.scaled_stellar_flux, self.rim_flux, self.midplane_flux, self.surface_flux_individual_scaled,self.emission_flux_individual.copy(), {}
+                
+                elif not self.use_dust_emis and self.use_dust_absorp:
+                    return self.scaled_stellar_flux, self.rim_flux, self.midplane_flux, {},self.emission_flux_individual.copy(), self.absorp_flux_individual_scaled
+            
             else:
                 return self.emission_flux_individual.copy()
                 
@@ -2196,7 +2369,14 @@ class complete_model:
 
                 midplane_flux=self.variables['sc_mid']*self.set_midplane()
                 if timeit: time5=time()
-                surface_flux=self.set_surface(one_output=True)
+                if self.use_dust_emis:
+                    surface_flux=self.set_surface(absorption=False,one_output=True)
+                else:
+                    surface_flux=np.zeros_like(rim_flux)
+                if self.use_dust_absorp:
+                    absorption_flux=self.set_surface(absorption=True,one_output=True)
+                else:
+                    absorption_flux=np.zeros_like(rim_flux)
                 if timeit: time6=time()
 
             emission_flux=self.set_emission_lines(one_output=True,scaled=True)
@@ -2210,20 +2390,22 @@ class complete_model:
                 if timeit: time7=time()
 
                 if old_version:
-                    tot_flux=flux_star+rim_flux+midplane_flux+surface_flux
+                    tot_flux=flux_star+rim_flux+midplane_flux+surface_flux+absorption_flux
                     tot_flux=scale*tot_flux+emission_flux
                 else:
-                    tot_flux=scale*flux_star+self.trans_flux*(rim_flux+midplane_flux+surface_flux)+emission_flux
+                    tot_flux=scale*flux_star+self.trans_flux*(rim_flux+midplane_flux+surface_flux+absorption_flux)+emission_flux
 
                 self.scaled_stellar_flux=scale*flux_star*ext_curve
                 if old_version:
                     self.rim_flux=scale*rim_flux*ext_curve
                     self.midplane_flux=scale*midplane_flux*ext_curve
                     self.surface_flux_tot=scale*surface_flux*ext_curve
+                    self.absorp_flux_tot=scale*absorption_flux*ext_curve
                 else:
                     self.rim_flux=self.trans_flux*rim_flux*ext_curve
                     self.midplane_flux=self.trans_flux*midplane_flux*ext_curve
                     self.surface_flux_tot=self.trans_flux*surface_flux*ext_curve
+                    self.absorp_flux_tot=self.trans_flux*absorption_flux*ext_curve
 
                 self.emission_flux=emission_flux*ext_curve #without the scaling because this is already applied
                 self.tot_flux=tot_flux*ext_curve
@@ -2244,7 +2426,7 @@ class complete_model:
         
         
 
-    def run_model_normalized(self,variables,dust_species,slab_dict,max_flux_obs,translate_scales=False,debug=False,timeit=False,save_continuum=continuum_penalty):
+    def run_model_normalized(self,variables,dust_species,slab_dict,max_flux_obs,absorp_species={},translate_scales=False,debug=False,timeit=False,save_continuum=continuum_penalty):
         '''
         This functions runs the model, but the scaling factors are between 0 and 1
         This is done by using the maximum value of every component and the maximum of the observation
@@ -2257,17 +2439,24 @@ class complete_model:
         else:
             ext_curve=np.ones_like(self.xnew)
         if timeit: time1=time()
-        self.variables=variables
-        self.abundance_dict=dust_species
+        self.variables=variables        
+        if self.use_dust_emis:
+            self.abundance_dict=dust_species
+        if self.use_dust_absorp:
+            self.abundance_dict_absorp=absorp_species
         self.slab_dict=slab_dict
         
         q=self.variables['q_mid']
-        q_thin=self.variables['q_thin']
+        if self.use_dust_emis and  self.sur_powerlaw:
+            q_thin=self.variables['q_thin']
+            self.variables['exp_surface'] = (2.0 - q_thin)/q_thin
+        if self.use_dust_absorp and  self.abs_powerlaw:
+            q_abs=self.variables['q_abs']
+            self.variables['exp_abs'] = (2.0 - q_abs)/q_abs
         q_emis=self.variables['q_emis']
         
         self.variables['exp_midplane'] = (2.0 - q)/q
 
-        self.variables['exp_surface'] = (2.0 - q_thin)/q_thin
         
         if old_version:
             self.variables['exp_emission']=(2-q_emis)/q_emis
@@ -2304,7 +2493,10 @@ class complete_model:
         midplane_flux=self.set_midplane()*ext_curve
         if timeit: time5=time()
 
-        self.set_surface()
+        if self.use_dust_emis:
+            self.set_surface(absorption=False)
+        if self.use_dust_absorp:
+            self.set_surface(absorption=True)
         if timeit: time6=time()
 
         self.set_emission_lines(one_output=False,scaled=True)
@@ -2335,23 +2527,41 @@ class complete_model:
             else:
                 scale_paras_list.append(self.variables['sc_ir']/self.trans_flux*max_flux_obs/max(rim_flux))
                 scale_paras_list.append(self.variables['sc_mid']/self.trans_flux*max_flux_obs/max(midplane_flux))
-                
-        surface_flux_tot=np.zeros_like(self.xnew)
-        for key in self.surface_flux_individual:
-            self.surface_flux_individual_scaled[key]=self.abundance_dict[key]*self.surface_flux_individual[key]*ext_curve*max_flux_obs/max(self.surface_flux_individual[key]*ext_curve)
-            surface_flux_tot+=self.surface_flux_individual_scaled[key]
-            tot_flux+=self.surface_flux_individual_scaled[key]    
-            if translate_scales:
-                if old_version:
-                    scale_paras_list.append(self.abundance_dict[key]/scale*max_flux_obs/max(self.surface_flux_individual[key]*ext_curve))
-                else:
-                    scale_paras_list.append(self.abundance_dict[key]/self.trans_flux*max_flux_obs/max(self.surface_flux_individual[key]*ext_curve))
+        if self.use_dust_emis:
+            surface_flux_tot=np.zeros_like(self.xnew)
+            for key in self.surface_flux_individual:
+                self.surface_flux_individual_scaled[key]=self.abundance_dict[key]*self.surface_flux_individual[key]*ext_curve*max_flux_obs/max(self.surface_flux_individual[key]*ext_curve)
+                surface_flux_tot+=self.surface_flux_individual_scaled[key]
+                tot_flux+=self.surface_flux_individual_scaled[key]    
+                if translate_scales:
+                    if old_version:
+                        scale_paras_list.append(self.abundance_dict[key]/scale*max_flux_obs/max(self.surface_flux_individual[key]*ext_curve))
+                    else:
+                        scale_paras_list.append(self.abundance_dict[key]/self.trans_flux*max_flux_obs/max(self.surface_flux_individual[key]*ext_curve))
 
-        
+            self.surface_flux_tot=surface_flux_tot
+        if self.use_dust_absorp:
+            absorp_flux_tot=np.zeros_like(self.xnew)
+            for key in self.absorp_flux_individual:
+                if self.use_extinction:
+                    self.absorp_flux_individual_scaled[key]=self.abundance_dict_absorp[key]*self.absorp_flux_individual[key]*ext_curve*max_flux_obs/max(abs(self.absorp_flux_individual[key]*ext_curve))
+                    absorp_flux_tot+=self.absorp_flux_individual_scaled[key]
+                    tot_flux+=self.absorp_flux_individual_scaled[key]    
+                    if translate_scales:
+                        scale_paras_list.append(self.abundance_dict_absorp[key]/scale_components*max_flux_obs/max(abs(self.absorp_flux_individual[key])))
+                else:
+                    self.absorp_flux_individual_scaled[key]=self.abundance_dict_absorp[key]*self.absorp_flux_individual[key]*max_flux_obs/max(abs(self.absorp_flux_individual[key]))
+                    absorp_flux_tot+=self.absorp_flux_individual_scaled[key]
+                    tot_flux+=self.absorp_flux_individual_scaled[key]    
+                    if translate_scales:
+                        scale_paras_list.append(self.abundance_dict_absorp[key]/scale_components*max_flux_obs/max(abs(self.absorp_flux_individual[key])))
+               
+            self.absorp_flux_tot=absorp_flux_tot
+
         
         if save_continuum:
             self.saved_continuum=tot_flux.copy()-emission_flux.copy() 
-        self.surface_flux_tot=surface_flux_tot
+        
         self.tot_flux=tot_flux
         
         if timeit:
@@ -2369,9 +2579,9 @@ class complete_model:
         else:
             return tot_flux
 
-    def run_fitted_to_obs(self,variables,dust_species,slab_dict,flux_obs,lam_obs,
+    def run_fitted_to_obs(self,variables,dust_species,slab_dict,flux_obs,lam_obs,absorp_species={},
                           interp=False,scipy=True,debug=False,save_continuum=continuum_penalty):
-        stellar_flux, rim_flux, midplane_flux, surface_flux_dict, emission_flux_dict= self.run_model(variables=variables,dust_species=dust_species,slab_dict=slab_dict,output_all=True)
+        stellar_flux, rim_flux, midplane_flux, surface_flux_dict, emission_flux_dict, absorp_flux_dict= self.run_model(variables=variables,dust_species=dust_species,absorp_species=absorp_species,slab_dict=slab_dict,output_all=True)
         
 
 
@@ -2386,11 +2596,14 @@ class complete_model:
         max_values=[]
         max_values.append(max(rim_flux))
         max_values.append(max(midplane_flux))
-        for key in surface_flux_dict:
-            max_values.append(max(surface_flux_dict[key]))
+        if self.use_dust_emis:
+            for key in surface_flux_dict:
+                max_values.append(max(surface_flux_dict[key]))
+        if self.use_dust_absorp:
+            for key in absorp_flux_dict:
+                max_values.append(max(abs(absorp_flux_dict[key])))           
         for key in emission_flux_dict:
-            max_values.append(max(emission_flux_dict[key]))
-            
+            max_values.append(max(emission_flux_dict[key])) 
             
         max_values=np.array(max_values)
         #to not devide by 0.0 we set the max value to 1.0 if it is 0.0
@@ -2402,17 +2615,28 @@ class complete_model:
             stellar_flux=spline(self.xnew,stellar_flux,lam_obs)
             rim_flux=spline(self.xnew,rim_flux,lam_obs)
             midplane_flux=spline(self.xnew,midplane_flux,lam_obs)
-
+        num_dust=0
+        if self.use_dust_emis:
+            num_dust+=len(list(surface_flux_dict.keys()))
+        if self.use_dust_absorp:
+            num_dust+=len(list(absorp_flux_dict.keys()))
         compo_ar=np.zeros((len(stellar_flux),2+num_dust+num_species))
         compo_ar[:,0]=rim_flux/max_values[0]
         compo_ar[:,1]=midplane_flux/max_values[1]
         i=2
         
-        for key in surface_flux_dict:
-            if interp:
-                surface_flux_dict[key]=spline(self.xnew,surface_flux_dict[key],lam_obs)
-            compo_ar[:,i]=surface_flux_dict[key]/max_values[i]
-            i+=1
+        if self.use_dust_emis:
+            for key in surface_flux_dict:
+                if interp:
+                    surface_flux_dict[key]=spline(self.xnew,surface_flux_dict[key],lam_obs)
+                compo_ar[:,i]=surface_flux_dict[key]/max_values[i]
+                i+=1
+        if self.use_dust_absorp:
+            for key in absorp_flux_dict:
+                if interp:
+                    absorp_flux_dict[key]=spline(self.xnew,absorp_flux_dict[key],lam_obs)
+                compo_ar[:,i]=absorp_flux_dict[key]/max_values[i]
+                i+=1
         for key in emission_flux_dict:
             if interp:
                 emission_flux_dict[key]=spline(self.xnew,emission_flux_dict[key],lam_obs)
@@ -2441,9 +2665,14 @@ class complete_model:
         tot_flux=stellar_flux+scaleparas[0]*rim_flux+scaleparas[1]*midplane_flux
 
         i=2
-        for key in surface_flux_dict:
-            tot_flux+=scaleparas[i]*surface_flux_dict[key]
-            i+=1
+        if self.use_dust_emis:
+            for key in surface_flux_dict:
+                tot_flux+=scaleparas[i]*surface_flux_dict[key]
+                i+=1 
+        if self.use_dust_absorp:
+            for key in absorp_flux_dict:
+                tot_flux+=scaleparas[i]*absorp_flux_dict[key]
+                i+=1 
         if save_continuum:
             self.saved_continuum=tot_flux.copy()            
         for key in emission_flux_dict:
@@ -2543,9 +2772,13 @@ class complete_model:
         return tot_flux
 
     
-    def get_q_translation_factors(self,dust_path):
+    def get_q_translation_factors(self,dust_path,absorption=False):
         factor_dict={}
-        for key in self.abundance_dict:
+        if not absorption:
+            used_dict=self.abundance_dict
+        else:
+            used_dict=self.abundance_dict_absorp
+        for key in used_dict:
 
             with open(dust_path+key,'r') as f:
                 lines=f.readlines()
@@ -2568,7 +2801,7 @@ class complete_model:
             factor_dict[key]=fact
         return factor_dict
     
-    def calc_dust_masses(self,dust_path,unit='msun',q_curve=True):
+    def calc_dust_masses(self,dust_path,unit='msun',q_curve=True,absorption=False):
         '''
         This only works with the radial version
         The idea is that pi*r^2*N=Mass
@@ -2587,20 +2820,47 @@ class complete_model:
             unit_val=self.mjup
         elif unit=='mearth':
             unit_val=self.mearth
-            
+        
+        if not self.cosi:
+            self.variables['incl']=0.0
             
         if q_curve:
             
-            fact_dict=self.get_q_translation_factors(dust_path=dust_path)
+            fact_dict=self.get_q_translation_factors(dust_path=dust_path,absorption=absorption)
         mass_dict={}
-        for key in self.abundance_dict:
-            #print(self.abundance_dict[key])
-            M= -1/2.0 /degree_to_cos(self.variables['incl']) * self.abundance_dict[key] *(self.parsec*self.variables['distance'])**2 * self.variables['q_thin'] * self.variables['tmax_s']**(2/self.variables['q_thin'])*4/3
-            if q_curve:
-                M*=fact_dict[key]
-            M*=((self.variables['tmin_s']/self.variables['tmax_s'])**(2/self.variables['q_thin'])-1)/unit_val
-            mass_dict[key]=M
-        return mass_dict
+        if not absorption:
+            for key in self.abundance_dict:
+                if self.sur_powerlaw:
+    
+                    #print(self.abundance_dict[key])
+                    M= -1/2.0 /degree_to_cos(self.variables['incl']) * self.abundance_dict[key] *(self.parsec*self.variables['distance'])**2 * self.variables['q_thin'] * self.variables['tmax_s']**(2/self.variables['q_thin'])*4/3
+                    if q_curve:
+                        M*=fact_dict[key]
+                    M*=((self.variables['tmin_s']/self.variables['tmax_s'])**(2/self.variables['q_thin'])-1)/unit_val
+                else:
+                    M=self.abundance_dict[key]*(self.parsec*self.variables['distance'])**2 *4/3 /degree_to_cos(self.variables['incl'])/unit_val
+                    if q_curve:
+                        M*=fact_dict[key]
+                    
+                mass_dict[key]=M
+
+        else:            
+            for key in self.abundance_dict_absorp:
+                if self.absorp_powerlaw:
+    
+                    #print(self.abundance_dict[key])
+                    M= -1/2.0 /degree_to_cos(self.variables['incl']) * self.abundance_dict_absorp[key] *(self.parsec*self.variables['distance'])**2 * self.variables['q_abs'] * self.variables['tmax_abs']**(2/self.variables['q_abs'])*4/3
+                    if q_curve:
+                        M*=fact_dict[key]
+                    M*=((self.variables['tmin_abs']/self.variables['tmax_abs'])**(2/self.variables['q_abs'])-1)/unit_val
+                else:
+                    M=self.abundance_dict_absorp[key]*(self.parsec*self.variables['distance'])**2 *4/3 /degree_to_cos(self.variables['incl'])/unit_val
+                    if q_curve:
+                        M*=fact_dict[key]
+                    
+                mass_dict[key]=M
+        return mass_dict            
+
     def plot_radial_structure(self,low_contribution=0.15,high_contribution=0.85,ylog=True):
         '''
         This function plots the radial molecular structure of the model.
@@ -3006,14 +3266,17 @@ class complete_model:
             plt.title('Extinction')
             plt.xlabel(r'$\lambda$ [$\rm \mu$m]')
             plt.show()
-
         plt.figure() 
         plt.ylim(min(self.tot_flux),max(self.tot_flux)*1.1)
         if not self.slab_only_mode:
             plt.loglog(self.xnew,self.scaled_stellar_flux,label='star')
             plt.loglog(self.xnew,self.rim_flux,label='inner rim')
             plt.loglog(self.xnew,self.midplane_flux,label='midplane')
-            plt.loglog(self.xnew,self.surface_flux_tot,label='surface')
+            if self.use_dust_emis:
+                plt.loglog(self.xnew,self.surface_flux_tot,label='surface')
+            if self.use_dust_absorp:
+                plt.loglog(self.xnew,self.absorp_flux_tot*-1.0,label='absorption x (-1.0)')
+            
 
         plt.loglog(self.xnew,self.emission_flux,label='molecular emission')
         plt.loglog(self.xnew,self.tot_flux,label='total')
@@ -3023,13 +3286,15 @@ class complete_model:
         plt.ylabel(r'$F_\nu$ [Jy]')
         plt.show()
 
-
-def create_header(var_dict,abundance_dict,slab_dict,fit_obs_err,fit_conti_err,fixed_dict,prior_dict):
+def create_header(var_dict,abundance_dict,slab_dict,fit_obs_err,fit_conti_err,fixed_dict,prior_dict,abundance_dict_absorption):
     header=[]
     header_para=[]
     header_abund=[]
     header_slab=[]
     header_sigma=[]
+    
+    header_absorp=[]
+    
     for key in var_dict:
         
         if key!='bb_star' and key not in fixed_dict:
@@ -3044,7 +3309,9 @@ def create_header(var_dict,abundance_dict,slab_dict,fit_obs_err,fit_conti_err,fi
     for key in abundance_dict:
         header.append(key)
         header_abund.append(key)            
-
+    for key in abundance_dict_absorption:
+        header.append(key+'_absorp')
+        header_absorp.append(key+'_absorp')
     if fit_obs_err:
         
         if 'log_sigma_obs' in prior_dict:
@@ -3069,11 +3336,13 @@ def create_header(var_dict,abundance_dict,slab_dict,fit_obs_err,fit_conti_err,fi
     header_sigma=np.array(header_sigma)
 
     header_abund=np.array(header_abund)
+    
+    header_absorp=np.array(header_absorp)
     if fit_obs_err or fit_conti_err:
         
-        return header,header_para,header_abund,header_slab,header_sigma
+        return header,header_para,header_abund,header_slab, header_absorp, header_sigma
     else:
-        return header,header_para,header_abund,header_slab
+        return header,header_para,header_abund,header_slab, header_absorp
 
 
 def cube_to_dict(data,header,fit_obs_err=False,fit_conti_err=False,log_coldens=True):
@@ -3110,11 +3379,12 @@ def cube_to_dict(data,header,fit_obs_err=False,fit_conti_err=False,log_coldens=T
     else:
         return var_dict,slab_dict
 
-def cube_to_dicts(data,header_para,header_abund,header_all,scale_prior,fit_obs_err=False,fit_conti_err=False,debug=False):
+def cube_to_dicts(data,header_para,header_abund,header_all,scale_prior,header_absorp=[],fit_obs_err=False,fit_conti_err=False,debug=False):
     var_dict={}
     slab_dict={}
     abund_dict={}
     sigma_dict={}
+    absorp_dict={}
     i=0
     for key in header_all:
         if debug: 
@@ -3125,7 +3395,12 @@ def cube_to_dicts(data,header_para,header_abund,header_all,scale_prior,fit_obs_e
             sigma_dict[key]=data[i]
         elif key=='log_sigma_obs' or key=='log_sigma_conti':
             sigma_dict[key[4:]]=10**data[i]
-            
+        elif key in header_absorp:
+            key_abs=key[:-7]
+            if prior_on_log:
+                absorp_dict[key_abs]=10**data[i] # so the prior of the abundances should be in log10 scale
+            else:
+                absorp_dict[key_abs]=data[i] #so the prior of the abundances should be in log10 scale            
         elif ':' in key:
             if debug: print('In Slab')
             idx=key.find(':')
@@ -3163,30 +3438,44 @@ def cube_to_dicts(data,header_para,header_abund,header_all,scale_prior,fit_obs_e
 
 
     if fit_conti_err or fit_obs_err:
-        return var_dict,abund_dict,slab_dict,sigma_dict
+        return var_dict,abund_dict,slab_dict,absorp_dict,sigma_dict
     else:
-        return var_dict,abund_dict,slab_dict
+        return var_dict,abund_dict,slab_dict,absorp_dict
 
 # In[9]:
 
 
 
-def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_water_ratios=False,use_extinction=False):
+def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_water_ratios=False,use_dust_emis=True,use_dust_absorp=False,use_extinction=False,sur_powerlaw=True,abs_powerlaw=True):
     if fit_water_ratios:
         var_dict={'q_emis':None,
                  'distance':None}
         return var_dict
     else:
+        var_dict={}
+        if use_dust_emis:
+            if sur_powerlaw:
+                var_dict['tmin_s']=None
+                var_dict['tmax_s']=None
+            else:
+                var_dict['temp_abs']=None
+                
+        var_dict['tmin_mp']=None
+        var_dict['tmax_mp']=None
+        var_dict['q_mid']=None
+        if use_dust_emis and sur_powerlaw:
+            var_dict['q_thin']=None
+        if use_dust_absorp:
+            if abs_powerlaw:
+                var_dict['tmax_abs']=None
+                var_dict['tmin_abs']=None
+                var_dict['q_abs']=None
+            else:
+                var_dict['temp_abs']=None
+
+
         
-        var_dict={'tmin_s':None,
-                 'tmax_s':None,
-                 'tmin_mp':None,
-                 'tmax_mp':None,
-                 #'sc_ir':None,
-                 #'sc_mid':None,
-                 'q_mid':None,
-                 'q_thin':None,
-                 'q_emis':None}
+        var_dict['q_emis']=None
         if 'incl' in prior_dict or 'incl' in fixed_dict:
             var_dict['incl']=None
         if use_bb_star:
