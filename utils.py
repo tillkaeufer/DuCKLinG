@@ -397,13 +397,21 @@ class complete_model:
                 print('-----------------------------')
                 
         for mol_name_init in slab_list:
-            if '_comp' in mol_name_init:
+            mol_absorp=False
+            if '_absorp' in mol_name_init:
+                mol_absorp=True
+                idx_comp=mol_name_init.find('_absorp')
+                mol_name=mol_name_init[:idx_comp]
+                print(mol_name_init)
+                print('Will be used in absorption')
+                print('The follwoing slab data is used:')
+                print(mol_name)
+            elif '_comp' in mol_name_init:
                 idx_comp=mol_name_init.find('_comp')
                 mol_name=mol_name_init[:idx_comp]
                 print(mol_name_init)
                 print('is changed to')
                 print(mol_name)
-                
             else:
                 mol_name=mol_name_init
             
@@ -457,6 +465,9 @@ class complete_model:
                     print('Done')
             else:
                 print('Checking for molecular data')
+            if mol_absorp:
+                print('Absorption is applied by turning the slab model upside-down')
+                self.slab_data[mol_name_init]*=(-1) # for absorption we are simply turning around the molecular component
         self.slab_parameters['col']=np.load(f'{slab_folder}{slab_prefix}parameter_col.npy')
         self.slab_parameters['temp']=np.load(f'{slab_folder}{slab_prefix}parameter_temp.npy')
         
@@ -534,7 +545,7 @@ class complete_model:
                     print('wavelength min max',np.min(wavelength),np.max(wavelength))
                     print('absorbtion min max',np.min(kabs),np.max(kabs))
 
-                # IS IT OKAY TO LIMIT IT T POSITIVE NUMBER??!?!?!?!
+                # IS IT OKAY TO LIMIT IT TO POSITIVE NUMBER??!?!?!?!
                 kabs=np.clip(kabs,a_min=0.0,a_max=None)
                 self.data_dict[key]=interpolate.interp1d(wavelength,kabs,kind='linear',bounds_error=False,fill_value=0.0)(self.xnew)
                 if debug:
@@ -1883,6 +1894,18 @@ class complete_model:
                 results[species]['rout,rin']=[self.slab_dict[species]['radius'],0] 
                 results[species]['radius_eff']=self.slab_dict[species]['radius']
             else:
+                if '_absorp' in species:
+                    all_comps=['lower_out','lower_in','inner_part','upper_in','upper_out']
+                    for comp in all_comps:
+                        if comp in list(output_dict[species].keys()):
+                            if comp=='inner_part':
+                                for i in range(len(output_dict[species][comp])):
+                                    output_dict[species][comp][i]*=(-1) #turning the contribution to emission to make all the calculations work
+                            else:
+                                output_dict[species][comp]*=(-1) #turning the contribution to emission to make all the calculations work
+                            
+                            
+                
                 tot_flux=0
                 for key in output_dict[species]:
                     if key not in exclude_list and 'temp' not in key:
@@ -2603,7 +2626,7 @@ class complete_model:
             for key in absorp_flux_dict:
                 max_values.append(max(abs(absorp_flux_dict[key])))           
         for key in emission_flux_dict:
-            max_values.append(max(emission_flux_dict[key])) 
+            max_values.append(max(abs(emission_flux_dict[key]))) 
             
         max_values=np.array(max_values)
         #to not devide by 0.0 we set the max value to 1.0 if it is 0.0
@@ -2713,7 +2736,7 @@ class complete_model:
         
         max_values=[]
         for key in emission_flux_dict:
-            max_values.append(max(emission_flux_dict[key]))
+            max_values.append(max(abs(emission_flux_dict[key])))
             
             
         max_values=np.array(max_values)
