@@ -203,6 +203,7 @@ Hopefully, this will plot/save you all the data you are interested in.
 - It is important to delete MultiNest files when you re-run a model that was interrupted due to any kinds of errors.
 - If you have your own sigma of your data, comment out 'log_sigma_obs' and define 'sig_obs'.
 - If the path to output directory is too long, Multinest cannot save its output file names properly due to the limits on fortran.
+- If you are running the plotting rountine on a mac, there might be an error if you are using the custom_list argument (e.g python plot_retrieval_results.py custom_list [[5,40]]), you can fix it by adding 'noglob' to the line (e.g. noglob python plot_retrieval_results.py custom_list [[5,40]])
 
 ## Licence
 Tbd
