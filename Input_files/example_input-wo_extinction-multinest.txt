@@ -1,13 +1,13 @@
 # -----------------------------
 # setting
 # -----------------------------
-bayesian_folder='/data/tk502/DuCKLinG_output/' #folder in which the output of this program should be saved
+bayesian_folder='./Example/' #folder in which the output of this program should be saved
 dust_path='./Q-curves/fitting-Qcurves/Q_GRF/'    #path to the dust data
 
 subfold='no_extinction/' #subfolder where the retrieval run is saved
 
 
-slab_folder='/data/tk502/LineData/' # folder where the slab grids are saved
+slab_folder='./LineData/' # folder where the slab grids are saved
 slab_prefix='12_' #prefix of the slab grid that is used
 run_number=1 #Giving your run a unique ID
 
