@@ -11,7 +11,7 @@ from PyAstronomy import pyasl
 import corner
 from matplotlib.lines import Line2D
 import pickle 
-
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from ast import literal_eval
 
@@ -40,13 +40,15 @@ save_mol_flux=False
 load_output=False
 plot_dust_individual=False
 number_plotted_dust=0
-zoom_list=[[2,40]]
+zoom_list=[[None,None]]
 reduce_posterior=False
 ignore_spectrum_plot=False
 fit_water_ratios=False
 ext_model=None
 sur_powerlaw=False
 abs_powerlaw=False
+close_plots=False
+
 
 if __name__ == "__main__":
     input_file=sys.argv[1]
@@ -64,21 +66,6 @@ if __name__ == "__main__":
             elif argument=='save_all':
                 save_output=True
                 save_flux=True   
-            elif argument=='standard':
-                zoom_list=[[2,40]]
-            elif argument=='prodimo_co2' or argument=='prodimo_CO2':
-                zoom_list=[[13,17]]            
-            elif argument=='prodimo_all':
-                zoom_list=[[5,30]]
-        
-            elif argument=='exlup_long':
-                zoom_list=[[13.5,17]]
-        
-            elif argument=='exlup_short':
-                zoom_list=[[4,8]]    
-            elif argument=='exlup_total':
-                zoom_list=[[4.5,8],[13.5,15.5],[13.5,17],[4,18]]
-
             elif argument=='custom_list':
                 zoom_list=np.array(literal_eval(arg_list[int(i+1)]),dtype='float64')
 
@@ -101,6 +88,8 @@ if __name__ == "__main__":
                 len_reduce_post=int(arg_list[i+1])
             elif argument=='no_spectrum':
                 ignore_spectrum_plot=True
+            elif argument=='close':
+                 close_plots=True
             else:
                 print('--------------')
                 print('--------------')
@@ -108,8 +97,6 @@ if __name__ == "__main__":
                 print(argument)
                 print('--------------')
                 print('--------------')
-print('Zoom window')
-print(zoom_list)
 print('save output')
 print(save_output)
 print('save fluxes')
@@ -230,7 +217,11 @@ continuum_penalty=False
 select_conti_like=False
 sum_sigma=True
 radial_version=True
-    
+
+if zoom_list[0][0]==None or zoom_list[0][1]==None:
+    zoom_list=[[min(np.round(lam_obs,4)),max(np.round(lam_obs,4))]]
+print('Zoom window')
+print(zoom_list)    
 print('Save:',save_output)
  
     
@@ -1559,7 +1550,7 @@ elif 'sigma_obs' in complete_header:
 if not ignore_spectrum_plot:
     if save_flux:
         
-        
+        np.save(f'{prefix}mol_flux{reduce_str}',emission_components)
         np.save(f'{prefix}array_flux{reduce_str}',array_flux)
         np.save(f'{prefix}interp_flux{reduce_str}',interp_fluxes)
 
@@ -1642,15 +1633,21 @@ if not ignore_spectrum_plot:
                 comp_names.append('Surface flux')
             if use_dust_absorp:
                 comp_names.append('Absorption flux x (-1)'),
-            comp_names.append('Emission flux')
+            if np.mean(emission_components)>=0.0:
+                comp_names.append('Emission flux')
+            else:
+                comp_names.append('Mol. absorption flux x (-1)')
             comp_colors=['tab:orange','tab:green','tab:purple','tab:brown','tab:olive','tab:red']
             
             comp_list=[stellar_components,rim_components,midplane_components]
             if use_dust_emis:
                 comp_list.append(surface_components)
             if use_dust_absorp:
-                comp_list.append(absorp_components*(-1))
-            comp_list.append(emission_components)
+                comp_list.append(absorp_components*(-1.0))
+            if np.mean(emission_components)>=0.0:      
+                comp_list.append(emission_components)
+            else:      
+                comp_list.append(emission_components*(-1.0))
             for idx_comp in range(len(comp_list)):
                 print('Adding ',comp_names[idx_comp])
                 comp=comp_list[idx_comp]
@@ -1770,8 +1767,11 @@ if not ignore_spectrum_plot:
                 plt.savefig(save_name+reduce_str+'_dust'+f'.{filetype_fig}',bbox_inches='tight')
             else:
                 plt.savefig(save_name+reduce_str+f'.{filetype_fig}',bbox_inches='tight')
+        if close_plots:
+            plt.close()
+        else:
 
-        plt.show()
+            plt.show()
 
         if zoom:
             for zoom_in in zoom_in_list:
@@ -1854,7 +1854,12 @@ if not ignore_spectrum_plot:
                     else:
                         plt.savefig(f'{save_name}_zoom_{str(zoom_in[0])}_{str(zoom_in[1])}{reduce_str}.{filetype_fig}',bbox_inches='tight')
 
-                plt.show()
+                if close_plots:
+                    plt.close()
+                else:
+
+                    plt.show()
+
 
 
     if fit_obs_err or 'sigma_obs' in fixed_dict or 'log_sigma_obs' in fixed_dict:
@@ -1936,7 +1941,12 @@ if not ignore_spectrum_plot:
         plt.tight_layout()
         if save:
             plt.savefig(save_name,bbox_inches='tight')
-        plt.show()
+        if close_plots:
+            plt.close()
+        else:
+
+            plt.show()
+
 
 
 
@@ -1977,7 +1987,12 @@ CORNER_KWARGS = dict(
 fig = corner.corner(samples[:,:len(header_para)], labels=header_para, color='tomato', **CORNER_KWARGS)
 
 plt.savefig(f'{save_folder}{str(run_number)}_Cornerplot_multinest_parameters{reduce_str}.{filetype_fig}',bbox_inches='tight')
-plt.show()
+if close_plots:
+    plt.close()
+else:
+
+    plt.show()
+
 
 header_para_slab=list(header_para)+list(header_slab)
 if fit_conti_err or fit_obs_err:
@@ -2009,7 +2024,11 @@ CORNER_KWARGS = dict(
 fig = corner.corner(samples[:,:len(header_para_slab)], labels=header_para_slab, color='tomato', **CORNER_KWARGS)
 
 plt.savefig(f'{save_folder}{str(run_number)}_Cornerplot_multinest_parameters_all{reduce_str}.{filetype_fig}',bbox_inches='tight')
-plt.show()
+if close_plots:
+    plt.close()
+else:
+
+    plt.show()
 
 print('...Saved')
 
@@ -2355,7 +2374,11 @@ def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True
     else:
         plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_fractions{suffix}{reduce_str}.{filetype_fig}',bbox_inches='tight')
         
-    plt.show()
+    if close_plots:
+        plt.close()
+    else:
+
+        plt.show()
 
 
 
@@ -2468,7 +2491,11 @@ def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regi
     else:
         plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_abs{suffix}{reduce_str}.{filetype_fig}',bbox_inches='tight')
         
-    plt.show()
+    if close_plots:
+        plt.close()
+    else:
+
+        plt.show()
 
 
 if use_dust_emis:
@@ -2691,7 +2718,11 @@ def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,suff
     else:
         plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_complete_plot{suffix}{reduce_str}.{filetype_fig}',bbox_inches='tight')
         
-    plt.show()
+    if close_plots:
+        plt.close()
+    else:
+
+        plt.show()
     
     
 if use_dust_emis:
@@ -2770,7 +2801,11 @@ CORNER_KWARGS = dict(
 fig = corner.corner(tot_samples_rel[:,-len(header_derived):], labels=header_derived, color='tomato', **CORNER_KWARGS)
 
 plt.savefig(f'{save_folder}{str(run_number)}_Cornerplot_derived_mol{reduce_str}.{filetype_fig}',bbox_inches='tight')
-plt.show()
+if close_plots:
+    plt.close()
+else:
+
+    plt.show()
 
 
 print('Done!')
@@ -2959,5 +2994,9 @@ if plot_last_corner_plot:
     fig = corner.corner(selected_posterior, labels=selected_header, color='tomato', **CORNER_KWARGS)
 
     plt.savefig(f'{save_folder}{str(run_number)}_Cornerplot_all_parameters{reduce_str}.{filetype_fig}',bbox_inches='tight')
-    plt.show()
+    if close_plots:
+        plt.close()
+    else:
+
+        plt.show()
 print('Done!!')

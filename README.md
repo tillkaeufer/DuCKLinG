@@ -196,6 +196,7 @@ Additionally, it accepts a large range of options to specify your plotting needs
 - plot_dust: This will plot all the different dust opacity curves individually. This requires a lot of memory and does not work for large retrievals.
 - reduce_post: If you want to have a quick look if the retrieval works and do not care about the exact retrieved values (or want to plot the dust individually but do not have the memory) you can provide reduce_post followed by an integer i (separated by a space). This will select i models for the posterior and calculate everything only for these models
 - no_spectrum: For only plotting the parameter posterior and ignoring the (memory-intensive and time-consuming) step of plotting the spectra add this option.
+- close: this will avoid that all the plots are displayed when they are done. They will simply be saved.
 
 Hopefully, this will plot/save you all the data you are interested in.  
 
