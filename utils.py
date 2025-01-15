@@ -2087,7 +2087,9 @@ class complete_model:
 
                     radii=temp_to_rad(rmin=self.slab_dict[species]['radius'],t=t_to_r,q=self.variables['exp_emission'],tmax=self.slab_dict[species]['tmax'])
                     radii_inner=temp_to_rad(rmin=self.slab_dict[species]['radius'],t=t_to_r_inner,q=self.variables['exp_emission'],tmax=self.slab_dict[species]['tmax'])
-
+                    if debug:
+                        print('total radial range')
+                        print(np.min(radii),np.max(radii))
                     r_at_min=temp_to_rad(rmin=self.slab_dict[species]['radius'],t=t_at_min,q=self.variables['exp_emission'],tmax=self.slab_dict[species]['tmax'])
                     r_at_max=temp_to_rad(rmin=self.slab_dict[species]['radius'],t=t_at_max,q=self.variables['exp_emission'],tmax=self.slab_dict[species]['tmax'])
                     if debug:
@@ -2380,6 +2382,7 @@ class complete_model:
                 return self.emission_flux_individual.copy()
                 
         else:
+
             
             if not self.slab_only_mode:
                 if self.rim_powerlaw:
@@ -2402,6 +2405,13 @@ class complete_model:
                     absorption_flux=np.zeros_like(rim_flux)
                 if timeit: time6=time()
 
+            #this makes it possible that not the inner radius is set in the slab dict but the emitting area radius instead
+            for species in self.slab_dict:
+                if 'radius' not in self.slab_dict[species]:
+                    self.slab_dict[species]['radius']=self.rin_from_r_area(tmax=self.slab_dict[species]['tmax'],tmin=self.slab_dict[species]['tmin'],
+                                                             r_area=self.slab_dict[species]['r_area'],q_emis=self.variables['q_emis'])
+
+            
             emission_flux=self.set_emission_lines(one_output=True,scaled=True)
             
             if self.slab_only_mode:
@@ -3239,7 +3249,20 @@ class complete_model:
                         else:
                             mass_dict[mol][f'{str(temp_brackets[i])}_{str(temp_brackets[j])}']=0.0
         return mass_dict
-                    
+
+    def rin_from_r_area(self, tmax,tmin,r_area,q_emis):
+        '''
+        This function translates the area description of the radius into radius
+        which is the inner radius that is needed for the line flux calculations
+        T(r)=T_0 *(r/r_0)**(q)
+        r(T)=r_0 *(t/t_0)**(1/q)
+        R_area=np.sqrt(r(tmin)**2-r(tmax)**2)
+        R_area=r_0*np.sqrt((tmin/t_0)**(2/q)-(tmax/t_0)**(2/q))
+        r_0=R_area/np.sqrt((tmin/t_0)**(2/q)-(tmax/t_0)**(2/q))
+        r_in=R_area/np.sqrt((tmin/t_max)**(2/q)-1)
+        '''
+        return r_area/np.sqrt((tmin/tmax)**(2/q_emis)-1)
+    
     def plot(self, plot_midplane=False):
         if self.use_extinction:
             
@@ -3519,3 +3542,36 @@ def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_water_ra
             var_dict['E(B-V)']=None   
         return var_dict
 
+molecular_names={'CO2_II':r'$\rm CO_2$','CO2':r'$\rm CO_2$',
+                'H2O':r'$\rm H_2O$',
+                'HCN':r'$\rm HCN$',
+                'C2H2':r'$\rm C_2H_2$',
+                'HC3N':r'$\rm HC_3N$',
+                'C6H6':r'$\rm C_6H_6$',
+                'C2H2_I':r'$\rm C_2H_2$','C2H2':r'$\rm C_2H_2$',
+                'C2H6_I':r'$\rm C_2H_6$','C2H6':r'$\rm C_2H_6$',
+                'CH4':r'$\rm CH_4$',
+                'C2H4_I':r'$\rm C_2H_4$','C2H4':r'$\rm C_2H_4$',
+                'C4H2':r'$\rm C_4H_2$',
+                'C3H4':r'$\rm C_3H_4$',
+                'CH3':r'$\rm CH_3$',
+                'NH3':r'$\rm NH_3$',
+                'CO':r'$\rm CO$',
+                'SiO':r'$\rm SiO$'
+                 
+                }
+mol_colors_dict={'CO2_II':'tab:red','CO2':'tab:red',
+                'H2O':'tab:blue',
+                'HCN':'#fabebe',
+                'C2H2':'darkred','C2H2_I':'darkred',
+                'HC3N':'gold',
+                'C6H6':'tab:orange',
+                'C2H6_I':'tab:purple','C2H6':'tab:purple',
+                'CH4':'tab:cyan',
+                'C2H4_I':'tab:olive',
+                'C4H2':'#000075',
+                'C3H4':'darkgreen',
+                'CH3':'tab:pink',
+                'NH3':'peru',
+                'CO':'yellowgreen',
+                'SiO':'brown'}
