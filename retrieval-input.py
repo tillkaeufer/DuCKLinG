@@ -133,7 +133,9 @@ except NameError:
 if use_ultranest:
     print('UltraNest')
     import ultranest
-    import ultranest.stepsampler
+    from ultranest.stepsampler import SliceSampler
+    from ultranest.integrator import ReactiveNestedSampler
+    from ultranest.calibrator import ReactiveNestedCalibrator
 else:
     print('MultiNest')
     from pymultinest.solve import solve, run
@@ -991,6 +993,28 @@ if use_ultranest:
         except:
             print('Adaptive_nsteps is not set')
             adaptive_nsteps=False
+    try:
+        n_live_points
+        print('n_live_points')
+    except:
+        print('n_live_points not set')
+        n_live_points=400
+        print('Default is 400')
+    try:
+        evidence_tolerance
+        print('evidence_tolerance')
+    except:
+        print('evidence_tolerance not set')
+        evidence_tolerance=0.5
+        print('Default is 0.5')  
+    try:
+        frac_remain 
+        print('frac_remain ')
+    except:
+        print('frac_remain  not set')
+        frac_remain=0.001
+        print('Default is 0.5')  
+
 else:
     try:
         n_live_points
@@ -1000,7 +1024,7 @@ else:
         print('Using fast_retrieval:',fast_retrival)
     
         if fast_retrival:
-            n_live_points = 1000#50
+            n_live_points = 400#50
             evidence_tolerance = 5.0
             sampling_efficiency = 0.8
         else:
@@ -1044,26 +1068,36 @@ if __name__ == "__main__":
     else:
         if use_ultranest:
     
-            sampler = ultranest.ReactiveNestedSampler(
-            complete_header,
-            loglike,
-            prior_fast,
-            log_dir=prefix,
-            resume=True)
+
             
             if not slice_sampler:
-                result = sampler.run(min_num_live_points=400)
+                sampler = ReactiveNestedSampler(
+                    complete_header,
+                    loglike,
+                    prior_fast,
+                    log_dir=prefix,
+                    resume=True)
+                result = sampler.run(min_num_live_points=n_live_points,Lepsilon=evidence_tolerance,frac_remain=frac_remain)
         
             if slice_sampler:
                 nsteps = length_ultra * len(complete_header)
+                sampler = ReactiveNestedSampler(
+                    complete_header,
+                    loglike,
+                    prior_fast,
+                    log_dir=prefix,
+                    resume=True)
                 # create step sampler:
-                sampler.stepsampler = ultranest.stepsampler.SliceSampler(
+                sampler.stepsampler = SliceSampler(
                     nsteps=nsteps,
                     generate_direction=ultranest.stepsampler.generate_mixture_random_direction,
                     adaptive_nsteps=adaptive_nsteps,
                     # max_nsteps=400
                 )
-                result = sampler.run(min_num_live_points=400)
+                print(np.shape(sampler))
+                result = sampler.run(min_num_live_points=n_live_points,Lepsilon=evidence_tolerance,frac_remain=frac_remain)
+
+                
             sampler.print_results()
         else:
             result = solve(LogLikelihood=loglike, Prior=prior_fast, 
