@@ -5,7 +5,7 @@
 This repository gives you all the files to run the DuCKLinG model.  
 It can be run as a forward model or in retrieval with MultiNest or UltraNest.
 
-A description of the model can be seen in [Kaeufer et al. 2024](https://arxiv.org/abs/2405.06486)
+A description of the model can be seen in [Kaeufer et al. 2024](https://www.aanda.org/articles/aa/pdf/2024/07/aa49936-24.pdf)
 
 ## Installation
 
@@ -199,6 +199,15 @@ Additionally, it accepts a large range of options to specify your plotting needs
 - close: this will avoid that all the plots are displayed when they are done. They will simply be saved.
 
 Hopefully, this will plot/save you all the data you are interested in.  
+
+Next you can plot the contributions of all molecules to the median probable model.  
+This can be done by running:
+
+> python plot_mol_contributions-input.py ./path/to/inputfile
+
+This function requires you to run the plotting routine before with the option (save or save_all).  
+The save_all option will allow you to also overplot the posterior of models to the figures.  
+For details on the median probable model have a look at [Kaeufer et al. 2024](https://www.aanda.org/articles/aa/pdf/2024/07/aa49936-24.pdf).
 
 ## Troubleshooting
 - It is important to delete MultiNest files when you re-run a model that was interrupted due to any kinds of errors.
