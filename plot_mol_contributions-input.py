@@ -48,6 +48,9 @@ plt.rcParams['xtick.major.width'] = plt.rcParams['ytick.major.width'] = 1.6
 plt.rcParams['font.size'] = 12
 
 
+close_plots=True
+
+
 # %%
 if __name__ == "__main__":
     input_file=sys.argv[1]
@@ -253,42 +256,44 @@ debug=False
 
 # %%
 folder=bayesian_folder+subfold
-
-try:
-    list_files=glob.glob(folder+f'test_{run_number}/*/chains/equal_weighted_post.txt')
-    list_files.sort()
-    print(len(list_files))
-    print(list_files[0])
-except:
-    list_files=glob.glob(folder+f'test_{run_number}/*hains/equal_weighted_post.txt')
-    list_files.sort()
-    print(len(list_files))
-    print(list_files[0])
+if use_ultranest:
+    try:
+        list_files=glob.glob(folder+f'test_{run_number}/*/chains/equal_weighted_post.txt')
+        list_files.sort()
+        print(len(list_files))
+        print(list_files[0])
+    except:
+        list_files=glob.glob(folder+f'test_{run_number}/*hains/equal_weighted_post.txt')
+        list_files.sort()
+        print(len(list_files))
+        print(list_files[0])
+else:
+    list_files=[folder+f'test_{run_number}post_equal_weights.dat']
 list_complete_post=glob.glob(folder+f'*_{run_number}complete_posterior.npy')
 list_complete_post.sort()
 print(len(list_complete_post))
 print(list_complete_post[0])
 
-# %%
-def read_file(filename):
-    data=np.loadtxt(filename)
-    paras=data[:,:-1]
-    like=data[:,-1]
-    return paras, like
-def read_file(filename):
-    data=np.loadtxt(filename,skiprows=1,dtype='float32')
-    paras=data
-    like=np.zeros((len(data)))
-    return paras, like
 
+def read_file(filename,ultranest=True):
+    if ultranest:
+        data=np.loadtxt(filename,skiprows=1,dtype='float32')
+        paras=data
+        like=np.zeros((len(data)))
+        return paras, like
+    else:
+        data=np.loadtxt(filename)
+        paras=data[:,:-1]
+        like=data[:,-1]
+        return paras, like
 # %%
 def median_probable_model(filename,file_complete='',complete_header=False,debug=False):
     
     #reading file
     if not complete_header:
-        paras,like=read_file(filename)
+        paras,like=read_file(filename,ultranest=use_ultranest)
     else:
-        paras_post,like=read_file(filename)
+        paras_post,like=read_file(filename,ultranest=use_ultranest)
         paras=np.load(file_complete)
     if debug:
         print(np.shape(paras),np.shape(paras_post))
@@ -710,7 +715,10 @@ def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=la
     plt.legend(loc=(0,1),ncol=max(1,len(list(mol_fluxes.keys()))//2)).set_zorder(102)
     plt.ylabel('$F \, [\mathrm{mJy}]$')
     plt.xlabel('$\lambda [\mathrm{\mu m}]$')
-    plt.show()
+    if close_plots:
+        plt.close()
+    else:
+        plt.show()
     plt.figure(figsize=(12,4))
     
     #plt.step(lam_obs,(interp_flux-tot_mol_flux)*1000,linewidth=0.5,color='black',linestyle='dashed',label='Continuum',zorder=102)
@@ -773,7 +781,10 @@ def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=la
     plt.xlim(wave_range)
     plt.ylabel('Residual [%]')
     plt.xlabel('$\lambda [\mathrm{\mu m}]$')
-    plt.show()
+    if close_plots:
+        plt.close()
+    else:
+        plt.show()
     print_residual=np.mean(abs((flux_obs-(interp_flux))*1000))
     print('Mean difference: %5.5f mJy'%print_residual)
     
@@ -794,7 +805,10 @@ for key in mol_colors_dict:
         plt.axvline(i,label=molecular_names[key],color=mol_colors_dict[key],lw=10)
         i+=1
 plt.legend(loc=(1,0))
-plt.show()
+if close_plots:
+    plt.close()
+else:
+    plt.show()
 
 # %%
 prefix_fig=folder+f'/figures/test_{run_number}'
@@ -899,11 +913,16 @@ def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=lam_
     axs[0].legend(loc=(0,1),ncol=len(list(mol_fluxes.keys()))//2).set_zorder(102)
     
     axs[-1].set_xlabel('$\lambda [\mathrm{\mu m}]$')
+
     if save_name!='':
         plt.savefig(save_name,bbox_inches='tight')
-    plt.show()
-   
+    if close_plots:
+        plt.close()
+    else:
+        plt.show()
 
+zoom_file_name=prefix_fig+'_mol_contribution_zoom_in_plot.pdf'
+plot_molecule_subplots(interp_flux,emission_flux_individual_scaled,wave_range=wave_grid,save_name=zoom_file_name)
 # %%
 if os.path.isfile(f'{prefix}array_flux.npy'):
     print('Loading posterior of fluxes')
@@ -932,9 +951,12 @@ if os.path.isfile(f'{prefix}array_flux.npy'):
     zoom_file_name=prefix_fig+'_mol_contribution_zoom_in_plot_with_post.pdf'
     plot_molecule_subplots(interp_flux,emission_flux_individual_scaled,y_median=y_median,y_std_min=y_std_min,y_std=y_std,wave_new=wave_new,wave_range=wave_grid,save_name=zoom_file_name)
 else:
+    print('----------------')
+    print('----------------')
     print('For getting the posterior overplotted')
     print('You need to run the plotting rountine with the argument save_all')
-
+    print('----------------')
+    print('----------------')
 print('Finished!')
 
 
