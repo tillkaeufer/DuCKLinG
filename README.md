@@ -205,9 +205,31 @@ This can be done by running:
 
 > python plot_mol_contributions-input.py ./path/to/inputfile
 
-This function requires you to run the plotting routine before with the option (save or save_all).  
+This function requires you to run the plotting routine before with the save option (save or save_all).  
 The save_all option will allow you to also overplot the posterior of models to the figures.  
 For details on the median probable model have a look at [Kaeufer et al. 2024](https://www.aanda.org/articles/aa/pdf/2024/07/aa49936-24.pdf).
+
+If you want to plot the molecular column densities, temperatures and radii this is possible with the follwoing function:
+
+
+> python plot_mol_conditions-input.py ./path/to/inputfile
+
+This function requires you to run the plotting routine before with the save option (save or save_all).  
+This function has a couple of options that allow you to change the plotting. They are called by adding them after the input file.
+
+- nbins: Number of bins for the colour maps (e.g. nbins 100)
+- npoints: Number of points that are calculated along the temperature power laws (e.g. npoints 1000)
+- log_t:True : This envokes that both plots use a logarithmic scale for the temperature.
+- log_t:False : This envokes that both plots use a linear scale for the temperature.
+- log_t_first:True : This envokes that the first plot (temperature vs. column density) uses a logarithmic scale for the temperature.
+- log_t_second:False : This envokes that the second plot (temperature vs. radius) uses a linear scale for the temperature.
+- radial_range: This argument sets the limits of the radial range that is plotted (on a log scale, e.g. radial_range [-2,0]). If you leave it blank, it is automatically set to the radial profiles that are retrieved.
+- coldens_range: This argument sets the limits of the column density range that is plotted (on a log scale, e.g. coldens_range [14,24])
+- temp_range: This argument sets the limits of the temperature range that is plotted (on a linear scale, e.g. temp_range [100,1500])
+-close: Closing the plots instead of showing them to the user.
+
+
+
 
 ## Troubleshooting
 - It is important to delete MultiNest files when you re-run a model that was interrupted due to any kinds of errors.
