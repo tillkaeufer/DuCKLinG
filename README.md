@@ -45,6 +45,9 @@ Download the folder and add it in DuCKLinG/LineData to have the example work wit
 Be aware that this requires about 15 GB of storage. You can also choose to download only the data for the molecules you are interested in.
 If you want to download the folder using the terminal you can do this by installing gdown (`pip install gdown`) and executing the following command: `gdown --folder https://drive.google.com/drive/folders/1XAEgrss9oupWWGo_nNQyHwQFsfMxEiKq --remaining-ok`
 
+| :exclamation:  On January 22, I uploaded a new water slab file that is using HITRAN. Previously the slab data was based on Lamda. If you are running water fits, I highly recommend downloading the HITRAN data. However, you can still access the LAMDA data, which is now saved as 12_LamH2O. |
+|-----------------------------------------|
+
 
 ## Getting started
 
