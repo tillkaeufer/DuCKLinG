@@ -48,7 +48,7 @@ ext_model=None
 sur_powerlaw=False
 abs_powerlaw=False
 close_plots=False
-
+run_all=False
 
 if __name__ == "__main__":
     input_file=sys.argv[1]
@@ -90,6 +90,9 @@ if __name__ == "__main__":
                 ignore_spectrum_plot=True
             elif argument=='close':
                  close_plots=True
+            elif argument=='all':
+                run_all=True
+                save_output=True
             else:
                 print('--------------')
                 print('--------------')
@@ -3000,3 +3003,11 @@ if plot_last_corner_plot:
 
         plt.show()
 print('Done!!')
+
+if run_all:
+    print('Starting the other plotting routines')
+    print('Starting plot_mol_conditions-input.py')
+    os.system(f'python plot_mol_conditions-input.py {input_file}')
+    print('Starting plot_mol_contributions-input.py ')
+    os.system(f'python plot_mol_contributions-input.py  {input_file}')
+print('Finished!!')

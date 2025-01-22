@@ -315,10 +315,16 @@ for mol in mol_list:
         t_points=np.log10(t_points)
     heatmap, xedges, yedges = np.histogram2d(t_points, n_points, bins=[xbins,ybins])
     extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-    plt.imshow(heatmap.T, extent=extent,origin='lower',aspect='auto',cmap=dict_cmaps[mol],zorder=zorder[i])
+    mol_color=mol
+    if '_comp' in mol:
+        idx_mol=mol.find('_comp')
+        
+        mol_color=mol[:idx_mol]
+        print(f'Changing {mol} to {mol_color}')
+    plt.imshow(heatmap.T, extent=extent,origin='lower',aspect='auto',cmap=dict_cmaps[mol_color],zorder=zorder[i])
     
-    custom_lines.append(Line2D([0], [0], color=mol_colors_dict[mol], lw=4))
-    custom_labels.append(molecular_names[mol])
+    custom_lines.append(Line2D([0], [0], color=mol_colors_dict[mol_color], lw=4))
+    custom_labels.append(molecular_names[mol_color])
     i+=1
 
 plt.ylabel('$\log_{10} \Sigma$ [cm$^{-2}$]')
@@ -480,11 +486,16 @@ for mol in mol_list:
     heatmap, xedges, yedges = np.histogram2d(r_points, t_points, bins=[xbins,ybins])
     heatmap_dict[mol]=heatmap
     extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-
-    plt.imshow(heatmap.T, extent=extent,origin='lower',aspect='auto',cmap=dict_cmaps[mol],zorder=zorder[i])
+    mol_color=mol
+    if '_comp' in mol:
+        idx_mol=mol.find('_comp')
+        
+        mol_color=mol[:idx_mol]
+        print(f'Changing {mol} to {mol_color}')
+    plt.imshow(heatmap.T, extent=extent,origin='lower',aspect='auto',cmap=dict_cmaps[mol_color],zorder=zorder[i])
            
-    custom_lines.append(Line2D([0], [0], color=mol_colors_dict[mol], lw=4))
-    custom_labels.append(molecular_names[mol])
+    custom_lines.append(Line2D([0], [0], color=mol_colors_dict[mol_color], lw=4))
+    custom_labels.append(molecular_names[mol_color])
     i+=1
 
 plt.xlabel('$\log_{10} R$ [au]')
