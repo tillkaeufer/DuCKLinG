@@ -331,11 +331,16 @@ if 'tmax_abs' in prior_dict or 'temp_abs' in prior_dict:
         abs_powerlaw=False
 else:
     use_dust_absorp=False
+use_mol_powerlaw=False
+if 'q_emis' in prior_dict or 'q_emis' in fixed_dict:
+    use_mol_powerlaw=True
+    
 # setting up the dictonaries and headers that will be used
 
 # In[19]:
 init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw,fit_water_ratios=fit_water_ratios,
-                           prior_dict=prior_dict,fixed_dict=fixed_dict,use_extinction=use_extinction,use_dust_emis=use_dust_emis,use_dust_absorp=use_dust_absorp,sur_powerlaw=sur_powerlaw,abs_powerlaw=abs_powerlaw)
+                           prior_dict=prior_dict,fixed_dict=fixed_dict,use_extinction=use_extinction,use_dust_emis=use_dust_emis,use_dust_absorp=use_dust_absorp,sur_powerlaw=sur_powerlaw,abs_powerlaw=abs_powerlaw,mol_powerlaw=use_mol_powerlaw)
+
 
 
 if 'log_sigma_obs' in prior_dict:
@@ -542,7 +547,7 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
             var_dict,slab_dict,sigma_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab)+list(header_sigma),fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens)
         else:
             var_dict,slab_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab),log_coldens=log_coldens)
-  
+
     if debug:
         print(var_dict)
         if sample_all:

@@ -1100,11 +1100,12 @@ class complete_model:
                            fast_norm=True,debug_interp=False):
         if output_quantities:
             output_dict={}
-        if self.radial_version:
-            exp=(2-self.variables['exp_emission'])/self.variables['exp_emission']
-
-        else:
-            exp=self.variables['exp_emission']
+        if 'exp_emission' in self.variables:
+            if self.radial_version:
+                exp=(2-self.variables['exp_emission'])/self.variables['exp_emission']
+    
+            else:
+                exp=self.variables['exp_emission']
 
         idxs=[]
         temps=[]
@@ -2288,14 +2289,14 @@ class complete_model:
 
 
         self.slab_dict=slab_dict
-        
-        q_emis=self.variables['q_emis']
-        
-
-        if old_version:
-            self.variables['exp_emission']=(2-q_emis)/q_emis
-        else:
-            self.variables['exp_emission']=q_emis
+        if 'q_emis' in self.variables:
+            q_emis=self.variables['q_emis']
+            
+    
+            if old_version:
+                self.variables['exp_emission']=(2-q_emis)/q_emis
+            else:
+                self.variables['exp_emission']=q_emis
 
         if self.use_extinction:  
             ext_curve=self.extinction_interpolation(rv=self.variables['Rv'],ebv=self.variables['E(B-V)'],debug=debug)
@@ -2486,15 +2487,18 @@ class complete_model:
         if self.use_dust_absorp and  self.abs_powerlaw:
             q_abs=self.variables['q_abs']
             self.variables['exp_abs'] = (2.0 - q_abs)/q_abs
-        q_emis=self.variables['q_emis']
         
-        self.variables['exp_midplane'] = (2.0 - q)/q
+        if 'q_emis' in self.variables:
+            q_emis=self.variables['q_emis']
 
         
-        if old_version:
-            self.variables['exp_emission']=(2-q_emis)/q_emis
-        else:
-            self.variables['exp_emission']=q_emis
+            if old_version:
+                self.variables['exp_emission']=(2-q_emis)/q_emis
+            else:
+                self.variables['exp_emission']=q_emis 
+                
+        self.variables['exp_midplane'] = (2.0 - q)/q
+
         if self.rim_powerlaw:
             q_rim=self.variables['q_rim']
             self.variables['exp_rim'] = (2.0 - q_rim)/q_rim
@@ -3492,7 +3496,7 @@ def cube_to_dicts(data,header_para,header_abund,header_all,scale_prior,header_ab
 
 
 
-def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_water_ratios=False,use_dust_emis=True,use_dust_absorp=False,use_extinction=False,sur_powerlaw=True,abs_powerlaw=True):
+def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_water_ratios=False,use_dust_emis=True,use_dust_absorp=False,use_extinction=False,sur_powerlaw=True,abs_powerlaw=True,mol_powerlaw=True):
     if fit_water_ratios:
         var_dict={'q_emis':None,
                  'distance':None}
@@ -3520,8 +3524,9 @@ def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_water_ra
                 var_dict['temp_abs']=None
 
 
-        
-        var_dict['q_emis']=None
+        if mol_powerlaw:
+            var_dict['q_emis']=None
+         
         if 'incl' in prior_dict or 'incl' in fixed_dict:
             var_dict['incl']=None
         if use_bb_star:

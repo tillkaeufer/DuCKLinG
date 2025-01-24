@@ -885,10 +885,15 @@ if 'tmax_abs' in prior_dict or 'temp_abs' in prior_dict:
 else:
     use_dust_absorp=False
 
+use_mol_powerlaw=False
+if 'q_emis' in prior_dict or 'q_emis' in fixed_dict:
+    use_mol_powerlaw=True
+
+
 # setting up the dictonaries and headers that will be used
 
 init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw,fit_water_ratios=fit_water_ratios,
-                           prior_dict=prior_dict,fixed_dict=fixed_dict,use_extinction=use_extinction,use_dust_emis=use_dust_emis,use_dust_absorp=use_dust_absorp,sur_powerlaw=sur_powerlaw,abs_powerlaw=abs_powerlaw)
+                           prior_dict=prior_dict,fixed_dict=fixed_dict,use_extinction=use_extinction,use_dust_emis=use_dust_emis,use_dust_absorp=use_dust_absorp,sur_powerlaw=sur_powerlaw,abs_powerlaw=abs_powerlaw,mol_powerlaw=use_mol_powerlaw)
 
 
 if 'log_sigma_obs' in prior_dict:
