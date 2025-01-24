@@ -157,7 +157,7 @@ Multiple absorption components of the same molecule can be introduced by combini
 
 - prior_dict: Prior dictionary for all parameters that are not related to the slab grid (except for q_emis)
 - slab_prior_dict: Prior dictionary for all parameters related to the slab grid. If log_coldens=True to column densities are provided as their logarithm.
-  - If the molecule is supposed to emit along a temperature range, set tmin and tmin for that molecule. If you want to emit at a single temperature set t_emis.
+  - If the molecule is supposed to emit along a temperature range, set tmin and tmin for that molecule. If you want to emit at a single temperature set t_emis. If all molecules are emitting without temperature ranges you can delete q_emis from your prior_dict. 
   - If the molecule is supposed to emit along a column density power law, set ColDens_tmin and ColDens_tmax, otherwise use ColDens.
 
 | :exclamation: Note that column density ranges are only possible if a temperature range is used, not for single temperatures. |
@@ -240,6 +240,6 @@ This function has a couple of options that allow you to change the plotting. The
 - If you have your own sigma of your data, comment out 'log_sigma_obs' and define 'sig_obs'.
 - If the path to output directory is too long, Multinest cannot save its output file names properly due to the limits on fortran.
 - If you are running the plotting rountine on a mac, there might be an error if you are using the custom_list argument (e.g python plot_retrieval_results.py custom_list [[5,40]]), you can fix it by adding 'noglob' to the line (e.g. noglob python plot_retrieval_results.py custom_list [[5,40]])
-
+- If you get errors that some functions are unknown, make sure that you are in the DuCKLinG directory when running your code. This is necessary because functions are loaded from utils.py.
 ## Licence
 Tbd
