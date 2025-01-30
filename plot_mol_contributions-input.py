@@ -49,14 +49,25 @@ plt.rcParams['font.size'] = 12
 
 
 close_plots=True
+preliminary=False
 
+complete_header=True
 
 # %%
 if __name__ == "__main__":
     input_file=sys.argv[1]
+    if len(sys.argv)>2:
+   
+        arg_list=sys.argv[1:]
+        
+        for i in range(len(arg_list)):
+            argument=arg_list[i]
+            if argument=='preliminary':
+                preliminary=True
+                complete_header=False
+            elif argument=='simple':
+                complete_header=False
 
-
-complete_header=True
 
 # %%
 old_version=False
@@ -269,10 +280,11 @@ if use_ultranest:
         print(list_files[0])
 else:
     list_files=[folder+f'test_{run_number}post_equal_weights.dat']
-list_complete_post=glob.glob(folder+f'*_{run_number}complete_posterior.npy')
-list_complete_post.sort()
-print(len(list_complete_post))
-print(list_complete_post[0])
+if complete_header:
+    list_complete_post=glob.glob(folder+f'*_{run_number}complete_posterior.npy')
+    list_complete_post.sort()
+    print(len(list_complete_post))
+    print(list_complete_post[0])
 
 
 def read_file(filename,ultranest=True):
@@ -283,8 +295,14 @@ def read_file(filename,ultranest=True):
         return paras, like
     else:
         data=np.loadtxt(filename)
-        paras=data[:,:-1]
-        like=data[:,-1]
+        if preliminary:
+            
+            paras=data[:-1]
+            like=data[-1]
+        else:
+            paras=data[:,:-1]
+            like=data[:,-1]
+            
         return paras, like
 # %%
 def median_probable_model(filename,file_complete='',complete_header=False,debug=False):
@@ -364,7 +382,12 @@ if complete_header:
     ibest,like,paras,paras_complete=median_probable_model(list_files[0],list_complete_post[0],
                                                           complete_header=complete_header,debug=True)
 else:
-    ibest,like,paras=median_probable_model(list_files[0])
+    if preliminary:
+        
+        paras,like=read_file(filename=list_files[0],ultranest=use_ultranest)
+        ibest=0
+    else:    
+        ibest,like,paras=median_probable_model(list_files[0])
 
 print('Done!')
 # %%
@@ -675,7 +698,7 @@ con_model.plot_radial_structure(ylog=False)
 emission_flux_individual_scaled={}
 for key in con_model.slab_dict:
     emission_flux_individual_scaled[key]=con_model.emission_flux_individual[key]*slab_dict[key]['radius']**2
-
+    con_model.emission_flux_individual_scaled[key]=emission_flux_individual_scaled[key]
 # %%
 
 
@@ -927,6 +950,18 @@ def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=lam_
 zoom_file_name=prefix_fig+'_mol_contribution_zoom_in_plot.pdf'
 plot_molecule_subplots(interp_flux,emission_flux_individual_scaled,wave_range=wave_grid,save_name=zoom_file_name)
 # %%
+
+# calculate the integrated fluxes for all molecules
+
+print('---------------------------')
+print('Integrated fluxes for all molecules over the fitted wavelength region:')
+
+for mol in slab_dict:
+    print(f'{mol}: {con_model.calc_integrated_flux(mol,wave_lims=[np.min(lam_obs),np.max(lam_obs)])} W/m^2')
+print('Done!')
+print('---------------------------')
+
+
 if os.path.isfile(f'{prefix}array_flux.npy'):
     print('Loading posterior of fluxes')
     array_flux=np.load(f'{prefix}array_flux.npy')
