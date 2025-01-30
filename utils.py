@@ -2617,7 +2617,7 @@ class complete_model:
             return tot_flux
 
     def run_fitted_to_obs(self,variables,dust_species,slab_dict,flux_obs,lam_obs,absorp_species={},
-                          interp=False,scipy=True,debug=False,save_continuum=continuum_penalty):
+                          interp=False,scipy=True,debug=False,save_continuum=continuum_penalty,save_mol_flux=save_mol_flux):
         stellar_flux, rim_flux, midplane_flux, surface_flux_dict, emission_flux_dict, absorp_flux_dict= self.run_model(variables=variables,dust_species=dust_species,absorp_species=absorp_species,slab_dict=slab_dict,output_all=True)
         
 

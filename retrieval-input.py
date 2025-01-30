@@ -185,17 +185,15 @@ try:
 except NameError:
     limit_integrated_flux=False
     print('limit_integrated_flux False by default')    
-    
+
+if limit_integrated_flux:
+    save_mol_flux=True
 try:
     save_mol_flux
     print('save_mol_flux')
     print(save_mol_flux)
 except NameError:
-    if limit_integrated_flux:
-        save_mol_flux=True
-    
-    else:
-        save_mol_flux=False
+    save_mol_flux=False
     print('save_mol_flux set to:')
     print(save_mol_flux)
 
@@ -607,33 +605,40 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
             if var_dict['tmin_s']>=var_dict['tmax_s']:
                 trigger_penalty=True
                 sum_penalty+=penalty*(var_dict['tmin_s']-var_dict['tmax_s'])
-    
+                if debug: print('Penalty t surface')
     if use_dust_absorp:
         if abs_powerlaw:
             if var_dict['tmin_abs']>=var_dict['tmax_abs']:
                 trigger_penalty=True
                 sum_penalty+=penalty*(var_dict['tmin_abs']-var_dict['tmax_abs'])
+                if debug: print('Penalty t abs')
     
     if var_dict['tmin_mp']>=var_dict['tmax_mp']:
         trigger_penalty=True
         sum_penalty+=penalty*(var_dict['tmin_mp']-var_dict['tmax_mp'])
+        if debug: print('Penalty t mp')
     
     if 't_rim' not in var_dict.keys():
         if var_dict['tmin_rim']>=var_dict['tmax_rim']:
             trigger_penalty=True
             sum_penalty+=penalty*(var_dict['tmin_rim']-var_dict['tmax_rim'])
+            if debug: print('Penalty t rim')
     
     for key in slab_dict:
         if 'tmin' in slab_dict[key]: 
             if slab_dict[key]['tmin']>=slab_dict[key]['tmax']:
                 trigger_penalty=True
                 sum_penalty+=penalty*(slab_dict[key]['tmin']-slab_dict[key]['tmax'])
+                if debug: print(f'Penalty {key} temp')
         if coldens_restriction:
             if 'ColDens_tmin' in slab_dict[key]: 
                 if slab_dict[key]['ColDens_tmin']>slab_dict[key]['ColDens_tmax']:
                     trigger_penalty=True
                     sum_penalty+=penalty*(slab_dict[key]['ColDens_tmin']-slab_dict[key]['ColDens_tmax'])
+                    if debug: print(f'Penalty {key} coldens')
     if trigger_penalty:
+        if debug:
+            print('Triggered penalty')
         return sum_penalty
 
     if timeit:
@@ -649,220 +654,21 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
                                                 dust_species=init_abundance,
                                                 absorp_species=init_abundance_absorp,
                                                 slab_dict=slab_dict,
-                                                flux_obs=flux_obs,lam_obs=lam_obs)
+                                                flux_obs=flux_obs,lam_obs=lam_obs,save_mol_flux=save_mol_flux)
 
     if limit_integrated_flux:
         for key in slab_dict:
             if key in limit_flux_dict:
+                if debug:
+                    print('lim')
+                    print(key)
                 int_flux=con_model.calc_integrated_flux(key)
+                if debug:
+                    print('int_flux')
+                    print(int_flux)
                 if int_flux>limit_flux_dict[key]:
                     trigger_penalty=True
-                    sum_penalty+=penalty*(1+int_flux-limit_flux_dict[key])
-        if trigger_penalty:
-            return sum_penalty                   
-    if timeit:
-        time_3=time()
-
-    if fit_obs_err or 'sigma_obs' in sigma_dict:
-        sigma=sigma_dict['sigma_obs']*flux_obs
-    else:
-        sigma=sig_obs
-    # constant of loglike
-    const=np.sum(np.log(2*np.pi*(sigma)**2))
-
-    #difference between observation and model
-
-    diff=(interp_flux - flux_obs)
-
-    #definition of chi
-    chi=np.sum((diff)**2/ sigma**2)
-
-    #loglike
-    loglikelihood =  -0.5 * (chi +const) 
-    
-    if continuum_penalty:
-        continuum_residual=con_model.saved_continuum-flux_obs
-        cliped_residual=np.clip(continuum_residual,a_min=0.0,a_max=None)
-
-        
-        if fit_conti_err:
-            sigma_conti=sigma_dict['sigma_conti']*flux_obs
-            if select_conti_like:
-                idx_select=np.where(cliped_residual>0.0)[0]
-                sigma=sigma[idx_select]
-                cliped_residual=cliped_residual[idx_select]
-            if sum_sigma:
-                sig_tot=np.sqrt(sigma_conti**2+sigma**2)
-            else:
-                sig_tot=sigma_conti
-        else:
-            sig_tot=sigma
-        # constant of loglike
-        const=np.sum(np.log(2*np.pi*(sig_tot)**2))
-        
-        #definition of chi
-        if not fit_conti_err:
-            chi=np.sum((cliped_residual)**2/ sig_tot**2)*penalty_fact
-        else:
-            chi=np.sum((cliped_residual)**2/ sig_tot**2)
-
-        #loglike
-        loglikelihood -=  0.5 * (chi +const) 
-    if timeit:
-        time_4=time()
-        print('Dictonary: ', time_2-time_1)
-        print('Run model: ', time_3-time_2)
-        print('Calc loglike: ', time_4-time_3)
-    if debug:
-        plt.loglog(con_model.xnew,interp_flux,label='model')
-        plt.plot(lam_obs,flux_obs,label='Obs')
-        plt.legend()
-        plt.show()
-        
-        plt.loglog(con_model.xnew,interp_flux,label='model')
-        plt.plot(lam_obs,flux_obs,label='Obs')
-        plt.legend()
-        plt.xlim([4,7])
-        plt.show()
-        plt.loglog(con_model.xnew,interp_flux,label='model')
-        plt.plot(lam_obs,flux_obs,label='Obs')
-        plt.legend()
-        plt.xlim([10,20])
-        plt.show()
-    if return_model:
-        return con_model
-    #print(loglikelihood)
-    if (not np.isfinite(loglikelihood)) or (np.isnan(loglikelihood)):
-        return penalty
-    else:
-        return loglikelihood
-    
-def loglike_run(cube,ndim,nparams,debug=False,timeit=False):
-    sigma_dict={}
-    if timeit:
-        time_1=time()
-    if sample_all:
-        
-        if fit_conti_err or fit_obs_err:
-            var_dict,abundance_dict,slab_dict,abundance_dict_absorp,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
-        else:
-            var_dict,abundance_dict,slab_dict,abundance_dict_absorp=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior)
-
-    else:    
-        if fit_conti_err or fit_obs_err:
-            var_dict,slab_dict,sigma_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab)+list(header_sigma),fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens)
-        else:
-            var_dict,slab_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab),log_coldens=log_coldens)
-  
-    if debug:
-        print(var_dict)
-        if sample_all:
-            print(abundance_dict)
-            print(abundance_dict_absorp)
-            
-        print(slab_dict)
-        if fit_conti_err or fit_obs_err:
-            print(sigma_dict)
-    if fixed_paras:
-        for key in fixed_dict:
-            if debug:
-                print(f'Fixed {key}..')
-            if key in header_abund:
-                abundance_dict[key]=fixed_dict[key]
-                if debug:
-                    print('..added to abundance_dict')
-            elif key in header_absorp:
-                key_abs=key[:-7]
-                abundance_dict_absorp[key_abs]=fixed_dict[key]
-                if debug:
-                    print('..added to abundance_dict_absorp')
-            elif key in init_dict or key=='distance':
-                var_dict[key]=fixed_dict[key]
-                if debug:
-                    print('..added to var_dict')
-            elif key =='sigma_obs':
-                sigma_dict['sigma_obs']=fixed_dict[key]
-                if debug:
-                    print('..added to sigma_dict')
-            elif key =='log_sigma_obs':
-                sigma_dict['sigma_obs']=10**fixed_dict[key]
-                if debug:
-                    print('..added to sigma_dict')
-
-            elif ':' in key:
-                idx=key.find(':')
-                if key[:idx] not in slab_dict:
-                    slab_dict[key[:idx]]={}
-                if debug:
-                    print('..added to slab_dict')
-
-                slab_dict[key[:idx]][key[idx+1:]]=fixed_dict[key]
-            else:
-                print(f'{key} is in fixed_dict but not used for the retrieval. Please check that.')
-  
-                
-    var_dict['bb_star']=use_bb_star
-    
-    #checking if the physics works out
-    penalty=float(-10**100.0)
-    sum_penalty=float(-10**100.0)
-    trigger_penalty=False
-    if use_dust_emis:
-        if sur_powerlaw:
-            if var_dict['tmin_s']>=var_dict['tmax_s']:
-                trigger_penalty=True
-                sum_penalty+=penalty*(var_dict['tmin_s']-var_dict['tmax_s'])
-    
-    if use_dust_absorp:
-        if abs_powerlaw:
-            if var_dict['tmin_abs']>=var_dict['tmax_abs']:
-                trigger_penalty=True
-                sum_penalty+=penalty*(var_dict['tmin_abs']-var_dict['tmax_abs'])
-    
-    if var_dict['tmin_mp']>=var_dict['tmax_mp']:
-        trigger_penalty=True
-        sum_penalty+=penalty*(var_dict['tmin_mp']-var_dict['tmax_mp'])
-    
-    if 't_rim' not in var_dict.keys():
-        if var_dict['tmin_rim']>=var_dict['tmax_rim']:
-            trigger_penalty=True
-            sum_penalty+=penalty*(var_dict['tmin_rim']-var_dict['tmax_rim'])
-    
-    for key in slab_dict:
-        if 'tmin' in slab_dict[key]: 
-            if slab_dict[key]['tmin']>=slab_dict[key]['tmax']:
-                trigger_penalty=True
-                sum_penalty+=penalty*(slab_dict[key]['tmin']-slab_dict[key]['tmax'])
-        if coldens_restriction:
-            if 'ColDens_tmin' in slab_dict[key]: 
-                if slab_dict[key]['ColDens_tmin']>slab_dict[key]['ColDens_tmax']:
-                    trigger_penalty=True
-                    sum_penalty+=penalty*(slab_dict[key]['ColDens_tmin']-slab_dict[key]['ColDens_tmax'])
-    if trigger_penalty:
-        return sum_penalty
-
-    if timeit:
-        time_2=time()    
-    if sample_all:
-        interp_flux=con_model.run_model_normalized(variables=var_dict,dust_species=abundance_dict,
-                                                slab_dict=slab_dict,absorp_species=abundance_dict_absorp,max_flux_obs=max_flux_obs)
-
-
-        
-    else:
-        interp_flux=con_model.run_fitted_to_obs(variables=var_dict,
-                                                dust_species=init_abundance,
-                                                absorp_species=init_abundance_absorp,
-                                                slab_dict=slab_dict,
-                                                flux_obs=flux_obs,lam_obs=lam_obs)
-
-    if limit_integrated_flux:
-        for key in slab_dict:
-            if key in limit_flux_dict:
-                int_flux=con_model.calc_integrated_flux(key)
-                if int_flux>limit_flux_dict[key]:
-                    trigger_penalty=True
-                    sum_penalty+=penalty*(1+int_flux-limit_flux_dict[key])
+                    sum_penalty+=penalty*(0.01+abs(int_flux-limit_flux_dict[key]))
         if trigger_penalty:
             return sum_penalty                   
     if timeit:
@@ -1052,7 +858,7 @@ if debug:
 
     else:
         loglike(test_vals,debug=True,timeit=False)
-          
+      
 if __name__ == "__main__":
     if not os.path.isfile(f'{prefix}start.time'):
         os.system(f'date > {prefix}start.time')
