@@ -402,121 +402,125 @@ for mol in mol_list:
         r_in= paras[:,idx_rout]
         t_out= paras[:,idx_t_out]
         t_in= paras[:,idx_t_in]
-    
-    tot_r.append(r_in)
-    tot_r.append(r_out)
-    tot_t.append(t_in)
-    tot_t.append(t_out)
-
-flat_r=[]
-for entry in tot_r:
-    for val in entry:
-        flat_r.append(val)
         
-flat_t=[]
-for entry in tot_t:
-    for val in entry:
-        flat_t.append(val)
-        
-flat_r=np.array(flat_r)
-flat_t=np.array(flat_t)
-
-print('Minimum temperature')
-print(np.min(flat_t))
-print('Maximum temperature')
-print(np.max(flat_t))
-
-if radial_range[0]==None:
-    radial_range[0]=np.log10(np.min(flat_r))
-if radial_range[1]==None:
-    radial_range[1]=np.log10(np.max(flat_r))
-
-xbins_linear=np.linspace(10**float(radial_range[0]),10**float(radial_range[1]),nbins)
-xbins=np.linspace(radial_range[0],radial_range[1],nbins)
-
-if log_t_second:
-    ybins=np.linspace(np.log10(temp_range[0]),np.log10(temp_range[1]),nbins)
+        tot_r.append(r_in)
+        tot_r.append(r_out)
+        tot_t.append(t_in)
+        tot_t.append(t_out)
+if len(tot_r)==0:
+    print('No i emits over a temperature powerlaw.')
+    print('Therefore, we cannot print the radial structure')
 else:
-    ybins=np.linspace(temp_range[0],temp_range[1],nbins)
-
-print('...Done!')
-
-print('Plotting radial temperature distribution..')
-heatmap_dict={}
-mol_list=list(slab_prior_dict.keys())
-zorder=np.arange(len(mol_list))
-
-custom_lines=[]
-custom_labels=[]
-plt.figure(figsize=(9,6))
-i=0
-for mol in mol_list:
-    print(mol)
-    powerlaw=True 
-    if f'{mol}:temis' in header:
-        powerlaw=False
-        idx_coldens=np.where(header==f'{mol}:ColDens')[0][0]
-        idx_t=np.where(header==f'{mol}:temis')[0][0]
-    else:
-        idx_coldens_out=np.where(header==f'{mol}:\nlogDensCol at 0.15')[0][0]
-        idx_coldens_in=np.where(header==f'{mol}:\nlogDensCol at 0.85')[0][0]
-        idx_rin=np.where(header==f'{mol}:\nrout')[0][0]
-        idx_rout=np.where(header==f'{mol}:\nrin')[0][0]
-
-        idx_t_out=np.where(header==f'{mol}:\nt at 0.15')[0][0]
-        idx_t_in=np.where(header==f'{mol}:\nt at 0.85')[0][0]
-
-    if powerlaw:
-        coldens_out= paras[:,idx_coldens_out]
-        coldens_in= paras[:,idx_coldens_in]
-        r_out= paras[:,idx_rin]
-        r_in= paras[:,idx_rout]
-        t_out= paras[:,idx_t_out]
-        t_in= paras[:,idx_t_in]
-        r_points,t_points=radius_temperature_relation(t_in=t_in,t_out=t_out,r_in=r_in,r_out=r_out)
-
-    else:
-        n_points= paras[:,idx_coldens]
-
-        t_points= paras[:,idx_t]
+    flat_r=[]
+    for entry in tot_r:
+        for val in entry:
+            flat_r.append(val)
+            
+    flat_t=[]
+    for entry in tot_t:
+        for val in entry:
+            flat_t.append(val)
+            
+    flat_r=np.array(flat_r)
+    flat_t=np.array(flat_t)
+    
+    print('Minimum temperature')
+    print(np.min(flat_t))
+    print('Maximum temperature')
+    print(np.max(flat_t))
+    
+    if radial_range[0]==None:
+        radial_range[0]=np.log10(np.min(flat_r))
+    if radial_range[1]==None:
+        radial_range[1]=np.log10(np.max(flat_r))
+    
+    xbins_linear=np.linspace(10**float(radial_range[0]),10**float(radial_range[1]),nbins)
+    xbins=np.linspace(radial_range[0],radial_range[1],nbins)
+    
     if log_t_second:
-        t_points=np.log10(t_points)
-        
-    r_points=np.log10(r_points)
-    heatmap, xedges, yedges = np.histogram2d(r_points, t_points, bins=[xbins,ybins])
-    heatmap_dict[mol]=heatmap
-    extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-    mol_color=mol
-    if '_comp' in mol:
-        idx_mol=mol.find('_comp')
-        
-        mol_color=mol[:idx_mol]
-        print(f'Changing {mol} to {mol_color}')
-    plt.imshow(heatmap.T, extent=extent,origin='lower',aspect='auto',cmap=dict_cmaps[mol_color],zorder=zorder[i])
-           
-    custom_lines.append(Line2D([0], [0], color=mol_colors_dict[mol_color], lw=4))
-    custom_labels.append(molecular_names[mol_color])
-    i+=1
-
-plt.xlabel('$\log_{10} R$ [au]')
-plt.ylabel('$T$ [K]')    
-if log_t_second:
-
-
-    ticks_labels=[30,100,200,300,400,500,600,700,800,900,1000,1100,1200,1300,1400,1500]
-    ticks_labels_print=[30,100,200,300,'',500,'',700,'','',1000,'','','','',1500]
-
-    plt.yticks(np.log10(ticks_labels),ticks_labels_print)
+        ybins=np.linspace(np.log10(temp_range[0]),np.log10(temp_range[1]),nbins)
+    else:
+        ybins=np.linspace(temp_range[0],temp_range[1],nbins)
     
-    plt.ylim([np.log10(temp_range[0]),np.log10(temp_range[1])]) 
-else:
-    plt.ylim([temp_range[0],temp_range[1]]) 
-plt.legend(custom_lines,custom_labels,loc=(-0.1,1.05),ncol=max(len(custom_lines)//2,1))
+    print('...Done!')
     
-plt.savefig(prefix_fig+'_molecular_contidions_radius.pdf',bbox_inches='tight')
-if closing:
-    plt.close()
-else:
-    plt.show()
+    print('Plotting radial temperature distribution..')
+    heatmap_dict={}
+    mol_list=list(slab_prior_dict.keys())
+    zorder=np.arange(len(mol_list))
+    
+    custom_lines=[]
+    custom_labels=[]
+    plt.figure(figsize=(9,6))
+    i=0
+    for mol in mol_list:
+        print(mol)
+        powerlaw=True 
+        if f'{mol}:temis' in header:
+            powerlaw=False
+            idx_coldens=np.where(header==f'{mol}:ColDens')[0][0]
+            idx_t=np.where(header==f'{mol}:temis')[0][0]
+            continue
+        else:
+            idx_coldens_out=np.where(header==f'{mol}:\nlogDensCol at 0.15')[0][0]
+            idx_coldens_in=np.where(header==f'{mol}:\nlogDensCol at 0.85')[0][0]
+            idx_rin=np.where(header==f'{mol}:\nrout')[0][0]
+            idx_rout=np.where(header==f'{mol}:\nrin')[0][0]
+    
+            idx_t_out=np.where(header==f'{mol}:\nt at 0.15')[0][0]
+            idx_t_in=np.where(header==f'{mol}:\nt at 0.85')[0][0]
+    
+        if powerlaw:
+            coldens_out= paras[:,idx_coldens_out]
+            coldens_in= paras[:,idx_coldens_in]
+            r_out= paras[:,idx_rin]
+            r_in= paras[:,idx_rout]
+            t_out= paras[:,idx_t_out]
+            t_in= paras[:,idx_t_in]
+            r_points,t_points=radius_temperature_relation(t_in=t_in,t_out=t_out,r_in=r_in,r_out=r_out)
+    
+        else:
+            n_points= paras[:,idx_coldens]
+    
+            t_points= paras[:,idx_t]
+        if log_t_second:
+            t_points=np.log10(t_points)
+            
+        r_points=np.log10(r_points)
+        heatmap, xedges, yedges = np.histogram2d(r_points, t_points, bins=[xbins,ybins])
+        heatmap_dict[mol]=heatmap
+        extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+        mol_color=mol
+        if '_comp' in mol:
+            idx_mol=mol.find('_comp')
+            
+            mol_color=mol[:idx_mol]
+            print(f'Changing {mol} to {mol_color}')
+        plt.imshow(heatmap.T, extent=extent,origin='lower',aspect='auto',cmap=dict_cmaps[mol_color],zorder=zorder[i])
+               
+        custom_lines.append(Line2D([0], [0], color=mol_colors_dict[mol_color], lw=4))
+        custom_labels.append(molecular_names[mol_color])
+        i+=1
+    
+    plt.xlabel('$\log_{10} R$ [au]')
+    plt.ylabel('$T$ [K]')    
+    if log_t_second:
+    
+    
+        ticks_labels=[30,100,200,300,400,500,600,700,800,900,1000,1100,1200,1300,1400,1500]
+        ticks_labels_print=[30,100,200,300,'',500,'',700,'','',1000,'','','','',1500]
+    
+        plt.yticks(np.log10(ticks_labels),ticks_labels_print)
+        
+        plt.ylim([np.log10(temp_range[0]),np.log10(temp_range[1])]) 
+    else:
+        plt.ylim([temp_range[0],temp_range[1]]) 
+    plt.legend(custom_lines,custom_labels,loc=(-0.1,1.05),ncol=max(len(custom_lines)//2,1))
+        
+    plt.savefig(prefix_fig+'_molecular_contidions_radius.pdf',bbox_inches='tight')
+    if closing:
+        plt.close()
+    else:
+        plt.show()
 
 print('..Finished!!')
