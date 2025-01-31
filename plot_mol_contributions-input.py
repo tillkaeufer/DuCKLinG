@@ -554,19 +554,32 @@ print('Lower lim', lower_lim)
 
 con_model=complete_model()
 
+#Additing the molecules that are only in the fixed_dict ot the read in phase
+#so that they are loaded as well
+load_in_slab_dict={}
+for key in slab_prior_dict:
+    
+    load_in_slab_dict[key]={}
+for key in fixed_dict:
+    if ':' in key:
+        idx=key.find(':')
+        if key[:idx] not in load_in_slab_dict:
+            load_in_slab_dict[key[:idx]]={}
+print(load_in_slab_dict)
 
 try:
     print(len(lam_obs))
     con_model.read_data(variables=init_dict,dust_species=init_abundance,
-                        slab_dict=slab_prior_dict,slab_prefix=slab_prefix,
+                        slab_dict=load_in_slab_dict,slab_prefix=slab_prefix,
                         stellar_file=stellar_file,wavelength_points=lam_obs,slab_only_mode=False,
                         dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
 except NameError:
     con_model.read_data(variables=init_dict,dust_species=init_abundance,
-                        slab_dict=slab_prior_dict,slab_prefix=slab_prefix,
+                        slab_dict=load_in_slab_dict,slab_prefix=slab_prefix,
                         stellar_file=stellar_file,slab_only_mode=False,
                         dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
 
+print('Data read in')
 # %%
 def input_to_model(cube,debug=False,timeit=False):
     if timeit:
@@ -631,6 +644,8 @@ def input_to_model(cube,debug=False,timeit=False):
     else:
         return var_dict,slab_dict
 
+print(paras)
+
 # %%
 if sample_all:
     var_dict,abundance_dict,abundance_dict_absorp,slab_dict=input_to_model(paras)
@@ -639,7 +654,6 @@ else:
     var_dict,slab_dict=input_to_model(paras,debug=False)
 
 # %%
-
 
 if sample_all:
     interp_flux=con_model.run_model_normalized(variables=var_dict,dust_species=abundance_dict,
@@ -676,10 +690,10 @@ else:
             i+=1
 
     for key in slab_dict:
-        
-        scale_facs[i]=np.sqrt(scale_facs[i])
-        slab_dict[key]['radius']=scale_facs[i]
-        i+=1
+        if 'radius' not in slab_dict[key]:
+            scale_facs[i]=np.sqrt(scale_facs[i])
+            slab_dict[key]['radius']=scale_facs[i]
+            i+=1
 
 # %%
 mol_data=con_model.extract_emission_quantities(low_contribution=0.15,high_contribution=0.85,debug=True)
@@ -950,6 +964,11 @@ def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=lam_
 zoom_file_name=prefix_fig+'_mol_contribution_zoom_in_plot.pdf'
 plot_molecule_subplots(interp_flux,emission_flux_individual_scaled,wave_range=wave_grid,save_name=zoom_file_name)
 # %%
+
+# printing the slab dict of the median probable model
+print('Slab dict:')
+print(slab_dict)
+
 
 # calculate the integrated fluxes for all molecules
 
