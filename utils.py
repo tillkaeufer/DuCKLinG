@@ -2620,8 +2620,20 @@ class complete_model:
                           interp=False,scipy=True,debug=False,save_continuum=continuum_penalty,save_mol_flux=save_mol_flux):
         stellar_flux, rim_flux, midplane_flux, surface_flux_dict, emission_flux_dict, absorp_flux_dict= self.run_model(variables=variables,dust_species=dust_species,absorp_species=absorp_species,slab_dict=slab_dict,output_all=True)
         
-
-
+        #This first paragraph detects for which molecules
+        #the radii are provided and therefore no NNLS is needed
+        flux_obs_fit=flux_obs.copy()
+        tot_flux=np.zeros_like(flux_obs)
+        for key in slab_dict:
+            if 'radius' in slab_dict[key]:
+                if debug:
+                    print(f'{key} has radius provided and is dropped from NNLS')
+                flux_mol=emission_flux_dict[key]*slab_dict[key]['radius']*slab_dict[key]['radius']        
+                self.emission_flux_individual_scaled[key]=flux_mol
+                flux_obs_fit= flux_obs_fit-flux_mol
+                tot_flux+=flux_mol
+                emission_flux_dict.pop(key,None)
+                
         #to make the algorithm find the best fit
         # I need to increase the dust component so that
         # their fluxes are of comparable strength
@@ -2686,10 +2698,10 @@ class complete_model:
         
         if scipy:
   
-            scaleparas=nnls(compo_ar,flux_obs-stellar_flux)[0]
+            scaleparas=nnls(compo_ar,flux_obs_fit-stellar_flux)[0]
             
         else:
-            scaleparas=np.linalg.lstsq(compo_ar,flux_obs-stellar_flux,rcond=None)[0]
+            scaleparas=np.linalg.lstsq(compo_ar,flux_obs_fit-stellar_flux,rcond=None)[0]
         if debug:
             print('before norm',scaleparas)
         scaleparas=scaleparas/max_values #changing the scalefactors by the same factor
@@ -2699,7 +2711,7 @@ class complete_model:
             print(np.max(compo_ar,axis=0))
             
         self.scaleparas=scaleparas
-        tot_flux=stellar_flux+scaleparas[0]*rim_flux+scaleparas[1]*midplane_flux
+        tot_flux+=stellar_flux+scaleparas[0]*rim_flux+scaleparas[1]*midplane_flux
 
         i=2
         if self.use_dust_emis:
@@ -2712,20 +2724,27 @@ class complete_model:
                 i+=1 
         if save_continuum:
             self.saved_continuum=tot_flux.copy()            
-        for key in emission_flux_dict:
+        for key in slab_dict:
             if debug:
-                print(i,scaleparas[i],key)
+                print(key)
                 plt.title('Emission flux contribution')
-                plt.plot(self.xnew,scaleparas[i]*self.emission_flux_individual[key],label=key,alpha=0.7)
-                plt.plot(self.xnew,scaleparas[i]*emission_flux_dict[key],label=key,alpha=0.7)
+                if key in emission_flux_dict:                
+                    plt.plot(self.xnew,scaleparas[i]*emission_flux_dict[key],label=key,alpha=0.7)
+                else:
+                    plt.plot(self.xnew,self.emission_flux_individual_scaled[key],label=key,alpha=0.7)
+                    
 
             if save_mol_flux:
-                scaled_flux=scaleparas[i]*emission_flux_dict[key]
-                self.emission_flux_individual_scaled[key]=scaled_flux
-                tot_flux+=scaled_flux
+                if key in emission_flux_dict:
+                    self.emission_flux_individual_scaled[key]=scaleparas[i]*emission_flux_dict[key]
+                    
+                tot_flux+=self.emission_flux_individual_scaled[key]
             else:
-                tot_flux+=scaleparas[i]*emission_flux_dict[key]
-            i+=1
+                if key in emission_flux_dict:
+                    
+                    tot_flux+=scaleparas[i]*emission_flux_dict[key]
+            if key in emission_flux_dict:
+                i+=1
 
         if debug:
             plt.xscale('log')
@@ -3562,7 +3581,8 @@ molecular_names={'CO2_II':r'$\rm CO_2$','CO2':r'$\rm CO_2$',
                 'CH3':r'$\rm CH_3$',
                 'NH3':r'$\rm NH_3$',
                 'CO':r'$\rm CO$',
-                'SiO':r'$\rm SiO$'
+                'SiO':r'$\rm SiO$',
+                'OH':r'$\rm OH$'
                  
                 }
 mol_colors_dict={'CO2_II':'tab:red','CO2':'tab:red',
@@ -3579,4 +3599,5 @@ mol_colors_dict={'CO2_II':'tab:red','CO2':'tab:red',
                 'CH3':'tab:pink',
                 'NH3':'brown',
                 'CO':'yellowgreen',
-                'SiO':'peru'}
+                'SiO':'peru',
+                'OH':'orchid'}

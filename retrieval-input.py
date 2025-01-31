@@ -755,22 +755,37 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
 
 con_model=complete_model()
 
+#Additing the molecules that are only in the fixed_dict ot the read in phase
+#so that they are loaded as well
+load_in_slab_dict={}
+for key in slab_prior_dict:
+    
+    load_in_slab_dict[key]={}
+for key in fixed_dict:
+    if ':' in key:
+        idx=key.find(':')
+        if key[:idx] not in load_in_slab_dict:
+            load_in_slab_dict[key[:idx]]={}
+print(load_in_slab_dict)
+
+        
+
 if not fit_water_ratios:
     con_model.read_data(variables=init_dict,dust_species=init_abundance, 
                         absorp_species=init_abundance_absorp, 
-                        slab_dict=slab_prior_dict,slab_prefix=slab_prefix,
+                        slab_dict=load_in_slab_dict,slab_prefix=slab_prefix,
                         stellar_file=stellar_file,wavelength_points=lam_obs,
                         dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
 
 else:
     try:
         print(len(lam_obs))
-        con_model.read_data(variables=init_dict,dust_species=init_abundance,slab_dict=slab_prior_dict,slab_prefix=slab_prefix,
+        con_model.read_data(variables=init_dict,dust_species=init_abundance,slab_dict=load_in_slab_dict,slab_prefix=slab_prefix,
                             stellar_file=stellar_file,wavelength_points=lam_obs,slab_only_mode=True,
                             dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
     except NameError:
         con_model.read_data(variables=init_dict,dust_species=init_abundance,
-                            slab_dict=slab_prior_dict,slab_prefix=slab_prefix,
+                            slab_dict=load_in_slab_dict,slab_prefix=slab_prefix,
                             stellar_file=stellar_file,slab_only_mode=True,
                             dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
 
