@@ -316,10 +316,15 @@ for mol in mol_list:
     heatmap, xedges, yedges = np.histogram2d(t_points, n_points, bins=[xbins,ybins])
     extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
     mol_color=mol
-    if '_comp' in mol:
-        idx_mol=mol.find('_comp')
+    if '_comp' in mol_color:
+        idx_mol=mol_color.find('_comp')
         
-        mol_color=mol[:idx_mol]
+        mol_color=mol_color[:idx_mol]
+        print(f'Changing {mol} to {mol_color}')
+    if '_absorp' in mol_color:
+        idx_mol=mol_color.find('_absorp')
+        
+        mol_color=mol_color[:idx_mol]
         print(f'Changing {mol} to {mol_color}')
     plt.imshow(heatmap.T, extent=extent,origin='lower',aspect='auto',cmap=dict_cmaps[mol_color],zorder=zorder[i])
     
@@ -369,7 +374,6 @@ def radius_temperature_relation(t_in,t_out,r_in,r_out,debug=False):
     
         print('r range',np.min(r_points),np.max(r_points))
 
-    
     return r_points.flatten(),t_points.flatten()
 
 
@@ -402,7 +406,17 @@ for mol in mol_list:
         r_in= paras[:,idx_rout]
         t_out= paras[:,idx_t_out]
         t_in= paras[:,idx_t_in]
-        
+        print('Filtering out 0.0 radii')
+        print('From', len(r_in))
+        idx_ok=np.where(r_in!=0.0)[0]
+
+        coldens_out=coldens_out[idx_ok]
+        coldens_in=coldens_in[idx_ok]
+        r_out=r_out[idx_ok]
+        r_in=r_in[idx_ok]            
+        t_out=t_out[idx_ok]
+        t_in=t_in[idx_ok]
+        print('To',len(r_in))
         tot_r.append(r_in)
         tot_r.append(r_out)
         tot_t.append(t_in)
@@ -428,6 +442,10 @@ else:
     print(np.min(flat_t))
     print('Maximum temperature')
     print(np.max(flat_t))
+    print('Minimum radius')
+    print(np.min(flat_r))
+    print('Maximum radius')
+    print(np.max(flat_r))
     
     if radial_range[0]==None:
         radial_range[0]=np.log10(np.min(flat_r))
@@ -460,6 +478,7 @@ else:
             powerlaw=False
             idx_coldens=np.where(header==f'{mol}:ColDens')[0][0]
             idx_t=np.where(header==f'{mol}:temis')[0][0]
+            print('.. does not emit along a radial powerlaw')
             continue
         else:
             idx_coldens_out=np.where(header==f'{mol}:\nlogDensCol at 0.15')[0][0]
@@ -477,6 +496,14 @@ else:
             r_in= paras[:,idx_rout]
             t_out= paras[:,idx_t_out]
             t_in= paras[:,idx_t_in]
+            
+            idx_ok=np.where(r_in!=0.0)[0]
+            coldens_out=coldens_out[idx_ok]
+            coldens_in=coldens_in[idx_ok]
+            r_out=r_out[idx_ok]
+            r_in=r_in[idx_ok]            
+            t_out=t_out[idx_ok]
+            t_in=t_in[idx_ok]
             r_points,t_points=radius_temperature_relation(t_in=t_in,t_out=t_out,r_in=r_in,r_out=r_out)
     
         else:
@@ -485,16 +512,20 @@ else:
             t_points= paras[:,idx_t]
         if log_t_second:
             t_points=np.log10(t_points)
-            
         r_points=np.log10(r_points)
         heatmap, xedges, yedges = np.histogram2d(r_points, t_points, bins=[xbins,ybins])
         heatmap_dict[mol]=heatmap
         extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
         mol_color=mol
-        if '_comp' in mol:
-            idx_mol=mol.find('_comp')
+        if '_comp' in mol_color:
+            idx_mol=mol_color.find('_comp')
             
-            mol_color=mol[:idx_mol]
+            mol_color=mol_color[:idx_mol]
+            print(f'Changing {mol} to {mol_color}')
+        if '_absorp' in mol_color:
+            idx_mol=mol_color.find('_absorp')
+            
+            mol_color=mol_color[:idx_mol]
             print(f'Changing {mol} to {mol_color}')
         plt.imshow(heatmap.T, extent=extent,origin='lower',aspect='auto',cmap=dict_cmaps[mol_color],zorder=zorder[i])
                

@@ -736,13 +736,20 @@ def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=la
     idx_color=0
     for key in mol_fluxes:
         new_mol=mol_fluxes[key]*1000
-        
-        if '_comp' in key:
-            idx_c=key.find('_comp')
-            key=key[:idx_c]
+        mol_color=key
+        if '_comp' in mol_color:
+            idx_mol=mol_color.find('_comp')
+            
+            mol_color=mol_color[:idx_mol]
+            print(f'Changing {key} to {mol_color}')
+        if '_absorp' in mol_color:
+            idx_mol=mol_color.find('_absorp')
+            
+            mol_color=mol_color[:idx_mol]
+            print(f'Changing {key} to {mol_color}')
         if debug:
             print(key,'Maximum',np.max(new_mol))
-        plt.fill_between(lam_obs,(interp_flux-tot_mol_flux)*1000+new_mol+added_mol_flux,(interp_flux-tot_mol_flux)*1000+added_mol_flux,linewidth=0,label=molecular_names[key],color=mol_colors_dict[key],step='pre',zorder=100-idx_color)
+        plt.fill_between(lam_obs,(interp_flux-tot_mol_flux)*1000+new_mol+added_mol_flux,(interp_flux-tot_mol_flux)*1000+added_mol_flux,linewidth=0,label=molecular_names[mol_color],color=mol_colors_dict[mol_color],step='pre',zorder=100-idx_color)
         idx_color+=1
         added_mol_flux+=new_mol
 
@@ -769,11 +776,18 @@ def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=la
     for key in mol_fluxes:
         new_mol=mol_fluxes[key]*1000
         
-        
-        if '_comp' in key:
-            idx_c=key.find('_comp')
-            key=key[:idx_c]
-        plt.fill_between(lam_obs,(interp_flux-tot_mol_flux)*1000+new_mol+added_mol_flux,(interp_flux-tot_mol_flux)*1000+added_mol_flux,linewidth=0,label=molecular_names[key],color=mol_colors_dict[key],step='pre',zorder=100-idx_color)
+        mol_color=key
+        if '_comp' in mol_color:
+            idx_mol=mol_color.find('_comp')
+            
+            mol_color=mol_color[:idx_mol]
+            print(f'Changing {key} to {mol_color}')
+        if '_absorp' in mol_color:
+            idx_mol=mol_color.find('_absorp')
+            
+            mol_color=mol_color[:idx_mol]
+            print(f'Changing {key} to {mol_color}')
+        plt.fill_between(lam_obs,(interp_flux-tot_mol_flux)*1000+new_mol+added_mol_flux,(interp_flux-tot_mol_flux)*1000+added_mol_flux,linewidth=0,label=molecular_names[mol_color],color=mol_colors_dict[mol_color],step='pre',zorder=100-idx_color)
         added_mol_flux+=new_mol
         idx_color+=1
     plt.step(lam_obs,flux_obs*1000,linewidth=0.5,color='black',zorder=101)
@@ -797,10 +811,18 @@ def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=la
         new_mol=mol_fluxes[key]*1000
 
             
-        if '_comp' in key:
-            idx_c=key.find('_comp')
-            key=key[:idx_c]
-        plt.fill_between(lam_obs,new_mol+added_mol_flux,added_mol_flux,label=molecular_names[key],color=mol_colors_dict[key],step='pre',linewidth=0,zorder=100-idx_color)
+        mol_color=key
+        if '_comp' in mol_color:
+            idx_mol=mol_color.find('_comp')
+            
+            mol_color=mol_color[:idx_mol]
+            print(f'Changing {key} to {mol_color}')
+        if '_absorp' in mol_color:
+            idx_mol=mol_color.find('_absorp')
+            
+            mol_color=mol_color[:idx_mol]
+            print(f'Changing {key} to {mol_color}')
+        plt.fill_between(lam_obs,new_mol+added_mol_flux,added_mol_flux,label=molecular_names[mol_color],color=mol_colors_dict[mol_color],step='pre',linewidth=0,zorder=100-idx_color)
         added_mol_flux+=new_mol
         idx_color+=1
     #plt.ylim([-5,None])
@@ -931,10 +953,18 @@ def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=lam_
             new_mol=mol_fluxes[key][idx[idx2]]*1000
 
 
-            if '_comp' in key:
-                idx_c=key.find('_comp')
-                key=key[:idx_c]
-            axs[i].fill_between(lam_obs_select,(interp_flux_select-tot_mol_flux_select)*1000+new_mol+added_mol_flux,(interp_flux_select-tot_mol_flux_select)*1000+added_mol_flux,linewidth=0,label=molecular_names[key],color=mol_colors_dict[key],step='pre',zorder=100-idx_color)
+            mol_color=key
+            if '_comp' in mol_color:
+                idx_mol=mol_color.find('_comp')
+                
+                mol_color=mol_color[:idx_mol]
+                print(f'Changing {key} to {mol_color}')
+            if '_absorp' in mol_color:
+                idx_mol=mol_color.find('_absorp')
+                
+                mol_color=mol_color[:idx_mol]
+                print(f'Changing {key} to {mol_color}')
+            axs[i].fill_between(lam_obs_select,(interp_flux_select-tot_mol_flux_select)*1000+new_mol+added_mol_flux,(interp_flux_select-tot_mol_flux_select)*1000+added_mol_flux,linewidth=0,label=molecular_names[mol_color],color=mol_colors_dict[mol_color],step='pre',zorder=100-idx_color)
             added_mol_flux+=new_mol
             idx_color+=1
         axs[i].step(lam_obs_select,flux_obs_select*1000,linewidth=0.5,color='black',zorder=101)
@@ -950,7 +980,7 @@ def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=lam_
         axs[i].set_xlim(wave_range[i])
         axs[i].set_ylabel('$F \, [\mathrm{mJy}]$')
 
-    axs[0].legend(loc=(0,1),ncol=len(list(mol_fluxes.keys()))//2).set_zorder(102)
+    axs[0].legend(loc=(0,1),ncol=max(1,len(list(mol_fluxes.keys()))//2)).set_zorder(102)
     
     axs[-1].set_xlabel('$\lambda [\mathrm{\mu m}]$')
 
@@ -1008,12 +1038,13 @@ if os.path.isfile(f'{prefix}array_flux.npy'):
     zoom_file_name=prefix_fig+'_mol_contribution_zoom_in_plot_with_post.pdf'
     plot_molecule_subplots(interp_flux,emission_flux_individual_scaled,y_median=y_median,y_std_min=y_std_min,y_std=y_std,wave_new=wave_new,wave_range=wave_grid,save_name=zoom_file_name)
 else:
-    print('----------------')
-    print('----------------')
+    print('---------------------------')
+    print('---------------------------')
     print('For getting the posterior overplotted')
     print('You need to run the plotting rountine with the argument save_all')
-    print('----------------')
-    print('----------------')
+
+    print('---------------------------')
+    print('---------------------------')
 print('Finished!')
 
 

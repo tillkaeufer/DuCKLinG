@@ -969,6 +969,7 @@ lower_lim=np.array(lower_lim)
 #Additing the molecules that are only in the fixed_dict ot the read in phase
 #so that they are loaded as well
 load_in_slab_dict={}
+not_fitted_species=[]
 for key in slab_prior_dict:
     
     load_in_slab_dict[key]={}
@@ -977,6 +978,8 @@ for key in fixed_dict:
         idx=key.find(':')
         if key[:idx] not in load_in_slab_dict:
             load_in_slab_dict[key[:idx]]={}
+            not_fitted_species.append(key[:idx])
+not_fitted_species=np.array(not_fitted_species)
 print(load_in_slab_dict)
 
 con_model=complete_model()
@@ -1137,7 +1140,8 @@ surface_components=[]
 tot_samples=[]
 con_model_new=complete_model()
 con_model_new.read_data(variables=init_dict,wavelength_points=wave_new,dust_species=init_abundance,absorp_species=init_abundance_absorp,
-                    slab_dict=slab_prior_dict,slab_prefix=slab_prefix,
+                    slab_dict=load_in_slab_dict
+,slab_prefix=slab_prefix,
                     stellar_file=stellar_file,dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
 #print(con_model)
 
@@ -1224,9 +1228,10 @@ def get_scales_parallel(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=Fa
 
     for key in slab_dict:
         
-        scale_facs[i]=np.sqrt(scale_facs[i])
-        slab_dict[key]['radius']=scale_facs[i]
-        i+=1
+        if 'radius' not in slab_dict[key]:
+            scale_facs[i]=np.sqrt(scale_facs[i])
+            slab_dict[key]['radius']=scale_facs[i]
+            i+=1
     tot_flux=con_model_new.run_model(variables=var_dict,dust_species=abundance_dict,absorp_species=abundance_dict_absorp,
                                      slab_dict=slab_dict,output_all=False)
     #section to get retrieved parameters from mol
@@ -2757,20 +2762,44 @@ if use_dust_absorp:
 
 
 print('Saved')
+
+
 print('Plot molecular cornerplot...')
 #adding header for derived molecular quantaties
 header_derived=[]
-for species in slab_prior_dict:
-    print(species)
-    header_derived.append(species+':\n'+r'$r_{eff}$')
-    header_derived.append(species+':\n'+'t at '+str(low_contribution))
-    header_derived.append(species+':\n'+'t at '+str(high_contribution))
-    header_derived.append(species+':\n'+'logDensCol at '+str(low_contribution))
-    header_derived.append(species+':\n'+'logDensCol at '+str(high_contribution))
-    if radial_version:
-        header_derived.append(species+':\n'+'rout')
-        header_derived.append(species+':\n'+'rin')
+for species in load_in_slab_dict:
+        print(species)
+        header_derived.append(species+':\n'+r'$r_{eff}$')
+        header_derived.append(species+':\n'+'t at '+str(low_contribution))
+        header_derived.append(species+':\n'+'t at '+str(high_contribution))
+        header_derived.append(species+':\n'+'logDensCol at '+str(low_contribution))
+        header_derived.append(species+':\n'+'logDensCol at '+str(high_contribution))
+        if radial_version:
+            header_derived.append(species+':\n'+'rout')
+            header_derived.append(species+':\n'+'rin')
     
+# checking which species where only included in the fixed dict and shouldn't be part of the arrays
+if len(not_fitted_species)>0:
+    tot_samples_rel_new=tot_samples_rel[:,:-len(header_derived)].copy()
+    header_derived_new=[]
+    print('Deleting not fitted molecules from output data')
+    idxs_pop=[]
+    for i in range(len(header_derived)):
+        for mol in not_fitted_species:
+            if mol in header_derived[i]:
+                print('Deleting:',header_derived[i])
+                idxs_pop.append(i)
+                
+                
+    
+    for i in range(len(header_derived)):
+        if i not in idxs_pop:
+            header_derived_new.append(header_derived[i])
+            appendix=np.expand_dims(tot_samples_rel[:,-len(header_derived)+i],axis=1)
+            
+            tot_samples_rel_new=np.append(tot_samples_rel_new,appendix,axis=1)
+    header_derived=header_derived_new
+    tot_samples_rel=tot_samples_rel_new
 
     
 # check if rin is 0  all the time
@@ -2781,13 +2810,13 @@ print('Shape data array:',np.shape(tot_samples_rel))
 tot_samples_rel_new=tot_samples_rel[:,:-len(header_derived)].copy()
 header_derived_new=[]
 idxs_pop=[]
-for species in slab_prior_dict:
-      
-    idx_pop = np.where(np.array(header_derived)==species+':\n'+'rin')[0][0]
-    if np.min(tot_samples_rel[:,-len(header_derived)+idx_pop])==np.max(tot_samples_rel[:,-len(header_derived)+idx_pop]):
-        idxs_pop.append(idx_pop)
-        idx_pop = np.where(np.array(header_derived)==species+':\n'+'rout')[0][0]
-        idxs_pop.append(idx_pop)
+for species in load_in_slab_dict:
+    if species not in not_fitted_species:
+        idx_pop = np.where(np.array(header_derived)==species+':\n'+'rin')[0][0]
+        if np.min(tot_samples_rel[:,-len(header_derived)+idx_pop])==np.max(tot_samples_rel[:,-len(header_derived)+idx_pop]):
+            idxs_pop.append(idx_pop)
+            idx_pop = np.where(np.array(header_derived)==species+':\n'+'rout')[0][0]
+            idxs_pop.append(idx_pop)
         
 
 for i in range(len(header_derived)):
@@ -2802,7 +2831,8 @@ header_derived=header_derived_new
 tot_samples_rel=tot_samples_rel_new
 print('Shape new derived header:',len(header_derived))
 print('Shape new data array:',np.shape(tot_samples_rel))
-
+for i in range(len(header_derived)):
+    print(header_derived[i],np.min(tot_samples_rel[:,-len(header_derived)+i]),np.max(tot_samples_rel[:,-len(header_derived)+i]))
 CORNER_KWARGS = dict(
     smooth=.9,
     label_kwargs=dict(fontsize=20,rotation=45),
