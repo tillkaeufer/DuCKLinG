@@ -93,6 +93,10 @@ if __name__ == "__main__":
             elif argument=='all':
                 run_all=True
                 save_output=True
+            elif argument=='all_plus':
+                run_all=True
+                save_output=True
+                save_flux=True  
             else:
                 print('--------------')
                 print('--------------')
