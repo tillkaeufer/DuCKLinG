@@ -201,6 +201,7 @@ Additionally, it accepts a large range of options to specify your plotting needs
 - no_spectrum: For only plotting the parameter posterior and ignoring the (memory-intensive and time-consuming) step of plotting the spectra add this option.
 - close: this will avoid that all the plots are displayed when they are done. They will simply be saved.
 - all: this option will automatically run the other two plotting routines as well
+- all_plus: this option also runs the two other plotting routines and overplots the posterior in plot_mol_contributions-input.py as well.
 
 Hopefully, this will plot/save you all the data you are interested in.  
 
@@ -213,8 +214,12 @@ This function requires you to run the plotting routine before with the save opti
 The save_all option will allow you to also overplot the posterior of models to the figures.  
 For details on the median probable model have a look at [Kaeufer et al. 2024](https://www.aanda.org/articles/aa/pdf/2024/07/aa49936-24.pdf).
 
-If you want to plot the molecular column densities, temperatures and radii this is possible with the follwoing function:
+The options for this routine are as follows:
 
+- preliminary: this can be used if your run just started and the posterior file has only one entry. It is a great way to check if the fit is doing what you want.
+- simple: this selects the median probable model on the multinest posterior and not the full posterior. The advantage is that you can run it without running any plotting routine before and before the fit is finished. The difference to preliminary is that this can be used when the posterior file has multiple entries already.
+
+If you want to plot the molecular column densities, temperatures and radii this is possible with the follwoing function:
 
 > python plot_mol_conditions-input.py ./path/to/inputfile
 
@@ -241,5 +246,6 @@ This function has a couple of options that allow you to change the plotting. The
 - If the path to output directory is too long, Multinest cannot save its output file names properly due to the limits on fortran.
 - If you are running the plotting rountine on a mac, there might be an error if you are using the custom_list argument (e.g python plot_retrieval_results.py custom_list [[5,40]]), you can fix it by adding 'noglob' to the line (e.g. noglob python plot_retrieval_results.py custom_list [[5,40]])
 - If you get errors that some functions are unknown, make sure that you are in the DuCKLinG directory when running your code. This is necessary because functions are loaded from utils.py.
+  
 ## Licence
 Tbd
