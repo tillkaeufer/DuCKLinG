@@ -42,6 +42,7 @@ use_ultranest=True
 ext_model=None
 sur_powerlaw=False
 abs_powerlaw=False
+
 #slice_sampler=True
 
 if __name__ == "__main__":
@@ -220,9 +221,24 @@ except NameError:
     print('fit_water_ratios set to:')
     print(fit_water_ratios)
 
+try:
+    fit_gas_only
+    print('fit_gas_only')
+    print(fit_gas_only)
+except NameError:
+    if fit_water_ratios:
+        fit_gas_only=True
+    else:
+        fit_gas_only=False
+
+    print('fit_gas_only set to:')
+    print(fit_gas_only)
+
+
 
 debug=False
 
+sigma_dict={}
 
 # # here starts the part where you have to adjust things
 # 
@@ -234,7 +250,7 @@ debug=False
 
 # In[23]:
 
-if not fit_water_ratios:
+if not fit_gas_only:
     max_flux_obs=np.max(flux_obs)
 
 
@@ -336,32 +352,34 @@ if 'q_emis' in prior_dict or 'q_emis' in fixed_dict:
 # setting up the dictonaries and headers that will be used
 
 # In[19]:
-init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw,fit_water_ratios=fit_water_ratios,
+init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw,fit_gas_only=fit_gas_only,
                            prior_dict=prior_dict,fixed_dict=fixed_dict,use_extinction=use_extinction,use_dust_emis=use_dust_emis,use_dust_absorp=use_dust_absorp,sur_powerlaw=sur_powerlaw,abs_powerlaw=abs_powerlaw,mol_powerlaw=use_mol_powerlaw)
 
 
 
 if 'log_sigma_obs' in prior_dict:
     fit_obs_err=True
+    fit_abs_err=False
+elif 'log_sigma_obs_abs' in prior_dict:
+    fit_obs_err=True
+    fit_abs_err=True
+elif 'sigma_obs_abs' in prior_dict:
+    fit_obs_err=True
+    fit_abs_err=True
 else:
     fit_obs_err=False
+    fit_abs_err=False
+
 if 'log_sigma_conti' in prior_dict:
     fit_conti_err=True
 else:
     fit_conti_err=False
-if fit_conti_err or fit_obs_err:
-    header,header_para,header_abund,header_slab,header_absorp,header_sigma=create_header(var_dict=init_dict,
+header,header_para,header_abund,header_slab,header_absorp,header_sigma=create_header(var_dict=init_dict,
                                                               abundance_dict=init_abundance,
                                                               slab_dict=slab_prior_dict,
-                                                              fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,
+                                                              fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,fit_abs_err=fit_abs_err,
                                                               fixed_dict=fixed_dict,prior_dict=prior_dict,abundance_dict_absorption=init_abundance_absorp)
-
-else:
-    header,header_para,header_abund,header_slab,header_absorp=create_header(var_dict=init_dict,
-                                                              abundance_dict=init_abundance,
-                                                              slab_dict=slab_prior_dict,
-                                                              fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,
-                                                              fixed_dict=fixed_dict,prior_dict=prior_dict,abundance_dict_absorption=init_abundance_absorp)
+                                                              
 upper_lim=[]
 lower_lim=[]
 complete_header=[]
@@ -392,6 +410,15 @@ if fit_obs_err:
     elif 'sigma_obs' in prior_dict:
         upper_lim.append(prior_dict['sigma_obs'][1])
         lower_lim.append(prior_dict['sigma_obs'][0])
+        complete_header.append('sigma_obs')
+    elif 'log_sigma_obs_abs' in prior_dict:
+        upper_lim.append(prior_dict['log_sigma_obs_abs'][1])
+        lower_lim.append(prior_dict['log_sigma_obs_abs'][0])
+        complete_header.append('log_sigma_obs')
+        
+    elif 'sigma_obs_abs' in prior_dict:
+        upper_lim.append(prior_dict['sigma_obs_abs'][1])
+        lower_lim.append(prior_dict['sigma_obs_abs'][0])
         complete_header.append('sigma_obs')
             
 if fit_conti_err:
@@ -426,17 +453,11 @@ def loglike_ratios(cube,debug=False,timeit=False):
     if timeit:
         time_1=time()
     if sample_all:
-        
-        if fit_conti_err or fit_obs_err:
-            var_dict,abundance_dict,slab_dict,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=header,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
-        else:
-            var_dict,abundance_dict,slab_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=header,scale_prior=scale_prior)
+        var_dict,abundance_dict,slab_dict,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=header,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
 
-    else:    
-        if fit_conti_err or fit_obs_err:
-            var_dict,slab_dict,sigma_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab)+list(header_sigma),fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens)
-        else:
-            var_dict,slab_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab),log_coldens=log_coldens)
+    else:
+        var_dict,slab_dict,sigma_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab)+list(header_sigma),fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens)
+
         abundance_dict={}
   
     if debug:
@@ -458,7 +479,22 @@ def loglike_ratios(cube,debug=False,timeit=False):
                 var_dict[key]=fixed_dict[key]
                 if debug:
                     print('..added to var_dict')
-
+            elif key =='sigma_obs':
+                sigma_dict['sigma_obs']=fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='log_sigma_obs':
+                sigma_dict['sigma_obs']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='log_sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
 
             elif ':' in key:
                 idx=key.find(':')
@@ -475,16 +511,25 @@ def loglike_ratios(cube,debug=False,timeit=False):
     var_dict['bb_star']=use_bb_star
     
     #checking if the physics works out
-    penalty=float(-10**20.0)
+    penalty=float(-10**100.0)
+    sum_penalty=float(-10**100.0)
+    trigger_penalty=False
     for key in slab_dict:
         if 'tmin' in slab_dict[key]: 
             if slab_dict[key]['tmin']>=slab_dict[key]['tmax']:
-                return penalty
+                trigger_penalty=True
+                sum_penalty+=penalty*(slab_dict[key]['tmin']-slab_dict[key]['tmax'])
+                if debug: print(f'Penalty {key} temp')
         if coldens_restriction:
             if 'ColDens_tmin' in slab_dict[key]: 
                 if slab_dict[key]['ColDens_tmin']>slab_dict[key]['ColDens_tmax']:
-                    return penalty
-    
+                    trigger_penalty=True
+                    sum_penalty+=penalty*(slab_dict[key]['ColDens_tmin']-slab_dict[key]['ColDens_tmax'])
+                    if debug: print(f'Penalty {key} coldens')
+    if trigger_penalty:
+        if debug:
+            print('Triggered penalty')
+        return sum_penalty
     if timeit:
         time_2=time()    
 
@@ -502,10 +547,12 @@ def loglike_ratios(cube,debug=False,timeit=False):
     if timeit:
         time_3=time()
 
-    if fit_obs_err:
-        sigma=sigma_dict['sigma_obs']*ratio_obs
+    if 'sigma_obs' in sigma_dict:
+        sigma=sigma_dict['sigma_obs']*flux_obs   
+    elif 'sigma_obs_abs' in sigma_dict:
+        sigma=sigma_dict['sigma_obs_abs']   
     else:
-        sigma=sig_ratio_obs
+        sigma=sig_obs
     # constant of loglike
     const=np.sum(np.log(2*np.pi*(sigma)**2))
 
@@ -524,6 +571,146 @@ def loglike_ratios(cube,debug=False,timeit=False):
         print('Dictonary: ', time_2-time_1)
         print('Run model: ', time_3-time_2)
         print('Calc loglike: ', time_4-time_3)
+    if debug:
+        print('loglikelihood:',loglikelihood)
+    if (not np.isfinite(loglikelihood)) or (np.isnan(loglikelihood)):
+        return penalty
+    else:
+        return loglikelihood
+
+
+
+def loglike_gas(cube,debug=False,timeit=False):
+    '''
+    This likelihood function is using in gas we are fitting the gas only.
+    This means that the continuum does not need to be calculated.
+    Also, we are using absolute uncertainties for the flux and not relative uncertainties.
+    This is because we will have (very likely) negative fluxes and consequenctly negative sigma,
+    which is a mess.
+    The desription of absolute errors should also be introduced to the full fitting in the future.
+    '''
+    if timeit:
+        time_1=time()
+    if sample_all:
+        var_dict,abundance_dict,slab_dict,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=header,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
+
+    else:
+        var_dict,slab_dict,sigma_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab)+list(header_sigma),fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens)
+
+        abundance_dict={}
+  
+    if debug:
+        print(var_dict)
+        if sample_all:
+            print(abundance_dict)
+        print(slab_dict)
+        if fit_conti_err or fit_obs_err:
+            print(sigma_dict)
+    if fixed_paras:
+        for key in fixed_dict:
+            if debug:
+                print(f'Fixed {key}..')
+            if key in header_abund:
+                abundance_dict[key]=fixed_dict[key]
+                if debug:
+                    print('..added to abundance_dict')
+            elif key in init_dict or key=='distance':
+                var_dict[key]=fixed_dict[key]
+                if debug:
+                    print('..added to var_dict')
+            elif key =='sigma_obs':
+                sigma_dict['sigma_obs']=fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='log_sigma_obs':
+                sigma_dict['sigma_obs']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=fixed_dict[key]
+                if debug:
+                    print(key,'..added to sigma_dict')
+            elif key =='log_sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+
+            elif ':' in key:
+                idx=key.find(':')
+                if key[:idx] not in slab_dict:
+                    slab_dict[key[:idx]]={}
+                if debug:
+                    print('..added to slab_dict')
+
+                slab_dict[key[:idx]][key[idx+1:]]=fixed_dict[key]
+            else:
+                print(f'{key} is in fixed_dict but not used for the retrieval. Please check that.')
+     
+                
+    var_dict['bb_star']=use_bb_star
+    
+    #checking if the physics works out
+    penalty=float(-10**100.0)
+    sum_penalty=float(-10**100.0)
+    trigger_penalty=False
+    for key in slab_dict:
+        if 'tmin' in slab_dict[key]: 
+            if slab_dict[key]['tmin']>=slab_dict[key]['tmax']:
+                trigger_penalty=True
+                sum_penalty+=penalty*(slab_dict[key]['tmin']-slab_dict[key]['tmax'])
+                if debug: print(f'Penalty {key} temp')
+        if coldens_restriction:
+            if 'ColDens_tmin' in slab_dict[key]: 
+                if slab_dict[key]['ColDens_tmin']>slab_dict[key]['ColDens_tmax']:
+                    trigger_penalty=True
+                    sum_penalty+=penalty*(slab_dict[key]['ColDens_tmin']-slab_dict[key]['ColDens_tmax'])
+                    if debug: print(f'Penalty {key} coldens')
+    if trigger_penalty:
+        if debug:
+            print('Triggered penalty')
+        return sum_penalty
+    
+    if timeit:
+        time_2=time()    
+
+    #here we are inserting the run of the model (with radii) and the fluxes
+    '''
+    '''
+
+    interp_flux=con_model.run_model(variables=var_dict,dust_species=abundance_dict,slab_dict=slab_dict,output_all=False,timeit=False)
+
+    
+    if timeit:
+        time_3=time()
+
+    if 'sigma_obs' in sigma_dict:
+        sigma=sigma_dict['sigma_obs']*flux_obs   
+    elif 'sigma_obs_abs' in sigma_dict:
+        sigma=sigma_dict['sigma_obs_abs']   
+    else:
+        sigma=sig_obs
+    # constant of loglike
+    const=np.sum(np.log(2*np.pi*(sigma)**2))
+
+
+   #difference between observation and model
+
+    diff=(interp_flux - flux_obs)
+
+    #definition of chi
+    chi=np.sum((diff)**2/ sigma**2)
+
+    #loglike
+    loglikelihood =  -0.5 * (chi +const) 
+ 
+    
+    if timeit:
+        time_4=time()
+        print('Dictonary: ', time_2-time_1)
+        print('Run model: ', time_3-time_2)
+        print('Calc loglike: ', time_4-time_3)
+    if debug:
+        print('loglikelihood:',loglikelihood)
     if (not np.isfinite(loglikelihood)) or (np.isnan(loglikelihood)):
         return penalty
     else:
@@ -534,17 +721,10 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
     if timeit:
         time_1=time()
     if sample_all:
-        
-        if fit_conti_err or fit_obs_err:
-            var_dict,abundance_dict,slab_dict,abundance_dict_absorp,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
-        else:
-            var_dict,abundance_dict,slab_dict,abundance_dict_absorp=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior)
+        var_dict,abundance_dict,slab_dict,abundance_dict_absorp,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
 
-    else:    
-        if fit_conti_err or fit_obs_err:
-            var_dict,slab_dict,sigma_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab)+list(header_sigma),fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens)
-        else:
-            var_dict,slab_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab),log_coldens=log_coldens)
+    else:
+        var_dict,slab_dict,sigma_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab)+list(header_sigma),fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens)
 
     if debug:
         print(var_dict)
@@ -579,6 +759,14 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
                     print('..added to sigma_dict')
             elif key =='log_sigma_obs':
                 sigma_dict['sigma_obs']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='log_sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=10**fixed_dict[key]
                 if debug:
                     print('..added to sigma_dict')
 
@@ -673,9 +861,11 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
             return sum_penalty                   
     if timeit:
         time_3=time()
-
-    if fit_obs_err or 'sigma_obs' in sigma_dict:
-        sigma=sigma_dict['sigma_obs']*flux_obs
+    
+    if 'sigma_obs' in sigma_dict:
+        sigma=sigma_dict['sigma_obs']*flux_obs   
+    elif 'sigma_obs_abs' in sigma_dict:
+        sigma=sigma_dict['sigma_obs_abs']   
     else:
         sigma=sig_obs
     # constant of loglike
@@ -740,6 +930,8 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
         plt.legend()
         plt.xlim([10,20])
         plt.show()
+    if debug:
+        print('loglikelihood:',loglikelihood)
     if return_model:
         return con_model
     #print(loglikelihood)
@@ -770,7 +962,7 @@ print(load_in_slab_dict)
 
         
 
-if not fit_water_ratios:
+if not fit_gas_only:
     con_model.read_data(variables=init_dict,dust_species=init_abundance, 
                         absorp_species=init_abundance_absorp, 
                         slab_dict=load_in_slab_dict,slab_prefix=slab_prefix,
@@ -870,10 +1062,11 @@ if debug:
     print(test_vals)
     if fit_water_ratios:
         loglike_ratios(test_vals,debug=True,timeit=False)
-
+    elif fit_gas_only:
+        loglike_gas(test_vals,debug=True,timeit=False)
     else:
         loglike(test_vals,debug=True,timeit=False)
-      
+
 if __name__ == "__main__":
     if not os.path.isfile(f'{prefix}start.time'):
         os.system(f'date > {prefix}start.time')
@@ -886,8 +1079,27 @@ if __name__ == "__main__":
             prior_fast,
             log_dir=prefix,
             resume=True)
+            
+            result = sampler.run(min_num_live_points=n_live_points,Lepsilon=evidence_tolerance,frac_remain=frac_remain)
         else:
             result = solve(LogLikelihood=loglike_ratios, Prior=prior_fast, 
+               n_dims=len(upper_lim), outputfiles_basename=prefix, verbose=True,
+               n_live_points = n_live_points,evidence_tolerance = evidence_tolerance, 
+               sampling_efficiency = sampling_efficiency, importance_nested_sampling=False)
+
+    elif fit_gas_only:
+        if use_ultranest:
+
+            sampler = ultranest.ReactiveNestedSampler(
+            complete_header,
+            loglike_gas,
+            prior_fast,
+            log_dir=prefix,
+            resume=True)
+            
+            result = sampler.run(min_num_live_points=n_live_points,Lepsilon=evidence_tolerance,frac_remain=frac_remain)
+        else:
+            result = solve(LogLikelihood=loglike_gas, Prior=prior_fast, 
                n_dims=len(upper_lim), outputfiles_basename=prefix, verbose=True,
                n_live_points = n_live_points,evidence_tolerance = evidence_tolerance, 
                sampling_efficiency = sampling_efficiency, importance_nested_sampling=False)
