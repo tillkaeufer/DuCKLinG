@@ -243,6 +243,7 @@ This function has a couple of options that allow you to change the plotting. The
 ## Troubleshooting
 - It is important to delete MultiNest files when you re-run a model that was interrupted due to any kinds of errors.
 - If you have your own sigma of your data, comment out 'log_sigma_obs' and define 'sig_obs'.
+- Similarly, if you are not using one of the components (e.g. dust absorption or emission) it is important to get rid of all the associated parameters (e.g. if dust absorption is used the emission parameters tmax_s, tmin_s, and q_thin should be deleted from your prior_dict/fixed_dict).
 - If the path to output directory is too long, Multinest cannot save its output file names properly due to the limits on fortran.
 - If you are running the plotting rountine on a mac, there might be an error if you are using the custom_list argument (e.g python plot_retrieval_results.py custom_list [[5,40]]), you can fix it by adding 'noglob' to the line (e.g. noglob python plot_retrieval_results.py custom_list [[5,40]])
 - If you get errors that some functions are unknown, make sure that you are in the DuCKLinG directory when running your code. This is necessary because functions are loaded from utils.py.
