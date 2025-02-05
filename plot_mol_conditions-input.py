@@ -16,7 +16,6 @@ from ast import literal_eval
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-import uncertainties
 from matplotlib.legend_handler import HandlerTuple
 
 import sys
@@ -173,6 +172,9 @@ print('Log T second plot: ',log_t_second)
 
 print('..Done!')
 print('----------------------------')
+
+
+
 
 #sleep(5)
 

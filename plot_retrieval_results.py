@@ -43,7 +43,7 @@ number_plotted_dust=0
 zoom_list=[[None,None]]
 reduce_posterior=False
 ignore_spectrum_plot=False
-fit_water_ratios=False
+
 ext_model=None
 sur_powerlaw=False
 abs_powerlaw=False
@@ -216,7 +216,32 @@ try:
 except NameError:
     slab_folder='./LineData/'
     print("slab_folder not set in input file")
-    print('./LineData')   
+    print('./LineData')  
+
+
+try:
+    fit_water_ratios
+    print('fit_water_ratios')
+    print(fit_water_ratios)
+except NameError:
+    fit_water_ratios=False
+
+    print('fit_water_ratios set to:')
+    print(fit_water_ratios)
+
+try:
+    fit_gas_only
+    print('fit_gas_only')
+    print(fit_gas_only)
+except NameError:
+    if fit_water_ratios:
+        fit_gas_only=True
+    else:
+        fit_gas_only=False
+
+    print('fit_gas_only set to:')
+    print(fit_gas_only)
+
 old_version=False
 continuum_penalty=False
 
@@ -262,21 +287,16 @@ def prior_run_fast(cube,ndim,nparams):
 
 
 
+
 def loglike_ratios(cube,debug=False,timeit=False):
     if timeit:
         time_1=time()
     if sample_all:
-        
-        if fit_conti_err or fit_obs_err:
-            var_dict,abundance_dict,slab_dict,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=header,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
-        else:
-            var_dict,abundance_dict,slab_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=header,scale_prior=scale_prior)
+        var_dict,abundance_dict,slab_dict,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=header,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
 
-    else:    
-        if fit_conti_err or fit_obs_err:
-            var_dict,slab_dict,sigma_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab)+list(header_sigma),fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens)
-        else:
-            var_dict,slab_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab),log_coldens=log_coldens)
+    else:
+        var_dict,slab_dict,sigma_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab)+list(header_sigma),fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens)
+
         abundance_dict={}
   
     if debug:
@@ -298,7 +318,22 @@ def loglike_ratios(cube,debug=False,timeit=False):
                 var_dict[key]=fixed_dict[key]
                 if debug:
                     print('..added to var_dict')
-
+            elif key =='sigma_obs':
+                sigma_dict['sigma_obs']=fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='log_sigma_obs':
+                sigma_dict['sigma_obs']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='log_sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
 
             elif ':' in key:
                 idx=key.find(':')
@@ -315,16 +350,25 @@ def loglike_ratios(cube,debug=False,timeit=False):
     var_dict['bb_star']=use_bb_star
     
     #checking if the physics works out
-    penalty=float(-10**20.0)
+    penalty=float(-10**100.0)
+    sum_penalty=float(-10**100.0)
+    trigger_penalty=False
     for key in slab_dict:
         if 'tmin' in slab_dict[key]: 
             if slab_dict[key]['tmin']>=slab_dict[key]['tmax']:
-                return penalty
+                trigger_penalty=True
+                sum_penalty+=penalty*(slab_dict[key]['tmin']-slab_dict[key]['tmax'])
+                if debug: print(f'Penalty {key} temp')
         if coldens_restriction:
             if 'ColDens_tmin' in slab_dict[key]: 
                 if slab_dict[key]['ColDens_tmin']>slab_dict[key]['ColDens_tmax']:
-                    return penalty
-    
+                    trigger_penalty=True
+                    sum_penalty+=penalty*(slab_dict[key]['ColDens_tmin']-slab_dict[key]['ColDens_tmax'])
+                    if debug: print(f'Penalty {key} coldens')
+    if trigger_penalty:
+        if debug:
+            print('Triggered penalty')
+        return sum_penalty
     if timeit:
         time_2=time()    
 
@@ -342,10 +386,12 @@ def loglike_ratios(cube,debug=False,timeit=False):
     if timeit:
         time_3=time()
 
-    if fit_obs_err:
-        sigma=sigma_dict['sigma_obs']*ratio_obs
+    if 'sigma_obs' in sigma_dict:
+        sigma=sigma_dict['sigma_obs']*flux_obs   
+    elif 'sigma_obs_abs' in sigma_dict:
+        sigma=sigma_dict['sigma_obs_abs']   
     else:
-        sigma=sig_ratio_obs
+        sigma=sig_obs
     # constant of loglike
     const=np.sum(np.log(2*np.pi*(sigma)**2))
 
@@ -364,6 +410,146 @@ def loglike_ratios(cube,debug=False,timeit=False):
         print('Dictonary: ', time_2-time_1)
         print('Run model: ', time_3-time_2)
         print('Calc loglike: ', time_4-time_3)
+    if debug:
+        print('loglikelihood:',loglikelihood)
+    if (not np.isfinite(loglikelihood)) or (np.isnan(loglikelihood)):
+        return penalty
+    else:
+        return loglikelihood
+
+
+
+def loglike_gas(cube,debug=False,timeit=False):
+    '''
+    This likelihood function is using in gas we are fitting the gas only.
+    This means that the continuum does not need to be calculated.
+    Also, we are using absolute uncertainties for the flux and not relative uncertainties.
+    This is because we will have (very likely) negative fluxes and consequenctly negative sigma,
+    which is a mess.
+    The desription of absolute errors should also be introduced to the full fitting in the future.
+    '''
+    if timeit:
+        time_1=time()
+    if sample_all:
+        var_dict,abundance_dict,slab_dict,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=header,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
+
+    else:
+        var_dict,slab_dict,sigma_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab)+list(header_sigma),fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens)
+
+        abundance_dict={}
+  
+    if debug:
+        print(var_dict)
+        if sample_all:
+            print(abundance_dict)
+        print(slab_dict)
+        if fit_conti_err or fit_obs_err:
+            print(sigma_dict)
+    if fixed_paras:
+        for key in fixed_dict:
+            if debug:
+                print(f'Fixed {key}..')
+            if key in header_abund:
+                abundance_dict[key]=fixed_dict[key]
+                if debug:
+                    print('..added to abundance_dict')
+            elif key in init_dict or key=='distance':
+                var_dict[key]=fixed_dict[key]
+                if debug:
+                    print('..added to var_dict')
+            elif key =='sigma_obs':
+                sigma_dict['sigma_obs']=fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='log_sigma_obs':
+                sigma_dict['sigma_obs']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=fixed_dict[key]
+                if debug:
+                    print(key,'..added to sigma_dict')
+            elif key =='log_sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+
+            elif ':' in key:
+                idx=key.find(':')
+                if key[:idx] not in slab_dict:
+                    slab_dict[key[:idx]]={}
+                if debug:
+                    print('..added to slab_dict')
+
+                slab_dict[key[:idx]][key[idx+1:]]=fixed_dict[key]
+            else:
+                print(f'{key} is in fixed_dict but not used for the retrieval. Please check that.')
+     
+                
+    var_dict['bb_star']=use_bb_star
+    
+    #checking if the physics works out
+    penalty=float(-10**100.0)
+    sum_penalty=float(-10**100.0)
+    trigger_penalty=False
+    for key in slab_dict:
+        if 'tmin' in slab_dict[key]: 
+            if slab_dict[key]['tmin']>=slab_dict[key]['tmax']:
+                trigger_penalty=True
+                sum_penalty+=penalty*(slab_dict[key]['tmin']-slab_dict[key]['tmax'])
+                if debug: print(f'Penalty {key} temp')
+        if coldens_restriction:
+            if 'ColDens_tmin' in slab_dict[key]: 
+                if slab_dict[key]['ColDens_tmin']>slab_dict[key]['ColDens_tmax']:
+                    trigger_penalty=True
+                    sum_penalty+=penalty*(slab_dict[key]['ColDens_tmin']-slab_dict[key]['ColDens_tmax'])
+                    if debug: print(f'Penalty {key} coldens')
+    if trigger_penalty:
+        if debug:
+            print('Triggered penalty')
+        return sum_penalty
+    
+    if timeit:
+        time_2=time()    
+
+    #here we are inserting the run of the model (with radii) and the fluxes
+    '''
+    '''
+
+    interp_flux=con_model.run_model(variables=var_dict,dust_species=abundance_dict,slab_dict=slab_dict,output_all=False,timeit=False)
+
+    
+    if timeit:
+        time_3=time()
+
+    if 'sigma_obs' in sigma_dict:
+        sigma=sigma_dict['sigma_obs']*flux_obs   
+    elif 'sigma_obs_abs' in sigma_dict:
+        sigma=sigma_dict['sigma_obs_abs']   
+    else:
+        sigma=sig_obs
+    # constant of loglike
+    const=np.sum(np.log(2*np.pi*(sigma)**2))
+
+
+   #difference between observation and model
+
+    diff=(interp_flux - flux_obs)
+
+    #definition of chi
+    chi=np.sum((diff)**2/ sigma**2)
+
+    #loglike
+    loglikelihood =  -0.5 * (chi +const) 
+ 
+    
+    if timeit:
+        time_4=time()
+        print('Dictonary: ', time_2-time_1)
+        print('Run model: ', time_3-time_2)
+        print('Calc loglike: ', time_4-time_3)
+    if debug:
+        print('loglikelihood:',loglikelihood)
     if (not np.isfinite(loglikelihood)) or (np.isnan(loglikelihood)):
         return penalty
     else:
@@ -374,18 +560,11 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
     if timeit:
         time_1=time()
     if sample_all:
-        
-        if fit_conti_err or fit_obs_err:
-            var_dict,abundance_dict,slab_dict,abundance_dict_absorp,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
-        else:
-            var_dict,abundance_dict,slab_dict,abundance_dict_absorp=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior)
+        var_dict,abundance_dict,slab_dict,abundance_dict_absorp,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
 
-    else:    
-        if fit_conti_err or fit_obs_err:
-            var_dict,slab_dict,sigma_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab)+list(header_sigma),fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens)
-        else:
-            var_dict,slab_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab),log_coldens=log_coldens)
-  
+    else:
+        var_dict,slab_dict,sigma_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab)+list(header_sigma),fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens)
+
     if debug:
         print(var_dict)
         if sample_all:
@@ -421,6 +600,14 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
                 sigma_dict['sigma_obs']=10**fixed_dict[key]
                 if debug:
                     print('..added to sigma_dict')
+            elif key =='sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='log_sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
 
             elif ':' in key:
                 idx=key.find(':')
@@ -445,33 +632,40 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
             if var_dict['tmin_s']>=var_dict['tmax_s']:
                 trigger_penalty=True
                 sum_penalty+=penalty*(var_dict['tmin_s']-var_dict['tmax_s'])
-    
+                if debug: print('Penalty t surface')
     if use_dust_absorp:
         if abs_powerlaw:
             if var_dict['tmin_abs']>=var_dict['tmax_abs']:
                 trigger_penalty=True
                 sum_penalty+=penalty*(var_dict['tmin_abs']-var_dict['tmax_abs'])
+                if debug: print('Penalty t abs')
     
     if var_dict['tmin_mp']>=var_dict['tmax_mp']:
         trigger_penalty=True
         sum_penalty+=penalty*(var_dict['tmin_mp']-var_dict['tmax_mp'])
+        if debug: print('Penalty t mp')
     
     if 't_rim' not in var_dict.keys():
         if var_dict['tmin_rim']>=var_dict['tmax_rim']:
             trigger_penalty=True
             sum_penalty+=penalty*(var_dict['tmin_rim']-var_dict['tmax_rim'])
+            if debug: print('Penalty t rim')
     
     for key in slab_dict:
         if 'tmin' in slab_dict[key]: 
             if slab_dict[key]['tmin']>=slab_dict[key]['tmax']:
                 trigger_penalty=True
                 sum_penalty+=penalty*(slab_dict[key]['tmin']-slab_dict[key]['tmax'])
+                if debug: print(f'Penalty {key} temp')
         if coldens_restriction:
             if 'ColDens_tmin' in slab_dict[key]: 
                 if slab_dict[key]['ColDens_tmin']>slab_dict[key]['ColDens_tmax']:
                     trigger_penalty=True
                     sum_penalty+=penalty*(slab_dict[key]['ColDens_tmin']-slab_dict[key]['ColDens_tmax'])
+                    if debug: print(f'Penalty {key} coldens')
     if trigger_penalty:
+        if debug:
+            print('Triggered penalty')
         return sum_penalty
 
     if timeit:
@@ -487,22 +681,30 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
                                                 dust_species=init_abundance,
                                                 absorp_species=init_abundance_absorp,
                                                 slab_dict=slab_dict,
-                                                flux_obs=flux_obs,lam_obs=lam_obs)
+                                                flux_obs=flux_obs,lam_obs=lam_obs,save_mol_flux=save_mol_flux)
 
     if limit_integrated_flux:
         for key in slab_dict:
             if key in limit_flux_dict:
+                if debug:
+                    print('lim')
+                    print(key)
                 int_flux=con_model.calc_integrated_flux(key)
+                if debug:
+                    print('int_flux')
+                    print(int_flux)
                 if int_flux>limit_flux_dict[key]:
                     trigger_penalty=True
-                    sum_penalty+=penalty*(1+int_flux-limit_flux_dict[key])
+                    sum_penalty+=penalty*(0.01+abs(int_flux-limit_flux_dict[key]))
         if trigger_penalty:
             return sum_penalty                   
     if timeit:
         time_3=time()
-
-    if fit_obs_err or 'sigma_obs' in sigma_dict:
-        sigma=sigma_dict['sigma_obs']*flux_obs
+    
+    if 'sigma_obs' in sigma_dict:
+        sigma=sigma_dict['sigma_obs']*flux_obs   
+    elif 'sigma_obs_abs' in sigma_dict:
+        sigma=sigma_dict['sigma_obs_abs']   
     else:
         sigma=sig_obs
     # constant of loglike
@@ -567,6 +769,8 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
         plt.legend()
         plt.xlim([10,20])
         plt.show()
+    if debug:
+        print('loglikelihood:',loglikelihood)
     if return_model:
         return con_model
     #print(loglikelihood)
@@ -574,213 +778,6 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
         return penalty
     else:
         return loglikelihood
-    
-def loglike_run(cube,ndim,nparams,debug=False,timeit=False):
-    sigma_dict={}
-    if timeit:
-        time_1=time()
-    if sample_all:
-        
-        if fit_conti_err or fit_obs_err:
-            var_dict,abundance_dict,slab_dict,abundance_dict_absorp,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
-        else:
-            var_dict,abundance_dict,slab_dict,abundance_dict_absorp=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior)
-
-    else:    
-        if fit_conti_err or fit_obs_err:
-            var_dict,slab_dict,sigma_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab)+list(header_sigma),fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens)
-        else:
-            var_dict,slab_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab),log_coldens=log_coldens)
-  
-    if debug:
-        print(var_dict)
-        if sample_all:
-            print(abundance_dict)
-            print(abundance_dict_absorp)
-            
-        print(slab_dict)
-        if fit_conti_err or fit_obs_err:
-            print(sigma_dict)
-    if fixed_paras:
-        for key in fixed_dict:
-            if debug:
-                print(f'Fixed {key}..')
-            if key in header_abund:
-                abundance_dict[key]=fixed_dict[key]
-                if debug:
-                    print('..added to abundance_dict')
-            elif key in header_absorp:
-                key_abs=key[:-7]
-                abundance_dict_absorp[key_abs]=fixed_dict[key]
-                if debug:
-                    print('..added to abundance_dict_absorp')
-            elif key in init_dict or key=='distance':
-                var_dict[key]=fixed_dict[key]
-                if debug:
-                    print('..added to var_dict')
-            elif key =='sigma_obs':
-                sigma_dict['sigma_obs']=fixed_dict[key]
-                if debug:
-                    print('..added to sigma_dict')
-            elif key =='log_sigma_obs':
-                sigma_dict['sigma_obs']=10**fixed_dict[key]
-                if debug:
-                    print('..added to sigma_dict')
-
-            elif ':' in key:
-                idx=key.find(':')
-                if key[:idx] not in slab_dict:
-                    slab_dict[key[:idx]]={}
-                if debug:
-                    print('..added to slab_dict')
-
-                slab_dict[key[:idx]][key[idx+1:]]=fixed_dict[key]
-            else:
-                print(f'{key} is in fixed_dict but not used for the retrieval. Please check that.')
-  
-                
-    var_dict['bb_star']=use_bb_star
-    
-    #checking if the physics works out
-    penalty=float(-10**100.0)
-    sum_penalty=float(-10**100.0)
-    trigger_penalty=False
-    if use_dust_emis:
-        if sur_powerlaw:
-            if var_dict['tmin_s']>=var_dict['tmax_s']:
-                trigger_penalty=True
-                sum_penalty+=penalty*(var_dict['tmin_s']-var_dict['tmax_s'])
-    
-    if use_dust_absorp:
-        if abs_powerlaw:
-            if var_dict['tmin_abs']>=var_dict['tmax_abs']:
-                trigger_penalty=True
-                sum_penalty+=penalty*(var_dict['tmin_abs']-var_dict['tmax_abs'])
-    
-    if var_dict['tmin_mp']>=var_dict['tmax_mp']:
-        trigger_penalty=True
-        sum_penalty+=penalty*(var_dict['tmin_mp']-var_dict['tmax_mp'])
-    
-    if 't_rim' not in var_dict.keys():
-        if var_dict['tmin_rim']>=var_dict['tmax_rim']:
-            trigger_penalty=True
-            sum_penalty+=penalty*(var_dict['tmin_rim']-var_dict['tmax_rim'])
-    
-    for key in slab_dict:
-        if 'tmin' in slab_dict[key]: 
-            if slab_dict[key]['tmin']>=slab_dict[key]['tmax']:
-                trigger_penalty=True
-                sum_penalty+=penalty*(slab_dict[key]['tmin']-slab_dict[key]['tmax'])
-        if coldens_restriction:
-            if 'ColDens_tmin' in slab_dict[key]: 
-                if slab_dict[key]['ColDens_tmin']>slab_dict[key]['ColDens_tmax']:
-                    trigger_penalty=True
-                    sum_penalty+=penalty*(slab_dict[key]['ColDens_tmin']-slab_dict[key]['ColDens_tmax'])
-    if trigger_penalty:
-        return sum_penalty
-
-    if timeit:
-        time_2=time()    
-    if sample_all:
-        interp_flux=con_model.run_model_normalized(variables=var_dict,dust_species=abundance_dict,
-                                                slab_dict=slab_dict,absorp_species=abundance_dict_absorp,max_flux_obs=max_flux_obs)
-
-
-        
-    else:
-        interp_flux=con_model.run_fitted_to_obs(variables=var_dict,
-                                                dust_species=init_abundance,
-                                                absorp_species=init_abundance_absorp,
-                                                slab_dict=slab_dict,
-                                                flux_obs=flux_obs,lam_obs=lam_obs)
-
-    if limit_integrated_flux:
-        for key in slab_dict:
-            if key in limit_flux_dict:
-                int_flux=con_model.calc_integrated_flux(key)
-                if int_flux>limit_flux_dict[key]:
-                    trigger_penalty=True
-                    sum_penalty+=penalty*(1+int_flux-limit_flux_dict[key])
-        if trigger_penalty:
-            return sum_penalty                   
-    if timeit:
-        time_3=time()
-
-    if fit_obs_err or 'sigma_obs' in sigma_dict:
-        sigma=sigma_dict['sigma_obs']*flux_obs
-    else:
-        sigma=sig_obs
-    # constant of loglike
-    const=np.sum(np.log(2*np.pi*(sigma)**2))
-
-    #difference between observation and model
-
-    diff=(interp_flux - flux_obs)
-
-    #definition of chi
-    chi=np.sum((diff)**2/ sigma**2)
-
-    #loglike
-    loglikelihood =  -0.5 * (chi +const) 
-    
-    if continuum_penalty:
-        continuum_residual=con_model.saved_continuum-flux_obs
-        cliped_residual=np.clip(continuum_residual,a_min=0.0,a_max=None)
-
-        
-        if fit_conti_err:
-            sigma_conti=sigma_dict['sigma_conti']*flux_obs
-            if select_conti_like:
-                idx_select=np.where(cliped_residual>0.0)[0]
-                sigma=sigma[idx_select]
-                cliped_residual=cliped_residual[idx_select]
-            if sum_sigma:
-                sig_tot=np.sqrt(sigma_conti**2+sigma**2)
-            else:
-                sig_tot=sigma_conti
-        else:
-            sig_tot=sigma
-        # constant of loglike
-        const=np.sum(np.log(2*np.pi*(sig_tot)**2))
-        
-        #definition of chi
-        if not fit_conti_err:
-            chi=np.sum((cliped_residual)**2/ sig_tot**2)*penalty_fact
-        else:
-            chi=np.sum((cliped_residual)**2/ sig_tot**2)
-
-        #loglike
-        loglikelihood -=  0.5 * (chi +const) 
-    if timeit:
-        time_4=time()
-        print('Dictonary: ', time_2-time_1)
-        print('Run model: ', time_3-time_2)
-        print('Calc loglike: ', time_4-time_3)
-    if debug:
-        plt.loglog(con_model.xnew,interp_flux,label='model')
-        plt.plot(lam_obs,flux_obs,label='Obs')
-        plt.legend()
-        plt.show()
-        
-        plt.loglog(con_model.xnew,interp_flux,label='model')
-        plt.plot(lam_obs,flux_obs,label='Obs')
-        plt.legend()
-        plt.xlim([4,7])
-        plt.show()
-        plt.loglog(con_model.xnew,interp_flux,label='model')
-        plt.plot(lam_obs,flux_obs,label='Obs')
-        plt.legend()
-        plt.xlim([10,20])
-        plt.show()
-    if return_model:
-        return con_model
-    #print(loglikelihood)
-    if (not np.isfinite(loglikelihood)) or (np.isnan(loglikelihood)):
-        return penalty
-    else:
-        return loglikelihood
-
-# In[9]:
 
 
 
@@ -797,7 +794,7 @@ def loglike_run(cube,ndim,nparams,debug=False,timeit=False):
 # In[23]:
 
 
-if not fit_water_ratios:
+if not fit_gas_only:
     max_flux_obs=np.max(flux_obs)
 
 
@@ -895,31 +892,33 @@ if 'q_emis' in prior_dict or 'q_emis' in fixed_dict:
 
 # setting up the dictonaries and headers that will be used
 
-init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw,fit_water_ratios=fit_water_ratios,
+init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw,fit_gas_only=fit_gas_only,
                            prior_dict=prior_dict,fixed_dict=fixed_dict,use_extinction=use_extinction,use_dust_emis=use_dust_emis,use_dust_absorp=use_dust_absorp,sur_powerlaw=sur_powerlaw,abs_powerlaw=abs_powerlaw,mol_powerlaw=use_mol_powerlaw)
-
 
 if 'log_sigma_obs' in prior_dict:
     fit_obs_err=True
+    fit_abs_err=False
+elif 'log_sigma_obs_abs' in prior_dict:
+    fit_obs_err=True
+    fit_abs_err=True
+elif 'sigma_obs_abs' in prior_dict:
+    fit_obs_err=True
+    fit_abs_err=True
 else:
     fit_obs_err=False
+    fit_abs_err=False
+
 if 'log_sigma_conti' in prior_dict:
     fit_conti_err=True
 else:
     fit_conti_err=False
-if fit_conti_err or fit_obs_err:
-    header,header_para,header_abund,header_slab,header_absorp,header_sigma=create_header(var_dict=init_dict,
+
+header,header_para,header_abund,header_slab,header_absorp,header_sigma=create_header(var_dict=init_dict,
                                                               abundance_dict=init_abundance,
                                                               slab_dict=slab_prior_dict,
-                                                              fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,
+                                                              fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,fit_abs_err=fit_abs_err,
                                                               fixed_dict=fixed_dict,prior_dict=prior_dict,abundance_dict_absorption=init_abundance_absorp)
 
-else:
-    header,header_para,header_abund,header_slab,header_absorp=create_header(var_dict=init_dict,
-                                                              abundance_dict=init_abundance,
-                                                              slab_dict=slab_prior_dict,
-                                                              fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,
-                                                              fixed_dict=fixed_dict,prior_dict=prior_dict,abundance_dict_absorption=init_abundance_absorp)
 upper_lim=[]
 lower_lim=[]
 complete_header=[]
@@ -951,7 +950,15 @@ if fit_obs_err:
         upper_lim.append(prior_dict['sigma_obs'][1])
         lower_lim.append(prior_dict['sigma_obs'][0])
         complete_header.append('sigma_obs')
-            
+    elif 'log_sigma_obs_abs' in prior_dict:
+        upper_lim.append(prior_dict['log_sigma_obs_abs'][1])
+        lower_lim.append(prior_dict['log_sigma_obs_abs'][0])
+        complete_header.append('log_sigma_obs')
+        
+    elif 'sigma_obs_abs' in prior_dict:
+        upper_lim.append(prior_dict['sigma_obs_abs'][1])
+        lower_lim.append(prior_dict['sigma_obs_abs'][0])
+        complete_header.append('sigma_obs')
 if fit_conti_err:
     if 'log_sigma_conti' in prior_dict:
         upper_lim.append(prior_dict['log_sigma_conti'][1])
@@ -988,7 +995,7 @@ print(load_in_slab_dict)
 
 con_model=complete_model()
 
-if not fit_water_ratios:
+if not fit_gas_only:
     con_model.read_data(variables=init_dict,dust_species=init_abundance,
                         absorp_species=init_abundance_absorp,
                         slab_dict=load_in_slab_dict,slab_prefix=slab_prefix,
@@ -1143,10 +1150,17 @@ surface_components=[]
 
 tot_samples=[]
 con_model_new=complete_model()
-con_model_new.read_data(variables=init_dict,wavelength_points=wave_new,dust_species=init_abundance,absorp_species=init_abundance_absorp,
-                    slab_dict=load_in_slab_dict
-,slab_prefix=slab_prefix,
-                    stellar_file=stellar_file,dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
+if not fit_gas_only:
+    
+    con_model_new.read_data(variables=init_dict,wavelength_points=wave_new,dust_species=init_abundance,absorp_species=init_abundance_absorp,
+                        slab_dict=load_in_slab_dict
+    ,slab_prefix=slab_prefix,
+                        stellar_file=stellar_file,dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
+else:
+    con_model_new.read_data(variables=init_dict,wavelength_points=wave_new,dust_species=init_abundance,absorp_species=init_abundance_absorp,
+                        slab_dict=load_in_slab_dict
+    ,slab_prefix=slab_prefix,
+                        stellar_file=stellar_file,dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model,slab_only_mode=True)
 #print(con_model)
 
   
@@ -1165,8 +1179,7 @@ def get_scales_parallel(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=Fa
     
     samp=samples[idx]
     dict_fluxes={}
-    sigma_dict={}
-    var_dict,slab_dict=cube_to_dict(samp,header=list(header_para)+list(header_slab))
+    var_dict,slab_dict,sigma_dict=cube_to_dict(samp,header=list(header_para)+list(header_slab))
     
 
     if fixed_paras:
@@ -1192,6 +1205,14 @@ def get_scales_parallel(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=Fa
                     print('..added to sigma_dict')
             elif key =='log_sigma_obs':
                 sigma_dict['sigma_obs']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='log_sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=10**fixed_dict[key]
                 if debug:
                     print('..added to sigma_dict')
             else:
@@ -1314,8 +1335,10 @@ def get_full_model(idx,dummy,debug=False):
     dict_fluxes={}
     sigma_dict={}
     if sample_all:
-        var_dict,abundance_dict,slab_dict,abundance_dict_absorp=cube_to_dicts(samp,header_para=header_para,header_abund=header_abund,header_absorp=header_absorp,header_all=complete_header,scale_prior=scale_prior)
-    
+        var_dict,abundance_dict,slab_dict,abundance_dict_absorp,sigma_dict=cube_to_dicts(samp,header_para=header_para,header_abund=header_abund,header_absorp=header_absorp,header_all=complete_header,scale_prior=scale_prior)
+    if fit_gas_only:
+        abundance_dict={}
+        var_dict,slab_dict,sigma_dict=cube_to_dict(samp,header=list(header_para)+list(header_slab))
     if debug:
         print(var_dict)
         if sample_all:
@@ -1346,6 +1369,14 @@ def get_full_model(idx,dummy,debug=False):
                 sigma_dict['sigma_obs']=10**fixed_dict[key]
                 if debug:
                     print('..added to sigma_dict')
+            elif key =='sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='log_sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
             else:
                 idx=key.find(':')
                 if key[:idx] not in slab_dict:
@@ -1360,24 +1391,28 @@ def get_full_model(idx,dummy,debug=False):
         print('Slab dict',slab_dict)
     var_dict['bb_star']=use_bb_star
     
-    interp_flux,scales=con_model.run_model_normalized(variables=var_dict,dust_species=abundance_dict,absorp_species=abundance_dict_absorp,
+    if sample_all: interp_fluxes,scales=con_model.run_model_normalized(variables=var_dict,dust_species=abundance_dict,absorp_species=abundance_dict_absorp,
                                                 slab_dict=slab_dict,max_flux_obs=max_flux_obs,translate_scales=True,debug=False)
-
-    var_dict['sc_ir']=scales[0]
-    var_dict['sc_mid']=scales[1]
-    i=2
-    if use_dust_emis:
-        for key in abundance_dict:
-            abundance_dict[key]=scales[i]
-            i+=1
-
-    if use_dust_absorp:
-        for key in abundance_dict_absorp:
-            abundance_dict_absorp[key]=scales[i]
-            i+=1
-
-
-    tot_flux=con_model_new.run_model(variables=var_dict,dust_species=abundance_dict,slab_dict=slab_dict,absorp_species=abundance_dict_absorp)
+    elif fit_gas_only:
+        interp_flux=con_model.run_model(variables=var_dict,dust_species=abundance_dict,slab_dict=slab_dict,output_all=False,timeit=False)
+    if sample_all:
+        var_dict['sc_ir']=scales[0]
+        var_dict['sc_mid']=scales[1]
+        i=2
+        if use_dust_emis:
+            for key in abundance_dict:
+                abundance_dict[key]=scales[i]
+                i+=1
+    
+        if use_dust_absorp:
+            for key in abundance_dict_absorp:
+                abundance_dict_absorp[key]=scales[i]
+                i+=1
+    
+    
+        tot_flux=con_model_new.run_model(variables=var_dict,dust_species=abundance_dict,slab_dict=slab_dict,absorp_species=abundance_dict_absorp)
+    elif fit_gas_only:
+        tot_flux=con_model_new.run_model(variables=var_dict,dust_species=abundance_dict,slab_dict=slab_dict,output_all=False,timeit=False)
         #section to get retrieved parameters from mol
     mol_results_dict=con_model.extract_emission_quantities(low_contribution=low_contribution,high_contribution=high_contribution)
     list_mol_results=[]
@@ -1393,53 +1428,55 @@ def get_full_model(idx,dummy,debug=False):
             list_mol_results.append(mol_results_dict[species]['rout,rin'][0])
             list_mol_results.append(mol_results_dict[species]['rout,rin'][1])
     list_mol_results=np.array(list_mol_results).flatten()
-    dust_mass_ar=[]
-    dust_mass_absorp_ar=[]
-    if use_dust_emis:
-        dust_mass_dict=con_model_new.calc_dust_masses(dust_path=dust_path,unit='msun')
-        dust_mass_ar=np.array(list(dust_mass_dict.values()))
-    if use_dust_absorp:
-        dust_mass_dict=con_model_new.calc_dust_masses(dust_path=dust_path,absorption=True,unit='msun')
-        dust_mass_absorp_ar=np.array(list(dust_mass_dict.values()))    
-    if plot_dust_individual:
-        scale_components=con_model_new.trans_flux
-
+    if sample_all:
+        dust_mass_ar=[]
+        dust_mass_absorp_ar=[]
         if use_dust_emis:
-            con_model_new.set_surface(one_output=False)
+            dust_mass_dict=con_model_new.calc_dust_masses(dust_path=dust_path,unit='msun')
+            dust_mass_ar=np.array(list(dust_mass_dict.values()))
         if use_dust_absorp:
-            con_model_new.set_surface(absorption=True,one_output=False)
-
-        if use_dust_emis:     
-            dict_fluxes['individual_surface']={}
-            for key in abundance_dict:    
-                dict_fluxes['individual_surface'][key]=scale_components*con_model_new.surface_flux_individual[key]*abundance_dict[key]
-                if debug:
-                    print(np.max(dict_fluxes['individual_surface'][key]))
-
-        if use_dust_absorp:     
-            dict_fluxes['individual_absorp']={}
-            for key in abundance_dict_absorp:    
-                dict_fluxes['individual_absorp'][key]=scale_components*con_model_new.absorp_flux_individual[key]*abundance_dict_absorp[key]
-                if debug:
-                    print(np.max(dict_fluxes['individual_absorp'][key]))
-
+            dust_mass_dict=con_model_new.calc_dust_masses(dust_path=dust_path,absorption=True,unit='msun')
+            dust_mass_absorp_ar=np.array(list(dust_mass_dict.values()))    
+        if plot_dust_individual:
+            scale_components=con_model_new.trans_flux
+    
+            if use_dust_emis:
+                con_model_new.set_surface(one_output=False)
+            if use_dust_absorp:
+                con_model_new.set_surface(absorption=True,one_output=False)
+    
+            if use_dust_emis:     
+                dict_fluxes['individual_surface']={}
+                for key in abundance_dict:    
+                    dict_fluxes['individual_surface'][key]=scale_components*con_model_new.surface_flux_individual[key]*abundance_dict[key]
+                    if debug:
+                        print(np.max(dict_fluxes['individual_surface'][key]))
+    
+            if use_dust_absorp:     
+                dict_fluxes['individual_absorp']={}
+                for key in abundance_dict_absorp:    
+                    dict_fluxes['individual_absorp'][key]=scale_components*con_model_new.absorp_flux_individual[key]*abundance_dict_absorp[key]
+                    if debug:
+                        print(np.max(dict_fluxes['individual_absorp'][key]))
+    
 
     if not ignore_spectrum_plot:
         dict_fluxes['tot_flux']=tot_flux
-        dict_fluxes['rim_flux']=con_model_new.rim_flux
-        dict_fluxes['stellar_flux']=con_model_new.scaled_stellar_flux
-        dict_fluxes['midplane_flux']=con_model_new.midplane_flux
-        if use_dust_emis:
-            dict_fluxes['surface_flux']=con_model_new.surface_flux_tot
-        if use_dust_absorp:
-            dict_fluxes['absorp_flux']=con_model_new.absorp_flux_tot
+        if sample_all:
+            dict_fluxes['rim_flux']=con_model_new.rim_flux
+            dict_fluxes['stellar_flux']=con_model_new.scaled_stellar_flux
+            dict_fluxes['midplane_flux']=con_model_new.midplane_flux
+            if use_dust_emis:
+                dict_fluxes['surface_flux']=con_model_new.surface_flux_tot
+            if use_dust_absorp:
+                dict_fluxes['absorp_flux']=con_model_new.absorp_flux_tot
         dict_fluxes['emission_flux']=con_model_new.emission_flux
         dict_fluxes['interp_flux']=interp_flux
-    
-    samp_select=samp[:-len(scales)]
-    
-    
-    return dict_fluxes, np.append(np.append(samp_select,scales),list_mol_results),dust_mass_ar,dust_mass_absorp_ar
+    if sample_all:
+        samp_select=samp[:-len(scales)]
+        return dict_fluxes, np.append(np.append(samp_select,scales),list_mol_results),dust_mass_ar,dust_mass_absorp_ar
+    elif fit_gas_only:
+        return dict_fluxes, np.append(samp,list_mol_results), [] , []
 print('The next step takes a while')
 
 
@@ -1448,8 +1485,8 @@ print('The next step takes a while')
 parallel=True
 if parallel:
 
-    pool =  mp.get_context('fork').Pool(int(16))
-    if sample_all:
+    pool =  mp.get_context('fork').Pool(min(int(16),mp.cpu_count()))
+    if sample_all or fit_gas_only:
         results = [pool.apply_async(get_full_model, args=(i,1)) for i in range(len(samples))]
         pool.close() 
 
@@ -1459,7 +1496,7 @@ if parallel:
         results = [pool.apply_async(get_scales_parallel, args=(i,obs_per_model)) for i in range(len(samples))]
         pool.close() 
 else:
-    if sample_all:
+    if sample_all or fit_gas_only:
         results = [get_full_model(i,1) for i in range(len(samples))]    
 
     else:
@@ -1510,21 +1547,22 @@ else:
         
         if not ignore_spectrum_plot:
             array_flux.append(dict_flux['tot_flux'])
-
-            stellar_components.append(dict_flux['stellar_flux'])
-            rim_components.append(dict_flux['rim_flux']+dict_flux['stellar_flux'])
-            midplane_components.append(dict_flux['midplane_flux'])
-            if use_dust_emis:
-                surface_components.append(dict_flux['surface_flux'])
-            if use_dust_absorp:
-                absorp_components.append(dict_flux['absorp_flux'])
+            if not fit_gas_only:
+                stellar_components.append(dict_flux['stellar_flux'])
+                rim_components.append(dict_flux['rim_flux']+dict_flux['stellar_flux'])
+                midplane_components.append(dict_flux['midplane_flux'])
+                if use_dust_emis:
+                    surface_components.append(dict_flux['surface_flux'])
+                if use_dust_absorp:
+                    absorp_components.append(dict_flux['absorp_flux'])
             emission_components.append(dict_flux['emission_flux'])
             interp_fluxes.append(dict_flux['interp_flux'])
         tot_samples.append(samp)
-        if use_dust_emis:
-            dust_mass_master_ar.append(dust_mass_ar)
-        if use_dust_absorp:
-            dust_mass_absorp_master_ar.append(dust_mass_absorp_ar)
+        if not fit_gas_only:
+            if use_dust_emis:
+                dust_mass_master_ar.append(dust_mass_ar)
+            if use_dust_absorp:
+                dust_mass_absorp_master_ar.append(dust_mass_absorp_ar)
 
 
 if plot_dust_individual:
@@ -1668,6 +1706,7 @@ if not ignore_spectrum_plot:
             comp_colors=['tab:orange','tab:green','tab:purple','tab:brown','tab:olive','tab:red']
             
             comp_list=[stellar_components,rim_components,midplane_components]
+            
             if use_dust_emis:
                 comp_list.append(surface_components)
             if use_dust_absorp:
@@ -1890,7 +1929,17 @@ if not ignore_spectrum_plot:
 
 
 
-    if fit_obs_err or 'sigma_obs' in fixed_dict or 'log_sigma_obs' in fixed_dict:
+    if 'sigma_obs'in fixed_dict:
+        sig_obs=fixed_dict['sigma_obs']*flux_obs
+        
+    elif 'log_sigma_obs'in fixed_dict:
+        sig_obs=10**fixed_dict['log_sigma_obs']*flux_obs
+    elif 'sigma_obs'in fixed_dict:
+        sig_obs=fixed_dict['sigma_obs_abs']
+        
+    elif 'sigma_obs'in fixed_dict:
+        sig_obs=10**fixed_dict['log_sigma_obs_abs']
+    else:
         sig_obs=np.zeros_like(flux_obs)
         print('Plot sig obs as 0')
 
@@ -1907,8 +1956,12 @@ if not ignore_spectrum_plot:
                                        individual_surface=dict_individual_flux,
                                        plot_individual_surface=True,number_plotted_dust=number_plotted_dust)
 
+    if fit_gas_only:
+        plot_model_uncertainties_names(flux_obs,sig_obs,lam_obs,array_flux,con_model_new.xnew,
+                                   'folder', zoom_in_list=zoom_list, save=True, save_name=save_folder+str(run_number)+'_Component_plot', min_wave=min_wave,ylim='',max_wave=max_wave,plot_components=False)
 
-    plot_model_uncertainties_names(flux_obs,sig_obs,lam_obs,array_flux,con_model_new.xnew,
+    else:
+        plot_model_uncertainties_names(flux_obs,sig_obs,lam_obs,array_flux,con_model_new.xnew,
                                    'folder', zoom_in_list=zoom_list, save=True, save_name=save_folder+str(run_number)+'_Component_plot', min_wave=min_wave,ylim='',max_wave=max_wave)
 
 
@@ -1978,9 +2031,9 @@ if not ignore_spectrum_plot:
 
 
 
-
-    plot_residual(flux_obs,sig_obs,lam_obs,interp_fluxes,'folder',
-                  save=True,save_name=save_folder+str(run_number)+f'_Residual_percent{reduce_str}.{filetype_fig}',percent=True)
+    if not fit_gas_only:
+        plot_residual(flux_obs,sig_obs,lam_obs,interp_fluxes,'folder',
+                      save=True,save_name=save_folder+str(run_number)+f'_Residual_percent{reduce_str}.{filetype_fig}',percent=True)
 
     plot_residual(flux_obs,sig_obs,lam_obs,interp_fluxes,'folder',
                   save=True,save_name=save_folder+str(run_number)+f'_Residual_jansky{reduce_str}.{filetype_fig}',percent=False)
@@ -2097,9 +2150,13 @@ def set_slab_labels(slab_prior_dict):
     return new_labels
 slab_labels=set_slab_labels(slab_prior_dict=slab_prior_dict)
 
-
-header_all=list(header_para_slab)+['sc_ir']+['sc_mid']
-ugly_header=list(header_para_slab)+['sc_ir']+['sc_mid']
+if not fit_gas_only:
+    header_all=list(header_para_slab)+['sc_ir']+['sc_mid']
+    ugly_header=list(header_para_slab)+['sc_ir']+['sc_mid']
+else:
+    
+    header_all=list(header_para_slab)
+    ugly_header=list(header_para_slab)
 
 if use_dust_emis:
     nicer_labels_output=nicer_labels(init_abundance=init_abundance)
@@ -2116,8 +2173,9 @@ if use_dust_absorp:
     
     for key in init_abundance_absorp:
         ugly_header.append(key+'_absorp')        
-header_all=header_all+slab_labels
-ugly_header=ugly_header+slab_labels
+if not fit_gas_only:
+    header_all=header_all+slab_labels
+    ugly_header=ugly_header+slab_labels
 
 
 if sample_all:
@@ -2140,6 +2198,9 @@ if sample_all:
 Converting the abundances from meaningless values to relative mass fractions
 If the curves are already given in Kappa, you can set q_curves=False
 '''
+if fit_gas_only:
+    tot_samples_rel=tot_samples
+
 
 if use_dust_emis:
     
@@ -2292,9 +2353,7 @@ if use_dust_absorp:
         
     
 
-   
-
-def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True,debug=False):
+def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True,plot_legend=False,debug=False):
     colour_list=['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
                 'tab:brown','tab:pink','tab:gray','tab:olive','tab:cyan']
     colour_count=0
@@ -2304,7 +2363,7 @@ def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True
     first=True
     i=0
     
-    plt.figure()
+    plt.figure(figsize=(12,6))
     for key_run in dust_analysis:
         key=key_run[:-7]
         if debug:
@@ -2337,6 +2396,9 @@ def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True
             if indicate_regions:
                 plt.fill_between([x_range[0]-0.5,x_range[-1]+0.5],
                                  y1=[1,1],y2=[0.95,0.95],alpha=0.7,color=colour_list[colour_count])
+                if not plot_legend:
+                    plt.text(x_range[0]-0.4,0.96,label)
+
             plt.bar(x_range, medians,label=label,color=colour_list[colour_count])
             
 
@@ -2367,6 +2429,9 @@ def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True
     if indicate_regions:
         plt.fill_between([x_range[0]-0.5,x_range[-1]+0.5],
                          y1=[1,1],y2=[0.95,0.95],alpha=0.7,color=colour_list[colour_count])
+        if not plot_legend:
+            plt.text(x_range[0]-0.4,0.96,label)
+            
     plt.bar(x_range, medians,label=label,color=colour_list[colour_count])
     plt.errorbar(x_range, medians,yerr=[minus_stds,plus_stds],color='black',linestyle='',capsize=2)
     rvs=[]
@@ -2396,21 +2461,18 @@ def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True
     else:
         plt.ylim(top=1)
         
-    plt.legend()
+    if plot_legend:
+        plt.legend()
     if scale=='log':
-        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_fractions_log{suffix}{reduce_str}.{filetype_fig}',bbox_inches='tight')
+        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_fractions_log{suffix}.{filetype_fig}',bbox_inches='tight')
     else:
-        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_fractions{suffix}{reduce_str}.{filetype_fig}',bbox_inches='tight')
+        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_fractions{suffix}.{filetype_fig}',bbox_inches='tight')
         
-    if close_plots:
-        plt.close()
-    else:
-
-        plt.show()
+    plt.show()
 
 
 
-def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regions=True,debug=False):
+def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regions=True,plot_legend=False,debug=False):
     colour_list=['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
                 'tab:brown','tab:pink','tab:gray','tab:olive','tab:cyan']
     colour_count=0
@@ -2423,7 +2485,7 @@ def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regi
     max_val=np.max(list(dust_analysis_abs.values()))*1.1
     min_val=np.min(list(dust_analysis_abs.values()))*0.9
     
-    plt.figure()
+    plt.figure(figsize=(12,6))
     for key in dust_analysis_abs:
         if debug:
             print(key)
@@ -2455,6 +2517,8 @@ def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regi
             if indicate_regions:
                 plt.fill_between([x_range[0]-0.5,x_range[-1]+0.5],
                                  y1=[max_val,max_val],y2=[max_val-(max_val-min_val)*0.05,max_val-(max_val-min_val)*0.05],alpha=0.7,color=colour_list[colour_count])
+                if not plot_legend:
+                    plt.text(x_range[0]-0.4,max_val-(max_val-min_val)*0.04,label)
             plt.bar(x_range, medians,label=label,color=colour_list[colour_count])
             
 
@@ -2485,6 +2549,8 @@ def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regi
     if indicate_regions:
         plt.fill_between([x_range[0]-0.5,x_range[-1]+0.5],
                          y1=[max_val,max_val],y2=[max_val-(max_val-min_val)*0.05,max_val-(max_val-min_val)*0.05],alpha=0.7,color=colour_list[colour_count])
+        if not plot_legend:
+            plt.text(x_range[0]-0.4,max_val-(max_val-min_val)*0.04,label)
     plt.bar(x_range, medians,label=label,color=colour_list[colour_count])
     plt.errorbar(x_range, medians,yerr=[minus_stds,plus_stds],color='black',linestyle='',capsize=2)
     rvs=[]
@@ -2512,18 +2578,15 @@ def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regi
     plt.ylim(bottom=min_val,top=max_val)
     if scale=='log':
         plt.yscale('log')
-        
-    plt.legend()
+    if plot_legend:  
+        plt.legend()
     if scale=='log':
-        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_abs_log{suffix}{reduce_str}.{filetype_fig}',bbox_inches='tight')
+        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_abs_log{suffix}.{filetype_fig}',bbox_inches='tight')
     else:
-        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_abs{suffix}{reduce_str}.{filetype_fig}',bbox_inches='tight')
+        plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_abs{suffix}.{filetype_fig}',bbox_inches='tight')
         
-    if close_plots:
-        plt.close()
-    else:
+    plt.show()
 
-        plt.show()
 
 
 if use_dust_emis:
@@ -2871,6 +2934,9 @@ if save_output:
     np.save(f'{prefix}header_complete_posterior',np.array(header_all))
     
 print('Saved')
+
+
+
 print('Plot full cornerplot...')
 
 '''

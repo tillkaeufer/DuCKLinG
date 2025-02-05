@@ -260,6 +260,19 @@ except NameError:
     print('fit_water_ratios set to:')
     print(fit_water_ratios)
 
+try:
+    fit_gas_only
+    print('fit_gas_only')
+    print(fit_gas_only)
+except NameError:
+    if fit_water_ratios:
+        fit_gas_only=True
+    else:
+        fit_gas_only=False
+
+    print('fit_gas_only set to:')
+    print(fit_gas_only)
+
 
 debug=False
 
@@ -314,7 +327,9 @@ def median_probable_model(filename,file_complete='',complete_header=False,debug=
         paras_post,like=read_file(filename,ultranest=use_ultranest)
         paras=np.load(file_complete)
     if debug:
-        print(np.shape(paras),np.shape(paras_post))
+        print(np.shape(paras))
+        if complete_header:
+            print(np.shape(paras_post))
     
     nmodels=len(paras)
  
@@ -322,6 +337,7 @@ def median_probable_model(filename,file_complete='',complete_header=False,debug=
     i1=int(nmodels/4)
     i2=int(3*nmodels/4)
     k=0
+    k2=0
     
     #sorting the parameter 
     sorted_paras=np.sort(paras,axis=0)
@@ -358,8 +374,10 @@ def median_probable_model(filename,file_complete='',complete_header=False,debug=
             if found>1 and k==0:
                 i1=i1+1
                 i2=i2-1
+                k2+=1
                 if i1<i2:
                     loop=True
+                print(f'Decreasing boundaries: {k2}',end='\r',flush=True)
             elif found==0:
                 k=k+1
                 i1=i1-1
@@ -368,8 +386,10 @@ def median_probable_model(filename,file_complete='',complete_header=False,debug=
                     loop=True
                 else:
                     print('Nothing found')
+                
+                print(f'Increasing boundaries: {k}',end='\r',flush=True)
 #        print(found,end='\r',flush=True)
-        print(k,end='\r',flush=True)
+
     
     if complete_header:
         return ibest,like[i],paras_post[i],paras[i]
@@ -383,11 +403,20 @@ if complete_header:
                                                           complete_header=complete_header,debug=True)
 else:
     if preliminary:
-        
         paras,like=read_file(filename=list_files[0],ultranest=use_ultranest)
         ibest=0
+        if len(np.shape(paras))==2:
+                
+            print('--------------------------------------')
+            print('--------------------------------------')
+            print('The posterior has more than one entry')
+            print('Run the simple option instead')
+            print('--------------------------------------')
+            print('--------------------------------------')
+            exit()
     else:    
-        ibest,like,paras=median_probable_model(list_files[0])
+        print('Simple median search')
+        ibest,like,paras=median_probable_model(list_files[0],debug=True)
 
 print('Done!')
 # %%
@@ -478,31 +507,34 @@ if 'q_emis' in prior_dict or 'q_emis' in fixed_dict:
 # setting up the dictonaries and headers that will be used
 
 # In[19]:
-init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw,fit_water_ratios=fit_water_ratios,
+init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw,fit_gas_only=fit_gas_only,
                            prior_dict=prior_dict,fixed_dict=fixed_dict,use_extinction=use_extinction,use_dust_emis=use_dust_emis,use_dust_absorp=use_dust_absorp,sur_powerlaw=sur_powerlaw,abs_powerlaw=abs_powerlaw,mol_powerlaw=use_mol_powerlaw)
 
 
 if 'log_sigma_obs' in prior_dict:
     fit_obs_err=True
+    fit_abs_err=False
+elif 'log_sigma_obs_abs' in prior_dict:
+    fit_obs_err=True
+    fit_abs_err=True
+elif 'sigma_obs_abs' in prior_dict:
+    fit_obs_err=True
+    fit_abs_err=True
 else:
     fit_obs_err=False
+    fit_abs_err=False
+
 if 'log_sigma_conti' in prior_dict:
     fit_conti_err=True
 else:
     fit_conti_err=False
-if fit_conti_err or fit_obs_err:
-    header,header_para,header_abund,header_slab,header_absorp,header_sigma=create_header(var_dict=init_dict,
+header,header_para,header_abund,header_slab,header_absorp,header_sigma=create_header(var_dict=init_dict,
                                                               abundance_dict=init_abundance,
                                                               slab_dict=slab_prior_dict,
-                                                              fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,
+                                                              fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,fit_abs_err=fit_abs_err,
                                                               fixed_dict=fixed_dict,prior_dict=prior_dict,abundance_dict_absorption=init_abundance_absorp)
 
-else:
-    header,header_para,header_abund,header_slab,header_absorp=create_header(var_dict=init_dict,
-                                                              abundance_dict=init_abundance,
-                                                              slab_dict=slab_prior_dict,
-                                                              fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,
-                                                              fixed_dict=fixed_dict,prior_dict=prior_dict,abundance_dict_absorption=init_abundance_absorp)
+
 upper_lim=[]
 lower_lim=[]
 complete_header=[]
@@ -567,16 +599,17 @@ for key in fixed_dict:
             load_in_slab_dict[key[:idx]]={}
 print(load_in_slab_dict)
 
+
 try:
     print(len(lam_obs))
     con_model.read_data(variables=init_dict,dust_species=init_abundance,
                         slab_dict=load_in_slab_dict,slab_prefix=slab_prefix,
-                        stellar_file=stellar_file,wavelength_points=lam_obs,slab_only_mode=False,
+                        stellar_file=stellar_file,wavelength_points=lam_obs,slab_only_mode=fit_gas_only,
                         dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
 except NameError:
     con_model.read_data(variables=init_dict,dust_species=init_abundance,
                         slab_dict=load_in_slab_dict,slab_prefix=slab_prefix,
-                        stellar_file=stellar_file,slab_only_mode=False,
+                        stellar_file=stellar_file,slab_only_mode=fit_gas_only,
                         dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
 
 print('Data read in')
@@ -585,18 +618,12 @@ def input_to_model(cube,debug=False,timeit=False):
     if timeit:
         time_1=time()
     if sample_all:
-        
-        if fit_conti_err or fit_obs_err:
-            var_dict,abundance_dict,slab_dict,abundance_dict_absorp,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
-        else:
-            var_dict,abundance_dict,slab_dict,abundance_dict_absorp=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior)
+        var_dict,abundance_dict,slab_dict,abundance_dict_absorp,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
 
-    else:    
-        if fit_conti_err or fit_obs_err:
-            var_dict,slab_dict,sigma_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab)+list(header_sigma),fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens)
-        else:
-            var_dict,slab_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab),log_coldens=log_coldens)
-    
+
+    else:
+        var_dict,slab_dict,sigma_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab)+list(header_sigma),fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens)
+
     if fixed_paras:
         for key in fixed_dict:
             if debug:
@@ -623,6 +650,14 @@ def input_to_model(cube,debug=False,timeit=False):
                 sigma_dict['sigma_obs']=10**fixed_dict[key]
                 if debug:
                     print('..added to sigma_dict')
+            elif key =='sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='log_sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
 
             elif ':' in key:
                 idx=key.find(':')
@@ -635,8 +670,8 @@ def input_to_model(cube,debug=False,timeit=False):
             else:
                 print(f'{key} is in fixed_dict but not used for the retrieval. Please check that.')
   
-                
-    var_dict['bb_star']=use_bb_star
+    if not fit_gas_only:            
+        var_dict['bb_star']=use_bb_star
     
 
     if sample_all:
@@ -667,42 +702,49 @@ if sample_all:
         abundance_dict[key]=scales[i]
         i+=1
 else:
-    interp_flux=con_model.run_fitted_to_obs(variables=var_dict,
-                                            dust_species=init_abundance,
-                                            absorp_species=init_abundance_absorp,
-                                            slab_dict=slab_dict,
-                                            flux_obs=flux_obs,lam_obs=lam_obs)       
-    scale_facs=con_model.scaleparas
-
-#    tot_samples.append(np.append(samp,scale_facs))
-    abundance_dict=init_abundance.copy()
-    abundance_dict_absorp=init_abundance_absorp.copy()
-    var_dict['sc_ir']=scale_facs[0]
-    var_dict['sc_mid']=scale_facs[1]
-    i=2
-    if use_dust_emis:
-        for key in abundance_dict:
-            abundance_dict[key]=scale_facs[i]
-            i+=1
-    if use_dust_absorp:
-        for key in abundance_dict_absorp:
-            abundance_dict_absorp[key]=scale_facs[i]
-            i+=1
-
-    for key in slab_dict:
-        if 'radius' not in slab_dict[key]:
-            scale_facs[i]=np.sqrt(scale_facs[i])
-            slab_dict[key]['radius']=scale_facs[i]
-            i+=1
+    if fit_gas_only:
+        
+        interp_flux=con_model.run_model(variables=var_dict,dust_species=init_abundance,slab_dict=slab_dict,output_all=False,timeit=False)
+        abundance_dict=init_abundance.copy()
+        abundance_dict_absorp=init_abundance_absorp.copy()
+    else:
+        interp_flux=con_model.run_fitted_to_obs(variables=var_dict,
+                                                dust_species=init_abundance,
+                                                absorp_species=init_abundance_absorp,
+                                                slab_dict=slab_dict,
+                                                flux_obs=flux_obs,lam_obs=lam_obs)       
+        scale_facs=con_model.scaleparas
+    
+    #    tot_samples.append(np.append(samp,scale_facs))
+        abundance_dict=init_abundance.copy()
+        abundance_dict_absorp=init_abundance_absorp.copy()
+        var_dict['sc_ir']=scale_facs[0]
+        var_dict['sc_mid']=scale_facs[1]
+        i=2
+        if use_dust_emis:
+            for key in abundance_dict:
+                abundance_dict[key]=scale_facs[i]
+                i+=1
+        if use_dust_absorp:
+            for key in abundance_dict_absorp:
+                abundance_dict_absorp[key]=scale_facs[i]
+                i+=1
+    
+        for key in slab_dict:
+            if 'radius' not in slab_dict[key]:
+                scale_facs[i]=np.sqrt(scale_facs[i])
+                slab_dict[key]['radius']=scale_facs[i]
+                i+=1
 
 # %%
 mol_data=con_model.extract_emission_quantities(low_contribution=0.15,high_contribution=0.85,debug=True)
 
 # %%
 
+
 con_model.read_data(variables=var_dict,dust_species=abundance_dict,
                     slab_dict=slab_dict,slab_prefix=slab_prefix,
-                    stellar_file=stellar_file,wavelength_points=lam_obs,
+                    stellar_file=stellar_file,wavelength_points=lam_obs,slab_only_mode=fit_gas_only,
                     dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
 
 # %%
@@ -871,6 +913,14 @@ if close_plots:
     plt.close()
 else:
     plt.show()
+
+
+save_folder=f'{fold_string}figures/'
+
+if not os.path.exists(save_folder):
+    os.system(f'mkdir {save_folder}')
+else:
+    print(f'Folder {save_folder} exists')
 
 # %%
 prefix_fig=folder+f'/figures/test_{run_number}'
