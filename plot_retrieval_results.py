@@ -1254,6 +1254,7 @@ def get_scales_parallel(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=Fa
     for key in slab_dict:
         
         if 'radius' not in slab_dict[key]:
+            
             scale_facs[i]=np.sqrt(scale_facs[i])
             slab_dict[key]['radius']=scale_facs[i]
             i+=1
@@ -1611,6 +1612,13 @@ if 'log_sigma_obs' in complete_header:
 elif 'sigma_obs' in complete_header:
     idx_sigma=np.where(complete_header=='sigma_obs')[0]
     sig_obs=flux_obs*np.median(tot_samples[:,idx_sigma])
+elif 'log_sigma_obs_abs' in complete_header:
+    idx_sigma=np.where(complete_header=='log_sigma_obs_abs')[0]
+    sig_obs=10**np.median(tot_samples[:,idx_sigma])
+
+elif 'sigma_obs_abs' in complete_header:
+    idx_sigma=np.where(complete_header=='sigma_ob_abs')[0]
+    sig_obs=np.median(tot_samples[:,idx_sigma])
 
     
 if not ignore_spectrum_plot:
@@ -1739,18 +1747,26 @@ if not ignore_spectrum_plot:
                 ax.fill_between(x_model,comp_dict[comp_names[idx_comp]]['std_min'],comp_dict[comp_names[idx_comp]]['std'],color=comp_colors[idx_comp],alpha=0.5)
                 ax.plot(x_model,comp_dict[comp_names[idx_comp]]['median'],label=comp_names[idx_comp],alpha=1,color=comp_colors[idx_comp])
             if plot_individual_surface:
-                comp_keys=list(individual_surface.keys())
+                dust_emission_plot=True
+                if len(list(individual_surface.keys()))==0:
+                    comp_keys=list(individual_absorp.keys())
+                    dust_emission_plot=False
+                else:
+                    comp_keys=list(individual_surface.keys())
                 comp_names_dust=[]
                 for lab in comp_keys:
                     comp_names_dust.append(nicer_labels_single(lab))
 
                 comp_colors_dust=['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0',
-                             '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000',
-                             '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000']
+                                '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000',
+                                '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000']
                 comp_list_dust=[]
                 max_vals_dust=[]
                 for comp in comp_keys:
-                    comp_list_dust.append(individual_surface[comp])
+                    if dust_emission_plot:
+                        comp_list_dust.append(individual_surface[comp])
+                    else:
+                        comp_list_dust.append(individual_absorp[comp]*-1.0)
                 for idx_comp in range(len(comp_list_dust)):
                     comp=comp_list_dust[idx_comp]
                     y_median_comp=np.median(comp,axis=0)
@@ -1785,12 +1801,13 @@ if not ignore_spectrum_plot:
                 else:
                     comp_list_select=np.arange(0,len(comp_list_dust),1)
 
+                idx_colour_count=0
                 for idx_comp in comp_list_select:
 
                     if debug:
                         print('idx comp', idx_comp)
                         print('dust name',comp_names_dust[idx_comp])
-                    idx_comp_color=idx_comp
+                    idx_comp_color=idx_colour_count
                     while idx_comp_color>=len(comp_colors_dust):
                         idx_comp_color-=len(comp_colors_dust)
                         if debug:
@@ -1799,6 +1816,7 @@ if not ignore_spectrum_plot:
                     ax.fill_between(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['std2_min'],indi_dust_dict[comp_names_dust[idx_comp]]['std2'],color=comp_colors_dust[idx_comp_color],alpha=0.3)
                     ax.fill_between(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['std_min'],indi_dust_dict[comp_names_dust[idx_comp]]['std'],color=comp_colors_dust[idx_comp_color],alpha=0.5)
                     ax.plot(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['median'],label=comp_names_dust[idx_comp],alpha=1,color=comp_colors_dust[idx_comp_color])
+                    idx_colour_count+=1
         sig_obs=np.array(sig_obs)
 
         if obs_as_line:
@@ -1891,9 +1909,10 @@ if not ignore_spectrum_plot:
                         ax.fill_between(x_model,comp_dict[comp_names[idx_comp]]['std_min'],comp_dict[comp_names[idx_comp]]['std'],color=comp_colors[idx_comp],alpha=0.5)
                         ax.plot(x_model,comp_dict[comp_names[idx_comp]]['median'],label=comp_names[idx_comp],alpha=1,color=comp_colors[idx_comp])
                 if plot_individual_surface:
-                    for idx_comp in range(len(comp_list_select)):
+                    idx_colour_count=0
+                    for idx_comp in comp_list_select:
 
-                        idx_comp_color=idx_comp
+                        idx_comp_color=idx_colour_count
                         while idx_comp_color>=len(comp_colors_dust):
                             idx_comp_color-=len(comp_colors_dust)
                             if debug:
@@ -1903,7 +1922,7 @@ if not ignore_spectrum_plot:
                         ax.fill_between(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['std2_min'],indi_dust_dict[comp_names_dust[idx_comp]]['std2'],color=comp_colors_dust[idx_comp_color],alpha=0.3)
                         ax.fill_between(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['std_min'],indi_dust_dict[comp_names_dust[idx_comp]]['std'],color=comp_colors_dust[idx_comp_color],alpha=0.5)
                         ax.plot(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['median'],label=comp_names_dust[idx_comp],alpha=1,color=comp_colors_dust[idx_comp_color])
-
+                        idx_colour_count+=1
                 axbox = ax.get_position()
 
                 #ax.set_xscale('log')
@@ -2145,8 +2164,9 @@ def nicer_labels(init_abundance=init_abundance,with_size=True):
 def set_slab_labels(slab_prior_dict):
     new_labels=[]
     for key in slab_prior_dict:
-        label=key+': radius'
-        new_labels.append(label)
+        if 'radius' not in slab_prior_dict[key] and 'log_radius' not in slab_prior_dict[key]:
+            label=key+': radius'
+            new_labels.append(label)
     return new_labels
 slab_labels=set_slab_labels(slab_prior_dict=slab_prior_dict)
 
@@ -2950,6 +2970,9 @@ scale_ir_log=False  # should the inner rim scaling factor be on a log scale
 clip_value_ir=1e-10
 scale_mid_log=False # should the midplane scaling factor be on a log scale
 clip_value_mid=1e-10
+
+for i in range(len(header_all)):
+    print(header_all[i],np.mean(tot_samples_rel[:,i]))
 
 
 if display_scale_log:

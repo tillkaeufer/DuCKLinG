@@ -233,7 +233,16 @@ except NameError:
 
     print('fit_gas_only set to:')
     print(fit_gas_only)
+try:
+    weights_obs
+    print('Observation is weighted')
+    weighted=True
+except NameError:
+    weighted=False
 
+
+    print('weighted set to:')
+    print(weighted)
 
 
 debug=False
@@ -282,6 +291,9 @@ if __name__ == "__main__":
 
     # run MultiNest
 prefix = fold_string+'test_'+str(run_number)
+
+
+
 
 
 
@@ -561,8 +573,11 @@ def loglike_ratios(cube,debug=False,timeit=False):
     diff=(ratio_calc - ratio_obs)
 
     #definition of chi
-    chi=np.sum((diff)**2/ sigma**2)
-
+    if weighted:
+        chi=np.sum(weights_obs*(diff)**2/ sigma**2)
+    else:
+        chi=np.sum((diff)**2/ sigma**2)
+        
     #loglike
     loglikelihood =  -0.5 * (chi +const) 
     
@@ -698,7 +713,10 @@ def loglike_gas(cube,debug=False,timeit=False):
     diff=(interp_flux - flux_obs)
 
     #definition of chi
-    chi=np.sum((diff)**2/ sigma**2)
+    if weighted:
+        chi=np.sum(weights_obs*(diff)**2/ sigma**2)
+    else:
+        chi=np.sum((diff)**2/ sigma**2)
 
     #loglike
     loglikelihood =  -0.5 * (chi +const) 
@@ -876,8 +894,10 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
     diff=(interp_flux - flux_obs)
 
     #definition of chi
-    chi=np.sum((diff)**2/ sigma**2)
-
+    if weighted:
+        chi=np.sum(weights_obs*(diff)**2/ sigma**2)
+    else:
+        chi=np.sum((diff)**2/ sigma**2)
     #loglike
     loglikelihood =  -0.5 * (chi +const) 
     

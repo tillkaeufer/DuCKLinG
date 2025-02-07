@@ -3568,7 +3568,7 @@ def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_gas_only
         return var_dict
 
 molecular_names={'CO2_II':r'$\rm CO_2$','CO2':r'$\rm CO_2$',
-                'H2O':r'$\rm H_2O$',
+                'H2O':r'$\rm H_2O$','BroadH2O':r'$\rm H_2O$ (broad)',
                 'HCN':r'$\rm HCN$',
                 'C2H2':r'$\rm C_2H_2$',
                 'HC3N':r'$\rm HC_3N$',
@@ -3587,7 +3587,7 @@ molecular_names={'CO2_II':r'$\rm CO_2$','CO2':r'$\rm CO_2$',
                  
                 }
 mol_colors_dict={'CO2_II':'tab:red','CO2':'tab:red',
-                'H2O':'tab:blue',
+                'H2O':'tab:blue','BroadH2O':'tab:cyan',
                 'HCN':'tab:olive',
                 'C2H2':'darkred','C2H2_I':'darkred',
                 'HC3N':'gold',
@@ -3602,3 +3602,19 @@ mol_colors_dict={'CO2_II':'tab:red','CO2':'tab:red',
                 'CO':'yellowgreen',
                 'SiO':'peru',
                 'OH':'orchid'}
+
+def calc_weights(lam_obs,target_res=2500):
+    print('Calculating the weights of the spectral points')
+    print('To give all spectral regions the same weight')
+    weights=np.zeros(len(lam_obs))
+
+    for i in range(len(lam_obs)-1):
+        if (lam_obs[i+1]-lam_obs[i]) == 0:
+            print(i,wave[i])
+        spec_res=lam_obs[i]/(lam_obs[i+1]-lam_obs[i])
+        weights[i]=target_res/spec_res
+
+    weights[-1]=target_res/(lam_obs[-1]/(lam_obs[-1]-lam_obs[-2]))
+    print('Max and min weight:',np.max(weights),np.min(weights))
+    #print(weights)
+    return weights
