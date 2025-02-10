@@ -483,6 +483,7 @@ if sample_all:
         prior_dict_dust_abs[key]=prior_scaling_abs
 
 
+
 if 'tmax_s' in prior_dict or 'temp_s' in prior_dict:
     use_dust_emis=True
     if 'tmax_s' in prior_dict:
@@ -499,10 +500,12 @@ if 'tmax_abs' in prior_dict or 'temp_abs' in prior_dict:
         abs_powerlaw=False
 else:
     use_dust_absorp=False
+
 use_mol_powerlaw=False
 if 'q_emis' in prior_dict or 'q_emis' in fixed_dict:
     use_mol_powerlaw=True
 # setting up the dictonaries and headers that will be used
+
 
 # In[19]:
 init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw,fit_gas_only=fit_gas_only,
@@ -601,11 +604,13 @@ print(load_in_slab_dict)
 try:
     print(len(lam_obs))
     con_model.read_data(variables=init_dict,dust_species=init_abundance,
+                        absorp_species=init_abundance_absorp,
                         slab_dict=load_in_slab_dict,slab_prefix=slab_prefix,
                         stellar_file=stellar_file,wavelength_points=lam_obs,slab_only_mode=fit_gas_only,
                         dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
 except NameError:
     con_model.read_data(variables=init_dict,dust_species=init_abundance,
+                        absorp_species=init_abundance_absorp,
                         slab_dict=load_in_slab_dict,slab_prefix=slab_prefix,
                         stellar_file=stellar_file,slab_only_mode=fit_gas_only,
                         dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
@@ -706,6 +711,12 @@ else:
         abundance_dict=init_abundance.copy()
         abundance_dict_absorp=init_abundance_absorp.copy()
     else:
+        debug=True
+        if debug:
+            print('Used var dict', var_dict)
+            print('Used dust emission dict', init_abundance)
+            print('Used dust absorption dict', init_abundance_absorp)
+            print('Used slab dict', slab_dict)
         interp_flux=con_model.run_fitted_to_obs(variables=var_dict,
                                                 dust_species=init_abundance,
                                                 absorp_species=init_abundance_absorp,
