@@ -20,8 +20,7 @@ import importlib
 import argparse
 
 from spectres.spectral_resampling_numba import spectres_numba  as spectres
-#from  matplotlib import colormaps as cmaps
-#cm = cmaps['viridis']
+
 from utils import *
 
 

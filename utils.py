@@ -11,9 +11,6 @@ from scipy.linalg import lstsq
 
 from spectres.spectral_resampling_numba import spectres_numba  as spectres
 
-from  matplotlib import colormaps as cmaps
-cm=cmaps['viridis']
-
 
 #from dust_extinction.parameter_averages import G23 as ext_model
 
@@ -2114,7 +2111,7 @@ class complete_model:
                         plt.figure()
                         plt.plot(radii_inner,c_inner,lw=12,c='tab:red',zorder=0)
 
-                        plt.scatter(radii,c_inbetween,c=t_to_r,vmin=min(t_to_r),vmax=max(t_to_r),s=35,cmap=cm)
+                        plt.scatter(radii,c_inbetween,c=t_to_r,vmin=min(t_to_r),vmax=max(t_to_r),s=35,cmap='viridis')
                         #plt.scatter(r_at_min,col_at_min,c=t_at_min,vmin=min(t_to_r),vmax=max(t_to_r),s=42,cmap=cm,lw=2,edgecolors='tab:red')
                         #plt.scatter(r_at_max,col_at_max,c=t_at_max,vmin=min(t_to_r),vmax=max(t_to_r),s=45,cmap=cm,lw=2,edgecolors='tab:red')
                         plt.yscale('log')

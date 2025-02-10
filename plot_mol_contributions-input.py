@@ -20,9 +20,7 @@ import sys
 import importlib
 
 from spectres import spectres
-from  matplotlib import colormaps as cmaps
 from utils import *
-cm = cmaps['viridis']
 
 SMALL_SIZE = 15
 MEDIUM_SIZE = 20

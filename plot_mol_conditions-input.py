@@ -23,8 +23,7 @@ import importlib
 from time import sleep
 
 from spectres import spectres
-from  matplotlib import colormaps as cmaps
-cm = cmaps['viridis']
+
 
 from utils import *
 
