@@ -257,6 +257,13 @@ except NameError:
     print('weighted set to:')
     print(weighted)
 
+try:
+    lam_obs_full
+    print('Masking used')
+except NameError:
+    print('There is no masking used')
+    lam_obs_full=lam_obs
+
 
 debug=False
 
@@ -999,14 +1006,15 @@ if not fit_gas_only:
     con_model.read_data(variables=init_dict,dust_species=init_abundance, 
                         absorp_species=init_abundance_absorp, 
                         slab_dict=load_in_slab_dict,slab_prefix=slab_prefix,
-                        stellar_file=stellar_file,wavelength_points=lam_obs,
+                        stellar_file=stellar_file,wavelength_points=lam_obs,wavelength_points_full=lam_obs_full,
                         dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
 
 else:
     try:
         print(len(lam_obs))
         con_model.read_data(variables=init_dict,dust_species=init_abundance,slab_dict=load_in_slab_dict,slab_prefix=slab_prefix,
-                            stellar_file=stellar_file,wavelength_points=lam_obs,slab_only_mode=True,
+                            stellar_file=stellar_file,wavelength_points=lam_obs,wavelength_points_full=lam_obs_full,
+                            slab_only_mode=True,
                             dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
     except NameError:
         con_model.read_data(variables=init_dict,dust_species=init_abundance,

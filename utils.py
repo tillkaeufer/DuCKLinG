@@ -287,7 +287,7 @@ class complete_model:
             return output_grid,rv_grid,ebv_grid
 
     
-    def read_data(self,variables={},dust_species={},absorp_species={},slab_dict={},R=0,wavelength_points=[],ext_model=None,
+    def read_data(self,variables={},dust_species={},absorp_species={},slab_dict={},R=0,wavelength_points=[],wavelength_points_full=[],ext_model=None,
                   bb_temp_steps=10,bb_min_temp=10,bb_max_temp=10000,
                   stellar_file ='./MCMAXspec-hae.in',dust_path='./Q-curves/fitting-Qcurves/Q_GRF/',
                   slab_folder='./LineData/', slab_only_mode=False,
@@ -301,6 +301,22 @@ class complete_model:
         # interp_bbody: leave it to false 
         
         
+        # checking if the full wavelength grid is used
+        # in that case the slab data will be binned on that grid
+        # and later the points that are not needed are deleted
+        # otherwise the wavelengths_points are used exclusevly
+        masked_version=False
+        if len(wavelength_points_full)!=0 and len(wavelength_points_full)!=len(wavelength_points):
+            print('Using a masked version of the model')
+            masked_version=True
+            idx_mask=[]
+            for i in range(len(wavelength_points_full)):
+                if wavelength_points_full[i] in wavelength_points:
+                    idx_mask.append(i)
+            full_wave=np.array(wavelength_points_full)
+            idx_mask=np.array(idx_mask)
+
+
         #running the model without the continuum?
         self.slab_only_mode=slab_only_mode
         self.variables=variables
@@ -357,6 +373,10 @@ class complete_model:
         
         ex_prebin=False
         if load_binned_data:
+
+            if not os.path.exists(f'{slab_folder}/binned_data'):
+                print('Creating binned data folder')
+                os.system(f'mkdir {slab_folder}/binned_data')
             slab_bin_folders=glob.glob(f'{slab_folder}/binned_data/*')
             slab_bin_folders.sort()
             print('Folder to be searched for pre-binned data:')
@@ -447,9 +467,13 @@ class complete_model:
                     count=0
                     for idx1 in range(np.shape(slab_data_loaded)[0]):
                         for idx2 in range(np.shape(slab_data_loaded)[1]):
-
-                            slab_data_filled[idx1,idx2]= spectres(new_wavs=self.slab_wave, spec_wavs=np.flip(slab_wave),
-                                                                  spec_fluxes=np.flip(slab_data_loaded[idx1,idx2]),fill=0.0,verbose=False)
+                            if masked_version:
+                                slab_binned= spectres(new_wavs=full_wave, spec_wavs=np.flip(slab_wave),
+                                                    spec_fluxes=np.flip(slab_data_loaded[idx1,idx2]),fill=0.0,verbose=False)
+                                slab_data_filled[idx1,idx2]=slab_binned[idx_mask]
+                            else:
+                                slab_data_filled[idx1,idx2]= spectres(new_wavs=self.slab_wave, spec_wavs=np.flip(slab_wave),
+                                                                    spec_fluxes=np.flip(slab_data_loaded[idx1,idx2]),fill=0.0,verbose=False)
                             if count%20==0:
                                 print(f'{np.round(count/(np.shape(slab_data_loaded)[0]*np.shape(slab_data_loaded)[1])*100,1)} %',end='\r',flush=True)
                             count+=1
@@ -3626,6 +3650,22 @@ mol_colors_dict={'CO2_II':'tab:red','CO2':'tab:red',
                 'CO':'yellowgreen',
                 'SiO':'peru',
                 'OH':'orchid'}
+
+def calc_weights(lam_obs,target_res=2500):
+    print('Calculating the weights of the spectral points')
+    print('To give all spectral regions the same weight')
+    weights=np.zeros(len(lam_obs))
+
+    for i in range(len(lam_obs)-1):
+        if (lam_obs[i+1]-lam_obs[i]) == 0:
+            print(i,wave[i])
+        spec_res=lam_obs[i]/(lam_obs[i+1]-lam_obs[i])
+        weights[i]=target_res/spec_res
+
+    weights[-1]=target_res/(lam_obs[-1]/(lam_obs[-1]-lam_obs[-2]))
+    print('Max and min weight:',np.max(weights),np.min(weights))
+    #print(weights)
+    return weights
 
 def calc_weights(lam_obs,target_res=2500):
     print('Calculating the weights of the spectral points')

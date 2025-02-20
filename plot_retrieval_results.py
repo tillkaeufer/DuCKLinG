@@ -253,6 +253,31 @@ except NameError:
     print('fit_gas_only set to:')
     print(fit_gas_only)
 
+try:
+    lam_obs_full
+    print('Masking used')   
+    try:
+        sig_obs_full
+    except NameError:
+        try:
+            sig_obs
+            sig_obs_full=sig_obs
+        except NameError:
+            print('Sig obs not set in input')
+except NameError:
+    print('There is no masking used')
+    lam_obs_full=lam_obs
+    flux_obs_full=flux_obs
+    try:
+        sig_obs_full
+    except NameError:
+        try:
+            sig_obs
+            sig_obs_full=sig_obs
+        except NameError:
+            print('Sig obs not set in input')
+
+
 old_version=False
 continuum_penalty=False
 
@@ -1012,7 +1037,7 @@ if not fit_gas_only:
     con_model.read_data(variables=init_dict,dust_species=init_abundance,
                         absorp_species=init_abundance_absorp,
                         slab_dict=load_in_slab_dict,slab_prefix=slab_prefix,
-                        stellar_file=stellar_file,wavelength_points=lam_obs,
+                        stellar_file=stellar_file,wavelength_points=lam_obs,wavelength_points_full=lam_obs_full,
                         dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
 
 else:
@@ -1020,7 +1045,7 @@ else:
         print(len(lam_obs))
         con_model.read_data(variables=init_dict,dust_species=init_abundance,
                             slab_dict=load_in_slab_dict,slab_prefix=slab_prefix,
-                            stellar_file=stellar_file,wavelength_points=lam_obs,slab_only_mode=True,
+                            stellar_file=stellar_file,wavelength_points=lam_obs,wavelength_points_full=lam_obs_full,slab_only_mode=True,
                             dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
     except NameError:
         con_model.read_data(variables=init_dict,dust_species=init_abundance,
@@ -1152,7 +1177,7 @@ below=np.unique(np.clip(standard_wave,a_max=np.min(con_model.xnew),a_min=None))
 out=np.append(above,below)
 wave_new=np.sort(np.unique(np.append(out,con_model.xnew)))
 
-
+wave_new_full=np.sort(np.unique(np.append(wave_new,lam_obs_full)))
 scatter_obs=False
 
 array_flux=[]
@@ -1165,12 +1190,12 @@ tot_samples=[]
 con_model_new=complete_model()
 if not fit_gas_only:
     
-    con_model_new.read_data(variables=init_dict,wavelength_points=wave_new,dust_species=init_abundance,absorp_species=init_abundance_absorp,
+    con_model_new.read_data(variables=init_dict,wavelength_points=wave_new,wavelength_points_full=wave_new_full,dust_species=init_abundance,absorp_species=init_abundance_absorp,
                         slab_dict=load_in_slab_dict
     ,slab_prefix=slab_prefix,
                         stellar_file=stellar_file,dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
 else:
-    con_model_new.read_data(variables=init_dict,wavelength_points=wave_new,dust_species=init_abundance,absorp_species=init_abundance_absorp,
+    con_model_new.read_data(variables=init_dict,wavelength_points=wave_new,wavelength_points_full=wave_new_full,dust_species=init_abundance,absorp_species=init_abundance_absorp,
                         slab_dict=load_in_slab_dict
     ,slab_prefix=slab_prefix,
                         stellar_file=stellar_file,dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model,slab_only_mode=True)
@@ -1621,17 +1646,19 @@ if save_output:
 if 'log_sigma_obs' in complete_header:
     idx_sigma=np.where(complete_header=='log_sigma_obs')[0]
     sig_obs=flux_obs*10**np.median(tot_samples[:,idx_sigma])
-
+    sig_obs_full=flux_obs_full*10**np.median(tot_samples[:,idx_sigma])
 elif 'sigma_obs' in complete_header:
     idx_sigma=np.where(complete_header=='sigma_obs')[0]
     sig_obs=flux_obs*np.median(tot_samples[:,idx_sigma])
+    sig_obs_full=flux_obs_full*np.median(tot_samples[:,idx_sigma])
 elif 'log_sigma_obs_abs' in complete_header:
     idx_sigma=np.where(complete_header=='log_sigma_obs_abs')[0]
-    sig_obs=10**np.median(tot_samples[:,idx_sigma])
-
+    sig_obs=10**np.median(tot_samples[:,idx_sigma])*np.ones_like(flux_obs)
+    sig_obs_full=10**np.median(tot_samples[:,idx_sigma])*np.ones_like(flux_obs)
 elif 'sigma_obs_abs' in complete_header:
     idx_sigma=np.where(complete_header=='sigma_ob_abs')[0]
-    sig_obs=np.median(tot_samples[:,idx_sigma])
+    sig_obs=np.median(tot_samples[:,idx_sigma])*np.ones_like(flux_obs)
+    sig_obs_full=np.median(tot_samples[:,idx_sigma])*np.ones_like(flux_obs)
 
     
 if not ignore_spectrum_plot:
@@ -1671,7 +1698,7 @@ def nicer_labels_single(lab,with_size=True):
 if not ignore_spectrum_plot:    
     min_wave=0
     max_wave=' '
-    def plot_model_uncertainties_names(flux_obs,sig_obs,wave_obs,y_predict_set,model_wave,folder,save=False,
+    def plot_model_uncertainties_names(flux_obs,sig_obs,wave_obs,y_predict_set,model_wave,folder,wave_obs_fitted=lam_obs,save=False,
                                        save_name='',min_wave=min_wave,ylim='',max_wave=max_wave,zoom=True,
                                        obs_as_line=True, zoom_in_list=[[5,30]],
                                        plot_components=True,stellar_components=stellar_components,
@@ -1899,7 +1926,25 @@ if not ignore_spectrum_plot:
                     ax.plot(wave_obs,flux_obs,label='Observation',color='tab:blue',alpha=0.7,zorder=1000)
                 else:
                     ax.errorbar(wave_obs,flux_obs,yerr=sig_obs, label='Observation',alpha=0.7,zorder=1000)    
+                # if the masking version is used
+                # we mark the vertical areas that there fitted
+                # using a grey tone
+                if len(wave_obs_fitted)!=len(wave_obs):
+                    idx_matches=[]
+                    for idx_fit in range(len(wave_obs_fitted)):
+                        idx_match=np.where(wave_obs_fitted[idx_fit]==wave_obs)[0][0]
+                        idx_matches.append(idx_match)
+                    min_wave_fit=wave_obs_fitted[0]
+                    for idx_fit in range(len(wave_obs_fitted)):
+                        if idx_matches[idx_fit]!=idx_matches[idx_fit]-1:
+                            max_wave_fit=wave_obs_fitted[idx_fit-1]
+                            ax.axvspan(min_wave_fit,max_wave_fit,alpha=0.1,color='grey')
+                            min_wave_fit=wave_obs_fitted[idx_fit]
+                        if idx_fit==len(wave_obs_fitted)-1:
+                            max_wave_fit=wave_obs_fitted[idx_fit]
+                            ax.axvspan(min_wave_fit,max_wave_fit,alpha=0.1,color='grey')
 
+                        
 
                 print('Adding  Full model')
 
@@ -1981,20 +2026,20 @@ if not ignore_spectrum_plot:
 
     if plot_dust_individual:
         print('Plotting dust version of the component plot')
-        plot_model_uncertainties_names(flux_obs,sig_obs,lam_obs,array_flux,con_model_new.xnew,
-                                   'folder',zoom_in_list=zoom_list,save=True,
+        plot_model_uncertainties_names(flux_obs_full,sig_obs_full,lam_obs_full,array_flux,con_model_new.xnew,wave_obs_fitted=lam_obs,
+                                   folder='folder',zoom_in_list=zoom_list,save=True,
                                        save_name=save_folder+str(run_number)+'_Component_plot',
                                        min_wave=min_wave,ylim='',max_wave=max_wave,
                                        individual_surface=dict_individual_flux,
                                        plot_individual_surface=True,number_plotted_dust=number_plotted_dust)
 
     if fit_gas_only:
-        plot_model_uncertainties_names(flux_obs,sig_obs,lam_obs,array_flux,con_model_new.xnew,
-                                   'folder', zoom_in_list=zoom_list, save=True, save_name=save_folder+str(run_number)+'_Component_plot', min_wave=min_wave,ylim='',max_wave=max_wave,plot_components=False)
+        plot_model_uncertainties_names(flux_obs_full,sig_obs_full,lam_obs_full,array_flux,con_model_new.xnew,wave_obs_fitted=lam_obs,
+                                   folder='folder', zoom_in_list=zoom_list, save=True, save_name=save_folder+str(run_number)+'_Component_plot', min_wave=min_wave,ylim='',max_wave=max_wave,plot_components=False)
 
     else:
-        plot_model_uncertainties_names(flux_obs,sig_obs,lam_obs,array_flux,con_model_new.xnew,
-                                   'folder', zoom_in_list=zoom_list, save=True, save_name=save_folder+str(run_number)+'_Component_plot', min_wave=min_wave,ylim='',max_wave=max_wave)
+        plot_model_uncertainties_names(flux_obs_full,sig_obs_full,lam_obs_full,array_flux,con_model_new.xnew,wave_obs_fitted=lam_obs,
+                                   folder='folder', zoom_in_list=zoom_list, save=True, save_name=save_folder+str(run_number)+'_Component_plot', min_wave=min_wave,ylim='',max_wave=max_wave)
 
 
 

@@ -189,7 +189,12 @@ print('Log T second plot: ',log_t_second)
 print('..Done!')
 print('----------------------------')
 
-
+try:
+    lam_obs_full
+    print('Masking used')
+except NameError:
+    print('There is no masking used')
+    lam_obs_full=lam_obs
 
 if reduce_posterior:
     reduce_str='_reduced'

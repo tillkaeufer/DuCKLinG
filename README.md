@@ -197,6 +197,11 @@ $L=\sum_{i} -\frac{1}{2}\times \left[\log({2\pi\times \sigma_i^2})+\frac{w_i\tim
 with $w_i$ being the weights.  
 Alternatively, you can also define your own custom weights.  As long as their have the same lengths as lam_obs, everything should work.  
 
+It is also possible to mask some wavelength regions. You can for example fit only the unblended water lines by creating a lam_obs file that only contains points close to the lines. However, this will technically effect the binning of the data (e.g. very large bins between the lines).  
+Therefore, it is possible to provide a lam_obs_full (and flux_obs_full) array that contains all the wavelengths points before masking.  
+The program will then bin the slab data to lam_obs_full and select the wavelengths points that are present in lam_obs.  
+On top of that, the plotting will plot the full spectrum and highlight the selected regions. If you are using uncertainties or weights, please also create a weights_obs_full and sig_obs_full array.
+
 
 #### settings for the retrieval  
 - use_ultranest: Set it to True if you are running a ultranest retrieval and to False if you run multinest (it is needed for the plotting routines to know how the output format looks like)
@@ -255,6 +260,7 @@ The options for this routine are as follows:
 - preliminary: this can be used if your run just started and the posterior file has only one entry. It is a great way to check if the fit is doing what you want.
 - simple: this selects the median probable model on the multinest posterior and not the full posterior. The advantage is that you can run it without running any plotting routine before and before the fit is finished. The difference to preliminary is that this can be used when the posterior file has multiple entries already.
 - close: Closing the plots instead of showing them to the user.
+- width: this phrase should be followed by a float. It specifies how large the wavelengths windows are that are plotted. Default is 2.0.
 
 If you want to plot the molecular column densities, temperatures and radii this is possible with the following function:
 

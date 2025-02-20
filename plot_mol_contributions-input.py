@@ -83,6 +83,9 @@ if __name__ == "__main__":
                 close_plots=True
             if argument=='open':
                 close_plots=False
+            if argument=='width':
+                wave_width=float(arg_list[i+1])
+                
 
 
 # %%
@@ -288,6 +291,39 @@ except NameError:
 
     print('fit_gas_only set to:')
     print(fit_gas_only)
+
+try:
+    wave_width
+    print('wave_width')
+except NameError:
+    wave_width=2.0
+    print('wave_width set to:')
+    print(wave_width)
+
+try:
+    lam_obs_full
+    print('Masking used')   
+    try:
+        sig_obs_full
+    except NameError:
+        try:
+            sig_obs
+            sig_obs_full=sig_obs
+        except NameError:
+            print('Sig obs not set in input')
+except NameError:
+    print('There is no masking used')
+    lam_obs_full=lam_obs
+    flux_obs_full=flux_obs
+    try:
+        sig_obs_full
+    except NameError:
+        try:
+            sig_obs
+            sig_obs_full=sig_obs
+        except NameError:
+            print('Sig obs not set in input')
+
 
 
 debug=False
@@ -624,7 +660,7 @@ try:
     con_model.read_data(variables=init_dict,dust_species=init_abundance,
                         absorp_species=init_abundance_absorp,
                         slab_dict=load_in_slab_dict,slab_prefix=slab_prefix,
-                        stellar_file=stellar_file,wavelength_points=lam_obs,slab_only_mode=fit_gas_only,
+                        stellar_file=stellar_file,wavelength_points=lam_obs,wavelength_points_full=lam_obs_full,slab_only_mode=fit_gas_only,
                         dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
 except NameError:
     con_model.read_data(variables=init_dict,dust_species=init_abundance,
@@ -712,7 +748,7 @@ else:
 # %%
 
 if sample_all:
-    interp_flux=con_model.run_model_normalized(variables=var_dict,dust_species=abundance_dict,
+    interp_flux_org=con_model.run_model_normalized(variables=var_dict,dust_species=abundance_dict,
                                                 slab_dict=slab_dict,absorp_species=abundance_dict_absorp,max_flux_obs=max_flux_obs)
 
 
@@ -725,7 +761,7 @@ if sample_all:
 else:
     if fit_gas_only:
         
-        interp_flux=con_model.run_model(variables=var_dict,dust_species=init_abundance,slab_dict=slab_dict,output_all=False,timeit=False)
+        interp_flux_org=con_model.run_model(variables=var_dict,dust_species=init_abundance,slab_dict=slab_dict,output_all=False,timeit=False)
         abundance_dict=init_abundance.copy()
         abundance_dict_absorp=init_abundance_absorp.copy()
     else:
@@ -735,7 +771,7 @@ else:
             print('Used dust emission dict', init_abundance)
             print('Used dust absorption dict', init_abundance_absorp)
             print('Used slab dict', slab_dict)
-        interp_flux=con_model.run_fitted_to_obs(variables=var_dict,
+        interp_flux_org=con_model.run_fitted_to_obs(variables=var_dict,
                                                 dust_species=init_abundance,
                                                 absorp_species=init_abundance_absorp,
                                                 slab_dict=slab_dict,
@@ -773,9 +809,10 @@ mol_data=con_model.extract_emission_quantities(low_contribution=0.15,high_contri
 
 con_model.read_data(variables=var_dict,dust_species=abundance_dict,
                     slab_dict=slab_dict,slab_prefix=slab_prefix,
-                    stellar_file=stellar_file,wavelength_points=lam_obs,slab_only_mode=fit_gas_only,
+                    stellar_file=stellar_file,wavelength_points=lam_obs_full,slab_only_mode=fit_gas_only,
                     dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
 
+interp_flux=con_model.run_model(variables=var_dict,dust_species=abundance_dict,slab_dict=slab_dict,output_all=False,timeit=False)
 # %%
 con_model.plot_radial_structure(ylog=False,close_plots=close_plots)
 
@@ -786,9 +823,15 @@ for key in con_model.slab_dict:
     con_model.emission_flux_individual_scaled[key]=emission_flux_individual_scaled[key]
 # %%
 
+# finding the indices at which lam_obs_full it lam_obs
+idx_matches=[]
+for idx_fit in range(len(lam_obs)):
+    idx_match=np.where(lam_obs_full==lam_obs[idx_fit])[0][0]
+    idx_matches.append(idx_match)
+idx_matches=np.array(idx_matches)   
 
 # %%
-def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=lam_obs,wave_range=[13.6,16.3],save_name='',debug=True):
+def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_obs=lam_obs_full,lam_obs_fitted=lam_obs,flux_obs_fitted=flux_obs,wave_range=[13.6,16.3],save_name='',debug=True):
     first=True
     for key in mol_fluxes:
         if first:
@@ -798,7 +841,7 @@ def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=la
             tot_mol_flux+=mol_fluxes[key]
     print(np.max(interp_flux),np.max(tot_mol_flux),np.shape(tot_mol_flux))
     print(np.shape(lam_obs),np.shape(np.zeros_like(lam_obs)),np.shape(mol_fluxes[key]))
-    residual=flux_obs-(interp_flux-tot_mol_flux)
+    residual=flux_obs_fitted-(interp_flux_org-tot_mol_flux[idx_matches])
 
     plt.figure(figsize=(12,4))
     #plt.step(lam_obs,(interp_flux-tot_mol_flux)*1000,linewidth=0.5,color='black',linestyle='dashed',label='Continuum')
@@ -862,6 +905,20 @@ def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=la
         added_mol_flux+=new_mol
         idx_color+=1
     plt.step(lam_obs,flux_obs*1000,linewidth=0.5,color='black',zorder=101)
+    if len(lam_obs)!=len(lam_obs_fitted):
+        min_wave_fit=lam_obs_fitted[0]
+        for idx_fit in range(1,len(lam_obs_fitted)):
+            if idx_matches[idx_fit]!=idx_matches[idx_fit-1]+1:
+                max_wave_fit=lam_obs_fitted[idx_fit-1]
+
+                if min_wave_fit<max_wave and max_wave_fit>min_wave:
+
+                    plt.axvspan(min_wave_fit,max_wave_fit,alpha=0.7,color='grey',linewidth=0.0)
+                min_wave_fit=lam_obs_fitted[idx_fit]
+        max_wave_fit=lam_obs_fitted[idx_fit]
+        if min_wave_fit<max_wave and max_wave_fit>min_wave:
+
+            plt.axvspan(min_wave_fit,max_wave_fit,alpha=0.7,color='grey',linewidth=0.0)
     #plt.plot(lam_obs,(interp_flux+tot_mol_flux)*1000,linewidth=0.5,color='black')
    
     #plt.ylim([-0.1,1])
@@ -878,7 +935,7 @@ def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=la
     else:
         plt.show()
     plt.figure(figsize=(12,4))
-    plt.step(lam_obs,residual*1000,linewidth=0.5,color='black',zorder=101)
+    plt.step(lam_obs_fitted,residual*1000,linewidth=0.5,color='black',zorder=101)
     added_mol_flux=np.zeros_like(mol_fluxes[key])
     idx_color=0
     for key in mol_fluxes:
@@ -909,7 +966,7 @@ def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=la
     else:
         plt.show()
     plt.figure(figsize=(12,4))
-    plt.step(lam_obs,(flux_obs-(interp_flux))*1000,linewidth=0.5,color='black')
+    plt.step(lam_obs_fitted,(flux_obs_fitted-(interp_flux_org))*1000,linewidth=0.5,color='black')
     plt.xlim(wave_range)
     plt.ylabel('$\Delta F \, [\mathrm{mJy}]$')
     plt.xlabel('$\lambda [\mathrm{\mu m}]$')
@@ -918,7 +975,7 @@ def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=la
     else:
         plt.show()
     plt.figure(figsize=(12,4))
-    plt.step(lam_obs,(flux_obs-(interp_flux))/(interp_flux)*100,linewidth=0.5,color='black')
+    plt.step(lam_obs_fitted,(flux_obs_fitted-(interp_flux_org))/(interp_flux_org)*100,linewidth=0.5,color='black')
     plt.axhline(0,linewidth=0.5,color='tab:blue')
     plt.xlim(wave_range)
     plt.ylabel('Residual [%]')
@@ -927,7 +984,7 @@ def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=la
         plt.close()
     else:
         plt.show()
-    print_residual=np.mean(abs((flux_obs-(interp_flux))*1000))
+    print_residual=np.mean(abs((flux_obs_fitted-(interp_flux_org))*1000))
     print('Mean difference: %5.5f mJy'%print_residual)
     
 
@@ -968,7 +1025,7 @@ plot_molecule_minds_like(interp_flux,emission_flux_individual_scaled,wave_range=
 
 # %%
 wave_grid=[]
-wave_range_plot=min(np.ptp(lam_obs),2)
+wave_range_plot=min(np.ptp(lam_obs),wave_width)
 i=np.min(lam_obs)
 while i<=np.max(lam_obs):
     if i==np.min(lam_obs):
@@ -983,7 +1040,7 @@ while i<=np.max(lam_obs):
 
 
 # %%
-def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=lam_obs,
+def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_obs=lam_obs_full,lam_obs_fitted=lam_obs,flux_obs_fitted=flux_obs,
                            y_median=[None],y_std=[],y_std_min=[],wave_new=[],wave_range=[[13.6,16.3]],save_name='',debug=True):
     first=True
     for key in mol_fluxes:
@@ -994,7 +1051,7 @@ def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=lam_
             tot_mol_flux+=mol_fluxes[key]
     print(np.max(interp_flux),np.max(tot_mol_flux),np.shape(tot_mol_flux))
     print(np.shape(lam_obs),np.shape(np.zeros_like(lam_obs)),np.shape(mol_fluxes[key]))
-    residual=flux_obs-(interp_flux-tot_mol_flux)
+
     
     nrows=len(wave_range)
     fig,axs=plt.subplots(nrows=nrows,figsize=(14,2.8*nrows))
@@ -1003,7 +1060,7 @@ def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=lam_
     plot_post=False
     if y_median[0]!=None:
         plot_post=True
-    
+
     for i in range(len(wave_range)):
         
         min_wave=wave_range[i][0]
@@ -1056,7 +1113,21 @@ def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs,lam_obs=lam_
             added_mol_flux+=new_mol
             idx_color+=1
         axs[i].step(lam_obs_select,flux_obs_select*1000,linewidth=0.5,color='black',zorder=101)
-        
+
+        if len(lam_obs)!=len(lam_obs_fitted):
+            min_wave_fit=lam_obs_fitted[0]
+            for idx_fit in range(1,len(lam_obs_fitted)):
+                if idx_matches[idx_fit]!=idx_matches[idx_fit-1]+1:
+                    max_wave_fit=lam_obs_fitted[idx_fit-1]
+
+                    if min_wave_fit<max_wave and max_wave_fit>min_wave:
+
+                        axs[i].axvspan(min_wave_fit,max_wave_fit,alpha=0.7,color='grey',linewidth=0.0)
+                    min_wave_fit=lam_obs_fitted[idx_fit]
+            max_wave_fit=lam_obs_fitted[idx_fit]
+            if min_wave_fit<max_wave and max_wave_fit>min_wave:
+
+                axs[i].axvspan(min_wave_fit,max_wave_fit,alpha=0.7,color='grey',linewidth=0.0)
         if plot_post:
             axs[i].fill_between(wave_new_plot,(y_std_min_plot)*1000,(y_std_plot)*1000,color='tab:blue',alpha=0.7,linewidth=0,step='pre', zorder=121)
 
