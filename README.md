@@ -265,10 +265,10 @@ This function has a couple of options that allow you to change the plotting. The
 
 - nbins: Number of bins for the colour maps (e.g. nbins 100)
 - npoints: Number of points that are calculated along the temperature power laws (e.g. npoints 1000)
-- log_t:True : This envokes that both plots use a logarithmic scale for the temperature.
-- log_t:False : This envokes that both plots use a linear scale for the temperature.
-- log_t_first:True : This envokes that the first plot (temperature vs. column density) uses a logarithmic scale for the temperature.
-- log_t_second:False : This envokes that the second plot (temperature vs. radius) uses a linear scale for the temperature.
+- log_t:True : This enforces that both plots use a logarithmic scale for the temperature.
+- log_t:False : This enforces that both plots use a linear scale for the temperature.
+- log_t_first:True : This enforces that the first plot (temperature vs. column density) uses a logarithmic scale for the temperature.
+- log_t_second:False : This enforces that the second plot (temperature vs. radius) uses a linear scale for the temperature.
 - radial_range: This argument sets the limits of the radial range that is plotted (on a log scale, e.g. radial_range [-2,0]). If you leave it blank, it is automatically set to the radial profiles that are retrieved.
 - coldens_range: This argument sets the limits of the column density range that is plotted (on a log scale, e.g. coldens_range [14,24])
 - temp_range: This argument sets the limits of the temperature range that is plotted (on a linear scale, e.g. temp_range [100,1500])  

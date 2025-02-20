@@ -24,6 +24,18 @@ from spectres.spectral_resampling_numba import spectres_numba  as spectres
 from utils import *
 
 
+# print license
+print('------------------------------------------------')
+print('------------------------------------------------')
+print('   DuCKLinG  Copyright (C) 2025 Till Kaeufer    ')  
+print('------------------------------------------------')
+print('This program comes with ABSOLUTELY NO WARRANTY  ')
+print('This is free software, and you are welcome to   ')
+print('redistribute it under certain conditions        ')
+print('detailed in the LICENSE file.                   ')
+print('------------------------------------------------')
+print('------------------------------------------------')
+
 filetype_fig='png'
 plot_last_corner_plot=False
 

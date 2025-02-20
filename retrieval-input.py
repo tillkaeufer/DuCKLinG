@@ -30,6 +30,19 @@ from utils import *
 #cm = cmaps['viridis']
 
 
+# print license
+print('------------------------------------------------')
+print('------------------------------------------------')
+print('   DuCKLinG  Copyright (C) 2025 Till Kaeufer    ')  
+print('------------------------------------------------')
+print('This program comes with ABSOLUTELY NO WARRANTY  ')
+print('This is free software, and you are welcome to   ')
+print('redistribute it under certain conditions        ')
+print('detailed in the LICENSE file.                   ')
+print('------------------------------------------------')
+print('------------------------------------------------')
+
+
 old_version=False
 continuum_penalty=False
 

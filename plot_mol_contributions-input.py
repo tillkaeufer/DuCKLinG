@@ -46,6 +46,20 @@ plt.rcParams['xtick.major.width'] = plt.rcParams['ytick.major.width'] = 1.6
 plt.rcParams['font.size'] = 12
 
 
+
+# print license
+print('------------------------------------------------')
+print('------------------------------------------------')
+print('   DuCKLinG  Copyright (C) 2025 Till Kaeufer    ')  
+print('------------------------------------------------')
+print('This program comes with ABSOLUTELY NO WARRANTY  ')
+print('This is free software, and you are welcome to   ')
+print('redistribute it under certain conditions        ')
+print('detailed in the LICENSE file.                   ')
+print('------------------------------------------------')
+print('------------------------------------------------')
+
+
 close_plots=True
 preliminary=False
 
