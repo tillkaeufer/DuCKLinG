@@ -1,6 +1,7 @@
 !------------------------------------------------------------------------------!
 ! Dust Continuum Kit with Line emission from Gas (DuCKLinG)                    !
-! Copyright (c) 2025 Till Kaeufer and contributers                             !
+! modelling and retrieval dust and gas emission of mid-infrared observations   !
+! Copyright (c) 2025 Till Kaeufer                                              !
 !------------------------------------------------------------------------------!
 !
 !  DuCKLinG is free software; you can redistribute it and/or modify
@@ -17,6 +18,9 @@
 !  but WITHOUT ANY WARRANTY; without even the implied warranty of
 !  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 !  See the GNU General Public License for more details.
+! 
+!  You should have received a copy of the GNU General Public License
+!  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 !
 !  t.kaeufer@exeter.ac.uk, 20th Feb 2025
 !
