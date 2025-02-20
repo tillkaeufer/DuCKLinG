@@ -446,12 +446,12 @@ if fit_obs_err:
     elif 'log_sigma_obs_abs' in prior_dict:
         upper_lim.append(prior_dict['log_sigma_obs_abs'][1])
         lower_lim.append(prior_dict['log_sigma_obs_abs'][0])
-        complete_header.append('log_sigma_obs')
+        complete_header.append('log_sigma_obs_abs')
         
     elif 'sigma_obs_abs' in prior_dict:
         upper_lim.append(prior_dict['sigma_obs_abs'][1])
         lower_lim.append(prior_dict['sigma_obs_abs'][0])
-        complete_header.append('sigma_obs')
+        complete_header.append('sigma_obs_abs')
             
 if fit_conti_err:
     if 'log_sigma_conti' in prior_dict:

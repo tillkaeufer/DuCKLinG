@@ -991,12 +991,12 @@ if fit_obs_err:
     elif 'log_sigma_obs_abs' in prior_dict:
         upper_lim.append(prior_dict['log_sigma_obs_abs'][1])
         lower_lim.append(prior_dict['log_sigma_obs_abs'][0])
-        complete_header.append('log_sigma_obs')
+        complete_header.append('log_sigma_obs_abs')
         
     elif 'sigma_obs_abs' in prior_dict:
         upper_lim.append(prior_dict['sigma_obs_abs'][1])
         lower_lim.append(prior_dict['sigma_obs_abs'][0])
-        complete_header.append('sigma_obs')
+        complete_header.append('sigma_obs_abs')
 if fit_conti_err:
     if 'log_sigma_conti' in prior_dict:
         upper_lim.append(prior_dict['log_sigma_conti'][1])
@@ -1643,24 +1643,59 @@ if save_output:
         np.save(f'{prefix}dust_absorp_masses{reduce_str}',dust_mass_absorp_master_ar)
     #exit()
 
-if 'log_sigma_obs' in complete_header:
-    idx_sigma=np.where(complete_header=='log_sigma_obs')[0]
-    sig_obs=flux_obs*10**np.median(tot_samples[:,idx_sigma])
-    sig_obs_full=flux_obs_full*10**np.median(tot_samples[:,idx_sigma])
-elif 'sigma_obs' in complete_header:
-    idx_sigma=np.where(complete_header=='sigma_obs')[0]
-    sig_obs=flux_obs*np.median(tot_samples[:,idx_sigma])
-    sig_obs_full=flux_obs_full*np.median(tot_samples[:,idx_sigma])
-elif 'log_sigma_obs_abs' in complete_header:
-    idx_sigma=np.where(complete_header=='log_sigma_obs_abs')[0]
-    sig_obs=10**np.median(tot_samples[:,idx_sigma])*np.ones_like(flux_obs)
-    sig_obs_full=10**np.median(tot_samples[:,idx_sigma])*np.ones_like(flux_obs)
-elif 'sigma_obs_abs' in complete_header:
-    idx_sigma=np.where(complete_header=='sigma_ob_abs')[0]
-    sig_obs=np.median(tot_samples[:,idx_sigma])*np.ones_like(flux_obs)
-    sig_obs_full=np.median(tot_samples[:,idx_sigma])*np.ones_like(flux_obs)
+complete_header=np.array(complete_header)
+try:
+    sig_obs
+except NameError:
+    if 'log_sigma_obs' in complete_header:
+        idx_sigma=np.where(complete_header=='log_sigma_obs')[0]
+        sig_obs=flux_obs*10**np.median(tot_samples[:,idx_sigma])
+        try:
+            sig_obs_full
+        except NameError:
+            sig_obs_full=flux_obs_full*np.median(tot_samples[:,idx_sigma])
+    elif 'sigma_obs' in complete_header:
+        idx_sigma=np.where(complete_header=='sigma_obs')[0]
+        sig_obs=flux_obs*np.median(tot_samples[:,idx_sigma])
+        try:
+            sig_obs_full
+        except NameError:
+            sig_obs_full=flux_obs_full*np.median(tot_samples[:,idx_sigma])
+    elif 'log_sigma_obs_abs' in complete_header:
+        idx_sigma=np.where(complete_header=='log_sigma_obs_abs')[0]
 
-    
+        sig_obs=10**np.median(tot_samples[:,idx_sigma])
+
+        try:
+            sig_obs_full
+        except NameError:
+            sig_obs_full=np.ones_like(lam_obs_full)*sig_obs
+
+    elif 'sigma_obs_abs' in complete_header:
+        idx_sigma=np.where(complete_header=='sigma_ob_abs')[0]
+        sig_obs=np.median(tot_samples[:,idx_sigma])
+        try:
+            sig_obs_full
+        except NameError:
+            sig_obs_full=np.ones_like(lam_obs_full)*sig_obs
+
+    elif 'sigma_obs'in fixed_dict:
+        sig_obs=fixed_dict['sigma_obs']*flux_obs
+
+        
+    elif 'log_sigma_obs'in fixed_dict:
+        sig_obs=10**fixed_dict['log_sigma_obs']*flux_obs
+    elif 'sigma_obs'in fixed_dict:
+        sig_obs=fixed_dict['sigma_obs_abs']
+        
+    elif 'sigma_obs'in fixed_dict:
+        sig_obs=10**fixed_dict['log_sigma_obs_abs']
+    else:
+        sig_obs=np.zeros_like(flux_obs)
+        print('Plot sig obs as 0')
+
+
+
 if not ignore_spectrum_plot:
     if save_flux:
         
@@ -1877,7 +1912,8 @@ if not ignore_spectrum_plot:
             ax.set_ylim(bottom=min_val*0.9,top=max_val*1.1)
 
         ax.set_xscale('log')
-        ax.set_yscale('log')
+        if not fit_gas_only:
+            ax.set_yscale('log')
         if max_wave!=' ':
             ax.set_xlim(right=max_wave)
         else:
@@ -2006,19 +2042,7 @@ if not ignore_spectrum_plot:
 
 
 
-    if 'sigma_obs'in fixed_dict:
-        sig_obs=fixed_dict['sigma_obs']*flux_obs
-        
-    elif 'log_sigma_obs'in fixed_dict:
-        sig_obs=10**fixed_dict['log_sigma_obs']*flux_obs
-    elif 'sigma_obs'in fixed_dict:
-        sig_obs=fixed_dict['sigma_obs_abs']
-        
-    elif 'sigma_obs'in fixed_dict:
-        sig_obs=10**fixed_dict['log_sigma_obs_abs']
-    else:
-        sig_obs=np.zeros_like(flux_obs)
-        print('Plot sig obs as 0')
+
 
 
     print('Plotting component plot...')

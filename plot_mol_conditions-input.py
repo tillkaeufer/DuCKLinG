@@ -211,7 +211,7 @@ prefix = fold_string+'test_'+str(run_number)
 print('Loading posterior...')
 
 folder=bayesian_folder+subfold
-prefix_fig=folder+f'/figures/test_{run_number}'
+prefix_fig=folder+f'/figures/{run_number}'
 list_complete_post=glob.glob(folder+f'*_{run_number}complete_posterior{reduce_str}.npy')
 
 list_complete_post.sort()

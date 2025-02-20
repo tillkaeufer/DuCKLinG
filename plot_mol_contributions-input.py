@@ -1018,7 +1018,7 @@ else:
     print(f'Folder {save_folder} exists')
 
 # %%
-prefix_fig=folder+f'/figures/test_{run_number}'
+prefix_fig=folder+f'/figures/{run_number}'
 print(prefix_fig)
 file_name=prefix_fig+'_mol_contribution_plot.pdf'
 plot_molecule_minds_like(interp_flux,emission_flux_individual_scaled,wave_range=[np.min(lam_obs),np.max(lam_obs)],save_name=file_name)
