@@ -1836,7 +1836,7 @@ class complete_model:
             return output_dict
         if one_output:
             return emission_flux
-    def extract_emission_quantities(self,low_contribution=0.15,high_contribution=0.85,debug=False):
+    def extract_emission_quantities(self,low_contribution=0.15,high_contribution=0.85,debug=False,close_plots=False):
         '''
         This module extracts the important quantities from the emitting regio of the model.
         Output: the radius, temperature and (optionally) columndensity range in which 1-low_contribution-high_contribution
@@ -2035,7 +2035,10 @@ class complete_model:
                     plt.vlines(t_at_max,ymin=0,ymax=1)
                     plt.xlabel('T [K]')
                     plt.ylabel('Cumulative flux fraction')
-                    plt.show()
+                    if close_plots:
+                        plt.close()
+                    else:
+                        plt.show()
 
                 # translating temp at limits to col dens at limits   
                 coldens_slope=output_dict[species]['ColDens_slope']
@@ -2068,7 +2071,10 @@ class complete_model:
 
                     plt.xlabel('T [K]')
                     plt.ylabel(r'ColDens [$\rm cm^{-2}$]')
-                    plt.show()
+                    if close_plots:
+                        plt.close()
+                    else:
+                        plt.show()
 
 
 
@@ -2097,7 +2103,10 @@ class complete_model:
                         plt.scatter(r_at_max,t_at_max)
                         plt.ylabel('T [K]')
                         plt.xlabel('R [au]')
-                        plt.show() 
+                        if close_plots:
+                            plt.close()
+                        else:
+                            plt.show()
 
                         c_inbetween=[]
                         for t in t_to_r:
@@ -2119,7 +2128,10 @@ class complete_model:
                         plt.xlabel('R [au]')
                         plt.ylabel(r'ColDens [$\rm cm^{-2}$]')
                         plt.colorbar(label='T [K]')
-                        plt.show()  
+                        if close_plots:
+                            plt.close()
+                        else:
+                            plt.show()  
                     if self.cosi:
                         results[species]['radius_eff']=np.sqrt(r_at_min**2-r_at_max**2)*degree_to_cos(self.variables['incl'])
 
@@ -2174,7 +2186,10 @@ class complete_model:
                         plt.scatter(t_at_max,r_at_max)
                         plt.xlabel('T [K]')
                         plt.ylabel('R/T [au/K]')
-                        plt.show()       
+                        if close_plots:
+                            plt.close()
+                        else:
+                            plt.show()      
                         plt.figure()
                         plt.plot(r_inbetween,c_inbetween)
                         plt.scatter(r_at_min,col_at_min)
@@ -2183,7 +2198,10 @@ class complete_model:
                         plt.xscale('log')
                         plt.xlabel('R/T [au/K]')
                         plt.ylabel(r'ColDens [$\rm cm^{-2}$]')
-                        plt.show()       
+                        if close_plots:
+                            plt.close()
+                        else:
+                            plt.show()         
 
                         plt.figure()
                         plt.scatter(r_inbetween,c_inbetween,c=t_inbetween,vmin=t_at_min,vmax=t_at_max,s=35,cmap=cm)
@@ -2193,7 +2211,10 @@ class complete_model:
                         plt.xlabel('R/T [au/K]')
                         plt.ylabel(r'ColDens [$\rm cm^{-2}$]')
                         plt.colorbar(label='T [K]')
-                        plt.show()  
+                        if close_plots:
+                            plt.close()
+                        else:
+                            plt.show()   
 
                 results[species]['tmin,tmax']=[t_at_min,t_at_max]
                 results[species]['cmin,cmax']=[col_at_min,col_at_max]
@@ -2914,7 +2935,7 @@ class complete_model:
                 mass_dict[key]=M
         return mass_dict            
 
-    def plot_radial_structure(self,low_contribution=0.15,high_contribution=0.85,ylog=True):
+    def plot_radial_structure(self,low_contribution=0.15,high_contribution=0.85,ylog=True,close_plots=False):
         '''
         This function plots the radial molecular structure of the model.
         The molecular data is loaded using exctract_emission_quantities.
@@ -2937,7 +2958,10 @@ class complete_model:
         plt.xscale('log')
         if ylog:
             plt.yscale('log')
-        plt.show()
+        if close_plots:
+            plt.close()
+        else:
+            plt.show()
             
             
     def calc_integrated_flux(self,mol_name,wave_lims=[]):
@@ -3283,7 +3307,7 @@ class complete_model:
         '''
         return r_area/np.sqrt((tmin/tmax)**(2/q_emis)-1)
     
-    def plot(self, plot_midplane=False):
+    def plot(self, plot_midplane=False,log_flux=True):
         if self.use_extinction:
             
             ext_curve=self.extinction_interpolation(rv=self.variables['Rv'],ebv=self.variables['E(B-V)'],debug=False)
@@ -3335,17 +3359,20 @@ class complete_model:
         plt.figure() 
         plt.ylim(min(self.tot_flux),max(self.tot_flux)*1.1)
         if not self.slab_only_mode:
-            plt.loglog(self.xnew,self.scaled_stellar_flux,label='star')
-            plt.loglog(self.xnew,self.rim_flux,label='inner rim')
-            plt.loglog(self.xnew,self.midplane_flux,label='midplane')
+            plt.plot(self.xnew,self.scaled_stellar_flux,label='star')
+            plt.plot(self.xnew,self.rim_flux,label='inner rim')
+            plt.plot(self.xnew,self.midplane_flux,label='midplane')
             if self.use_dust_emis:
-                plt.loglog(self.xnew,self.surface_flux_tot,label='surface')
+                plt.plot(self.xnew,self.surface_flux_tot,label='surface')
             if self.use_dust_absorp:
-                plt.loglog(self.xnew,self.absorp_flux_tot*-1.0,label='absorption x (-1.0)')
-            
+                plt.plot(self.xnew,self.absorp_flux_tot*-1.0,label='absorption x (-1.0)')
+            if log_flux:
+                plt.yscale('log')
+        plt.xscale('log')
 
-        plt.loglog(self.xnew,self.emission_flux,label='molecular emission')
-        plt.loglog(self.xnew,self.tot_flux,label='total')
+
+        plt.plot(self.xnew,self.emission_flux,label='molecular emission')
+        plt.plot(self.xnew,self.tot_flux,label='total')
         plt.legend()
         #plt.title('full model')
         plt.xlabel(r'$\lambda$ [$\rm \mu$m]')

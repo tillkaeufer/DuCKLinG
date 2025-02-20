@@ -867,26 +867,28 @@ if sample_all:
         prior_dict_dust_abs[key]=prior_scaling_abs
 
 
-if 'tmax_s' in prior_dict or 'temp_s' in prior_dict:
+
+
+if 'tmax_s' in prior_dict or 'temp_s' in prior_dict or 'tmax_s' in fixed_dict or 'temp_s' in fixed_dict:
     use_dust_emis=True
-    if 'tmax_s' in prior_dict:
+    if 'tmax_s' in prior_dict or 'tmax_s' in fixed_dict:
         sur_powerlaw=True
     else:
         sur_powerlaw=False
 else:
     use_dust_emis=False
-if 'tmax_abs' in prior_dict or 'temp_abs' in prior_dict:
+if 'tmax_abs' in prior_dict or 'temp_abs' in prior_dict or 'tmax_abs' in fixed_dict or 'temp_abs' in fixed_dict:
     use_dust_absorp=True
-    if 'tmax_abs' in prior_dict:
+    if 'tmax_abs' in prior_dict or 'tmax_abs' in fixed_dict:
         abs_powerlaw=True
     else:
         abs_powerlaw=False
 else:
     use_dust_absorp=False
-
 use_mol_powerlaw=False
 if 'q_emis' in prior_dict or 'q_emis' in fixed_dict:
     use_mol_powerlaw=True
+  
 
 
 # setting up the dictonaries and headers that will be used
@@ -1531,7 +1533,7 @@ else:
         if parallel:
             dict_flux,samp,dust_mass_ar,dust_mass_absorp_ar=results[i].get()
         else:
-            dict_flux,samp,dust_mass_ar,dust_mass_absorp_ar=np.array(results,dtype='object')[i,j,0],np.array(results,dtype='object')[i,j,1].flatten(),np.array(results,dtype='object')[i,j,2].flatten()
+            dict_flux,samp,dust_mass_ar,dust_mass_absorp_ar=np.array(results,dtype='object')[i,0],np.array(results,dtype='object')[i,1].flatten(),np.array(results,dtype='object')[i,2],np.array(results,dtype='object')[i,3]
         if plot_dust_individual:
             if use_dust_emis:
                 for key in dict_flux['individual_surface']:
@@ -2487,7 +2489,11 @@ def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True
     else:
         plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_fractions{suffix}.{filetype_fig}',bbox_inches='tight')
         
-    plt.show()
+    if close_plots:
+        plt.close()
+    else:
+
+        plt.show()
 
 
 
@@ -2604,7 +2610,11 @@ def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regi
     else:
         plt.savefig(f'{save_folder}{str(run_number)}_histogram_mass_abs{suffix}.{filetype_fig}',bbox_inches='tight')
         
-    plt.show()
+    if close_plots:
+        plt.close()
+    else:
+
+        plt.show()
 
 
 
@@ -3145,7 +3155,17 @@ print('Done!!')
 if run_all:
     print('Starting the other plotting routines')
     print('Starting plot_mol_conditions-input.py')
-    os.system(f'python plot_mol_conditions-input.py {input_file}')
+    arg_list_pass_on=''
+    if close_plots:
+        arg_list_pass_on+=' close'
+    if reduce_posterior:
+        os.system(f'python plot_mol_conditions-input.py {input_file} reduce_post {arg_list_pass_on}')
+    else:
+        os.system(f'python plot_mol_conditions-input.py {input_file} {arg_list_pass_on}')
     print('Starting plot_mol_contributions-input.py ')
-    os.system(f'python plot_mol_contributions-input.py  {input_file}')
+    if reduce_posterior:
+        os.system(f'python plot_mol_contributions-input.py  {input_file} simple {arg_list_pass_on}')
+
+    else:
+        os.system(f'python plot_mol_contributions-input.py  {input_file} {arg_list_pass_on}')
 print('Finished!!')

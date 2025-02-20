@@ -3,9 +3,12 @@
 <img src="./DuCKLinG_logo.png" width="250" />
 
 This repository gives you all the files to run the DuCKLinG model.  
-It can be run as a forward model or in retrieval with MultiNest or UltraNest.
+It can be run as a forward model or be used for retrievals with [MultiNest](https://github.com/JohannesBuchner/MultiNest) or [UltraNest](https://github.com/JohannesBuchner/UltraNest).
 
-A description of the model can be seen in [Kaeufer et al. 2024](https://www.aanda.org/articles/aa/pdf/2024/07/aa49936-24.pdf)
+A description of the model can be seen in [Kaeufer et al. 2024](https://ui.adsabs.harvard.edu/abs/2024A%26A...687A.209K/abstract).
+
+Please have a look at the LICENSE file to understand the usage and distribution conditions.  
+This code uses a GPLv3 license which includes the kind request that you cite [Kaeufer et al. 2024](https://ui.adsabs.harvard.edu/abs/2024A%26A...687A.209K/abstract) in scientific publications that use the code. Please also consider citing [Arabhavi et al. 2024](https://ui.adsabs.harvard.edu/abs/2024Sci...384.1086A/abstract) who introduced the slab models that form the basis of the gas component of the model and [Juhász et al. 2009](https://ui.adsabs.harvard.edu/abs/2009ApJ...695.1024J/abstract) who first introduced the general concept that underpins the dust components. For citations of the dust opacities see references in [Kaeufer et al. 2024](https://ui.adsabs.harvard.edu/abs/2024A%26A...687A.209K/abstract) and [Jang et al. 2024](https://ui.adsabs.harvard.edu/abs/2024A%26A...691A.148J/abstract).
 
 ## Installation
 
@@ -30,12 +33,18 @@ Here is a list of all packages that are loaded in at the beginning of the script
 - numba
 - h5py
 - dust_extinction
+
+You can install them individually or run:
+`pip install -r requirements.txt`  
+This will install all of them at once.
   
 Additionally, it is recommended to install [OpenMPI](https://www.open-mpi.org/) and mpi4py to run the retrieval in parallel.
 
-If you run the multinest retrievel you also need to install multinest for example [here](https://github.com/JohannesBuchner/MultiNest) or [here](https://github.com/farhanferoz/MultiNest).
+If you run the multinest retrieval you also need to install multinest for example [here](https://github.com/JohannesBuchner/MultiNest) or [here](https://github.com/farhanferoz/MultiNest).
 
 If you run the ultranest retrieval (recommended for high dimensional parameter spaces) install [UltraNest](https://johannesbuchner.github.io/UltraNest/installation.html)
+
+Generally, my experience is that ultranest is the only reliable option for very complex, high-dimensional parameter spaces, but that MultiNest is much faster for simpler cases. So, if you are able to install both, it's best to run MultiNest retrievals and switch to UltraNest when they become unfeasible.
 
 ### Download gas files
 
@@ -62,10 +71,10 @@ There is an example input file in the Example folder.
 You can use this as a test ground if everything works.
 
 Run one of the following commands  
-> python retrieval-input.py ./Input_files/example_input-wo_extinction.txt
-> python retrieval-input.py ./Input_files/example_input-wo_extinction_multinest.txt
-> python retrieval-input.py ./Input_files/example_input-extinction.txt
-> python retrieval-input.py ./Input_files/example_input-absorption.txt 
+> python retrieval-input.py ./Input_files/example_input-wo_extinction.txt  
+> python retrieval-input.py ./Input_files/example_input-wo_extinction_multinest.txt   
+> python retrieval-input.py ./Input_files/example_input-extinction.txt  
+> python retrieval-input.py ./Input_files/example_input-absorption.txt   
 
 to start the retrieval.
 
@@ -92,7 +101,7 @@ If you just want to have a look at the different slab models that are used as in
 
 ## How to run
 
-The idea is that you create an input file that defines all the settings, priors, and observation that you want to use and then you simply execute it the same way as shown for the *retreival example*.
+The idea is that you create an input file that defines all the settings, priors, and observation that you want to use and then you simply execute it the same way as shown for the *retrieval example*.
 
 | :exclamation:  Even if you run the retrieval in parallel make sure to first run everything in a single core till the retrieval part of the script starts. This makes sure that the slab grids are already binned to your observation and this is not done N times. |
 |-----------------------------------------|
@@ -105,6 +114,8 @@ Start simple, see if it works and then you can make it more complicated.
 The input file provides all the information for the retrieval. You don't need to change anything in the python scripts.
 
 There are different sections in the input files that govern different things.
+
+The README.md file in the Input_files folder explains the meaning of all parameters that the model uses.
 
 #### Settings
 This is where the settings for background data are provided:
@@ -139,6 +150,7 @@ Here we define the setup of the model we want to use.
 - dust_species_list: This is a list with all the dust opacity files that you want to use. The files have to be located in dust_path. If you don't want to use this option just delete the list and delete all the surface layer parameters from the dictionaries as well.
 - absorp_species_list: If you want to recreated dust absorption features instead of emission you can use this list to provide the dust opacity files that you want to use. The files have to be located in dust_path. Make sure that you use the absorption parameters then as well (e.g. tmax_abs, tmin_abs, and q_abs or 'temp_abs'). If you leave this list empty dust absorption will be ignored. 
 - if you are using extinction you can add a line that loads the extinction model you are using. An example is provided in the example input files. If you want to use extinction you have to define Rv and E(B-V) in either the fixed_dict or the prior_dict.
+
 #### fixed parameters
 Setting the fixed parameters.  
 For some parameters, you might want to fix the value in the retrieval (e.g. distance).
@@ -169,16 +181,40 @@ Here you provide a short Python script to load your observation.
 In the end, it is important that flux_obs provided the fluxes in Jansky at the wavelength points lam_obs (in microns).  
 You can also provide the corresponding uncertainties as sig_obs.
 
+By default the likelihood function is as follows:  
+
+$L=\sum_{i} -\frac{1}{2}\times \left[\log({2\pi\times \sigma_i^2})+\frac{(f_{\rm model,i}-f_{\rm obs,i})^2}{\sigma_i^2}\right]$
+
+With $L$ being the likelihood and $i$ the index of the the wavelength point of the observation. $\sigma_i$, $f_{\rm model,i}$, and $f_{\rm obs,i}$ are the uncertainty, model prediction, and observed flux at the $i$-th wavelengths point.  
+
+Due to the change of spectral resolving power of MIRI over wavelengths, it means that there are more points at shorter wavelengths which makes this part of the spectrum dominating the likelihood function.  If you want every wavelengths interval to have the same weight you can do so by adding the following line to the input file:
+
+weights_obs=calc_weights(lam_obs)
+
+This will activate this likelihood functions:  
+$L=\sum_{i} -\frac{1}{2}\times \left[\log({2\pi\times \sigma_i^2})+\frac{w_i\times (f_{\rm model,i}-f_{\rm obs,i})^2}{\sigma_i^2}\right]$
+
+with $w_i$ being the weights.  
+Alternatively, you can also define your own custom weights.  As long as their have the same lengths as lam_obs, everything should work.  
+
+
 #### settings for the retrieval  
 - use_ultranest: Set it to True if you are running a ultranest retrieval and to False if you run multinest (it is needed for the plotting routines to know how the output format looks like)
   
-For UltraNest: 
-- length_ultra: We are using slice_sample for ultanest. Therefore, you need to provide how many steps you are taking. The integer here is multiplied by the number of parameters that you are using to derive the number of steps. 2 works fine in my case. If you want to check if everything converged, double the number, run it again, and see if anything changed.
+**For UltraNest:**
 
-For MultiNest:
+- slice_sampler: Set to True to use slice sampling, otherwise nested sampling is applied
+- length_ultra: If you are using slice_sample for ultranest, you need to provide how many steps you are taking. The integer here is multiplied by the number of parameters that you are using to derive the number of steps. 2 works fine in my case. If you want to check if everything converged, double the number, run it again, and see if anything changed.
+- n_live_points: Number of live points. Typically 400, but some cases might require more.
+- evidence_tolerance: The change in evidence at which the fit is considered converged. 0.5 is a good values if you want to calculate Bayes factors, for fast retrievals 5 should be fine as well.
+- frac_remain: Stop criterion if the fraction of the integral is left in the remainder. For values like 0.001 will make sure you cover all peaks, larger numbers like 0.5 are okay if the posterior is simple.
+- dlogz: Evidence uncertainty that should be achieved for convergence. A good value is 0.5.
+- dKL: posterior uncertainty for convergence. A good value is 0.5.
+
+**For MultiNest:**
 
 There are two predefined settings that can be selected with 
-- fast_retrival: If True the settings are n_live_points = 1000, evidence_tolerance = 5.0, and sampling_efficiency = 0.8, otherwise the settings are n_live_points = 1000, evidence_tolerance = 0.5, and sampling_efficiency = 0.3
+- fast_retrival: If True the settings are n_live_points = 400, evidence_tolerance = 5.0, and sampling_efficiency = 0.8, otherwise the settings are n_live_points = 1000, evidence_tolerance = 0.5, and sampling_efficiency = 0.3
 
 Alternatively, you can set the settings yourself, by setting n_live_points, evidence_tolerance, and sampling_efficiency in the input file (remove the # in front of them)
 
@@ -218,8 +254,9 @@ The options for this routine are as follows:
 
 - preliminary: this can be used if your run just started and the posterior file has only one entry. It is a great way to check if the fit is doing what you want.
 - simple: this selects the median probable model on the multinest posterior and not the full posterior. The advantage is that you can run it without running any plotting routine before and before the fit is finished. The difference to preliminary is that this can be used when the posterior file has multiple entries already.
+- close: Closing the plots instead of showing them to the user.
 
-If you want to plot the molecular column densities, temperatures and radii this is possible with the follwoing function:
+If you want to plot the molecular column densities, temperatures and radii this is possible with the following function:
 
 > python plot_mol_conditions-input.py ./path/to/inputfile
 
@@ -237,16 +274,17 @@ This function has a couple of options that allow you to change the plotting. The
 - temp_range: This argument sets the limits of the temperature range that is plotted (on a linear scale, e.g. temp_range [100,1500])  
 - close: Closing the plots instead of showing them to the user.
 
-
-
-
 ## Troubleshooting
 - It is important to delete MultiNest files when you re-run a model that was interrupted due to any kinds of errors.
 - If you have your own sigma of your data, comment out 'log_sigma_obs' and define 'sig_obs'.
 - Similarly, if you are not using one of the components (e.g. dust absorption or emission) it is important to get rid of all the associated parameters (e.g. if dust absorption is used the emission parameters tmax_s, tmin_s, and q_thin should be deleted from your prior_dict/fixed_dict).
 - If the path to output directory is too long, Multinest cannot save its output file names properly due to the limits on fortran.
-- If you are running the plotting rountine on a mac, there might be an error if you are using the custom_list argument (e.g python plot_retrieval_results.py custom_list [[5,40]]), you can fix it by adding 'noglob' to the line (e.g. noglob python plot_retrieval_results.py custom_list [[5,40]])
+- If you are running the plotting routine on a mac, there might be an error if you are using the custom_list argument (e.g python plot_retrieval_results.py custom_list [[5,40]]), you can fix it by adding 'noglob' to the line (e.g. noglob python plot_retrieval_results.py custom_list [[5,40]])
 - If you get errors that some functions are unknown, make sure that you are in the DuCKLinG directory when running your code. This is necessary because functions are loaded from utils.py.
   
-## Licence
-Tbd
+## Paper that use the model
+
+- Introduction of the model and application to a TTauri star: [Kaeufer et al. 2024a](https://ui.adsabs.harvard.edu/abs/2024A%26A...687A.209K/abstract)
+- Application to a very low-mass star to disentangle the dust and gas contributions: [Kaeufer et al. 2024b](https://ui.adsabs.harvard.edu/abs/2024A%26A...690A.100K/abstract)
+- Using the dust component of the model to determine the dust composition of PDS70 [Jang et al. 2024](https://ui.adsabs.harvard.edu/abs/2024A%26A...691A.148J/abstract)
+
