@@ -5,7 +5,7 @@
 This repository gives you all the files to run the DuCKLinG model.  
 It can be run as a forward model or be used for retrievals with [MultiNest](https://github.com/JohannesBuchner/MultiNest) or [UltraNest](https://github.com/JohannesBuchner/UltraNest).
 
-A description of the model can be seen in [Kaeufer et al. 2024](https://ui.adsabs.harvard.edu/abs/2024A%26A...687A.209K/abstract).
+A description of the model can be seen in [Kaeufer et al. 2024](https://ui.adsabs.harvard.edu/abs/2024A%26A...687A.209K/abstract). If the code is useful for your research, please get in touch (t.kaeufer@exeter.ac.uk). I'm very happy to discuss your project and will hopefully be able to help you with any problems regarding the code.
 
 Please have a look at the LICENSE file to understand the usage and distribution conditions.  
 This code uses a GPLv3 license which includes the kind request that you cite [Kaeufer et al. 2024](https://ui.adsabs.harvard.edu/abs/2024A%26A...687A.209K/abstract) in scientific publications that use the code. Please also consider citing [Arabhavi et al. 2024](https://ui.adsabs.harvard.edu/abs/2024Sci...384.1086A/abstract) who introduced the slab models that form the basis of the gas component of the model and [Juhász et al. 2009](https://ui.adsabs.harvard.edu/abs/2009ApJ...695.1024J/abstract) who first introduced the general concept that underpins the dust components. For citations of the dust opacities see references in [Kaeufer et al. 2024](https://ui.adsabs.harvard.edu/abs/2024A%26A...687A.209K/abstract) and [Jang et al. 2024](https://ui.adsabs.harvard.edu/abs/2024A%26A...691A.148J/abstract).
@@ -59,6 +59,11 @@ If you want to download the folder using the terminal you can do this by install
 
 
 ## Getting started
+
+### Hands-on session
+
+If you are new to the program, it might be a good idea to check out the [DuCKLinG hands-on session](https://github.com/tillkaeufer/duckling_hands-on_session) to get started. It should be self-explanatory and good start to get things running.  
+Otherwise, there are also a few retrieval examples in the repository you are currently at. Below you see a quick introduction.
 
 ### Forward model
 
