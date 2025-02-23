@@ -7,7 +7,7 @@ dust_path='./Q-curves/fitting-Qcurves/Q_GRF/'    #path to the dust data
 subfold='no_extinction/' #subfolder where the retrieval run is saved
 
 
-slab_folder='/data/tk502/LineData/' # folder where the slab grids are saved
+slab_folder='./LineData/' # folder where the slab grids are saved
 slab_prefix='12_' #prefix of the slab grid that is used
 run_number=2 #Giving your run a unique ID
 
@@ -130,9 +130,9 @@ sig_obs=flux_obs*0.03
 # Retrieval settings
 # -----------------------------
 
-#for ultranest
-
 use_ultranest=True
+
+#for ultranest
 slice_sampler=False
 length_ultra=2 #only relevant if slice_sampler=True
 adaptive_nsteps=False #only relevant if slice_sampler=True e.g. 'move-distance'
@@ -145,5 +145,6 @@ fast_retrival=True #accuracy setting of multinest
 n_live_points = 400 # for multinest and ultranest
 evidence_tolerance = 5 # for multinest and ultranest
 #sampling_efficiency = 0.3 # for multinest
-frac_remain= 0.5 # for ultranest
-
+frac_remain= 0.01 # for ultranest
+dlogz=2.0 # for ultranest
+dKL=2.0 # for ultranest

@@ -138,8 +138,10 @@ adaptive_nsteps=False #only relevant if slice_sampler=True e.g. 'move-distance'
 fast_retrival=True #accuracy setting of multinest 
 
 #alternatively you get set the specific settings
-#n_live_points = 400 # for multinest and ultranest
-#evidence_tolerance = 5 # for multinest and ultranest
+n_live_points = 400 # for multinest and ultranest
+evidence_tolerance = 5 # for multinest and ultranest
 #sampling_efficiency = 0.3 # for multinest
-#frac_remain= 0.5 # for ultranest
+frac_remain= 0.01 # for ultranest
+dlogz=2.0 # for ultranest
+dKL=2.0 # for ultranest
 
