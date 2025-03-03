@@ -277,7 +277,7 @@ except NameError:
         except NameError:
             print('Sig obs not set in input')
 
-fit_dust_only=True
+fit_dust_only=False
 if len(list(slab_prior_dict.keys()))==0:
     no_gas=True
     for key in fixed_dict:
