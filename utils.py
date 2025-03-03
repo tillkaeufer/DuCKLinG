@@ -3498,7 +3498,7 @@ def cube_to_dict(data,header,fit_obs_err=False,fit_conti_err=False,log_coldens=T
     return var_dict,slab_dict,sigma_dict
 
 
-def cube_to_dicts(data,header_para,header_abund,header_all,scale_prior,header_absorp=[],fit_obs_err=False,fit_conti_err=False,debug=False):
+def cube_to_dicts(data,header_para,header_abund,header_all,scale_prior,header_absorp=[],fit_obs_err=False,fit_conti_err=False,log_coldens=True,prior_on_log=True,debug=False):
     var_dict={}
     slab_dict={}
     abund_dict={}
@@ -3629,7 +3629,7 @@ molecular_names={'CO2_II':r'$\rm CO_2$','CO2':r'$\rm CO_2$',
                 'C3H4':r'$\rm C_3H_4$',
                 'CH3':r'$\rm CH_3$',
                 'NH3':r'$\rm NH_3$',
-                'CO':r'$\rm CO$',
+                'CO':r'$\rm CO$','hotCO':r'$\rm CO$',
                 'SiO':r'$\rm SiO$',
                 'OH':r'$\rm OH$'
                  
@@ -3647,7 +3647,7 @@ mol_colors_dict={'CO2_II':'tab:red','CO2':'tab:red',
                 'C3H4':'darkgreen',
                 'CH3':'tab:pink',
                 'NH3':'brown',
-                'CO':'yellowgreen',
+                'CO':'yellowgreen','hotCO':'yellowgreen',
                 'SiO':'peru',
                 'OH':'orchid'}
 

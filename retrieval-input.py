@@ -485,7 +485,8 @@ def loglike_ratios(cube,debug=False,timeit=False):
     if timeit:
         time_1=time()
     if sample_all:
-        var_dict,abundance_dict,slab_dict,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=header,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
+        var_dict,abundance_dict,slab_dict,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=header,scale_prior=scale_prior,
+                                                                   fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens,prior_on_log=prior_on_log)
 
     else:
         var_dict,slab_dict,sigma_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab)+list(header_sigma),fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens)
@@ -627,7 +628,8 @@ def loglike_gas(cube,debug=False,timeit=False):
     if timeit:
         time_1=time()
     if sample_all:
-        var_dict,abundance_dict,slab_dict,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=header,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
+        var_dict,abundance_dict,slab_dict,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=header,scale_prior=scale_prior,
+                                                                   fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens,prior_on_log=prior_on_log)
 
     else:
         var_dict,slab_dict,sigma_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab)+list(header_sigma),fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens)
@@ -759,7 +761,8 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
     if timeit:
         time_1=time()
     if sample_all:
-        var_dict,abundance_dict,slab_dict,abundance_dict_absorp,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior,fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err)
+        var_dict,abundance_dict,slab_dict,abundance_dict_absorp,sigma_dict=cube_to_dicts(cube,header_para=header_para,header_abund=header_abund,header_all=complete_header,header_absorp=header_absorp,scale_prior=scale_prior,
+                                                                                         fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens,prior_on_log=prior_on_log)
 
     else:
         var_dict,slab_dict,sigma_dict=cube_to_dict(cube,header=list(header_para)+list(header_slab)+list(header_sigma),fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,log_coldens=log_coldens)

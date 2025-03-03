@@ -1330,6 +1330,7 @@ def get_scales_parallel(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=Fa
             print('Dust mass absorption array')
             print(dust_mass_absorp_ar)
     if plot_dust_individual:
+        con_model_new.set_surface(one_output=False)
         scale_components=con_model_new.trans_flux
         if use_dust_emis:     
             dict_fluxes['individual_surface']={}
@@ -1477,6 +1478,7 @@ def get_full_model(idx,dummy,debug=False):
             dust_mass_dict=con_model_new.calc_dust_masses(dust_path=dust_path,absorption=True,unit='msun')
             dust_mass_absorp_ar=np.array(list(dust_mass_dict.values()))    
         if plot_dust_individual:
+            con_model_new.set_surface(one_output=False)
             scale_components=con_model_new.trans_flux
     
             if use_dust_emis:
