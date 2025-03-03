@@ -112,7 +112,7 @@ scale_prior={'sc_ir':[-5,0],
 import numpy as np
 lam_obs=np.load('./Observations/mock_observation_dust_wave.npy')
 flux_obs=np.load('./Observations/mock_observation_dust_flux.npy')
-sig_obs=flux_obs*0.03
+sig_obs=flux_obs*0.01
 
 
 # -----------------------------
