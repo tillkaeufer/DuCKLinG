@@ -489,10 +489,13 @@ class complete_model:
             if mol_absorp:
                 print('Absorption is applied by turning the slab model upside-down')
                 self.slab_data[mol_name_init]*=(-1) # for absorption we are simply turning around the molecular component
-        self.slab_parameters['col']=np.load(f'{slab_folder}{slab_prefix}parameter_col.npy')
-        self.slab_parameters['temp']=np.load(f'{slab_folder}{slab_prefix}parameter_temp.npy')
-        
-        self.slab_temp_steps=self.slab_parameters['temp'][-1]-self.slab_parameters['temp'][-2]
+        first=True
+        for mol_name_init in slab_list:
+            self.slab_parameters[f'{mol_name_init}:col']=np.load(f'{slab_folder}{slab_prefix}{mol_name}_parameter_col.npy')
+            self.slab_parameters[f'{mol_name_init}:temp']=np.load(f'{slab_folder}{slab_prefix}{mol_name}_parameter_temp.npy')
+            if first:
+                self.slab_temp_steps=self.slab_parameters[f'{mol_name_init}:temp'][-1]-self.slab_parameters[f'{mol_name_init}:temp'][-2]
+                first=False
         if not slab_only_mode:
             if len(wavelength_points)==0:
                 #setting up the wavlength grid at which we calculate the model
@@ -1181,26 +1184,26 @@ class complete_model:
 
                 idx_dens=[]
 
-                arg_dens=np.argmin(abs(self.slab_parameters['col']-dens))
-                if self.slab_parameters['col'][arg_dens]<dens:
+                arg_dens=np.argmin(abs(self.slab_parameters[f'{specie}:col']-dens))
+                if self.slab_parameters[f'{specie}:col'][arg_dens]<dens:
                     idx_dens.append(arg_dens)
                     idx_dens.append(arg_dens+1)
                 else:
                     idx_dens.append(arg_dens-1)
                     idx_dens.append(arg_dens)
-                dens_lower=self.slab_parameters['col'][idx_dens[0]]
-                dens_upper=self.slab_parameters['col'][idx_dens[1]]
+                dens_lower=self.slab_parameters[f'{specie}:col'][idx_dens[0]]
+                dens_upper=self.slab_parameters[f'{specie}:col'][idx_dens[1]]
                 idx_temp=[]
-                arg_temp=np.argmin(abs(self.slab_parameters['temp']-temis))
-                if self.slab_parameters['temp'][arg_temp]<temis:
+                arg_temp=np.argmin(abs(self.slab_parameters[f'{specie}:temp']-temis))
+                if self.slab_parameters[f'{specie}:temp'][arg_temp]<temis:
                     idx_temp.append(arg_temp)
                     idx_temp.append(arg_temp+1)
                 else:
                     idx_temp.append(arg_temp-1)
                     idx_temp.append(arg_temp)
 
-                temp_lower=self.slab_parameters['temp'][idx_temp[0]]
-                temp_upper=self.slab_parameters['temp'][idx_temp[1]]
+                temp_lower=self.slab_parameters[f'{specie}:temp'][idx_temp[0]]
+                temp_upper=self.slab_parameters[f'{specie}:temp'][idx_temp[1]]
                 if debug:
                     print('temp_lower',temp_lower)
                     print('temp_upper',temp_upper)
@@ -1311,16 +1314,16 @@ class complete_model:
                         else:
                             dens_min_log=dens_max_log-slope*(t_max_log-t_min_log)
                             dens_min=10**dens_min_log
-                        temp_logs=np.log10(self.slab_parameters['temp'])
+                        temp_logs=np.log10(self.slab_parameters[f'{specie}:temp'])
                     else:
                         slope=(dens_max_log-dens_min_log)/(t_max-t_min)
 
-                    respective_cols=np.zeros_like(self.slab_parameters['temp'],'float')
+                    respective_cols=np.zeros_like(self.slab_parameters[f'{specie}:temp'],'float')
                     if tapered_version:
 
-                        respective_radii=temp_to_rad(rmin=self.slab_dict[specie]['radius'],t=self.slab_parameters['temp'],q=self.variables['exp_emission'],tmax=self.slab_dict[specie]['tmax'])
+                        respective_radii=temp_to_rad(rmin=self.slab_dict[specie]['radius'],t=self.slab_parameters[f'{specie}:temp'],q=self.variables['exp_emission'],tmax=self.slab_dict[specie]['tmax'])
                         const=np.log10(np.exp(1))
-                    for t in range(len(self.slab_parameters['temp'])):
+                    for t in range(len(self.slab_parameters[f'{specie}:temp'])):
                         if debug:
                             if self.radial_version:
                                 if tapered_version:
@@ -1331,14 +1334,14 @@ class complete_model:
                                     print(dens_min_log+(temp_logs[t]-t_min_log)*slope)
 
                             else:
-                                print(dens_min_log,(self.slab_parameters['temp'][t]-t_min)*slope)
-                        if self.slab_parameters['temp'][t]<=t_max and self.slab_parameters['temp'][t]>=t_min: #+1*self.slab_temp_steps -1*self.slab_temp_steps
+                                print(dens_min_log,(self.slab_parameters[f'{specie}:temp'][t]-t_min)*slope)
+                        if self.slab_parameters[f'{specie}:temp'][t]<=t_max and self.slab_parameters[f'{specie}:temp'][t]>=t_min: #+1*self.slab_temp_steps -1*self.slab_temp_steps
                             if self.radial_version:
                                 respective_cols[t]=float(dens_min_log+(temp_logs[t]-t_min_log)*slope)
                                 if tapered_version:
                                     respective_cols[t]+=const*((-1)*(respective_radii[t]/r_taper)**(theta_taper))
                             else:
-                                respective_cols[t]=float(dens_min_log+(self.slab_parameters['temp'][t]-t_min)*slope)
+                                respective_cols[t]=float(dens_min_log+(self.slab_parameters[f'{specie}:temp'][t]-t_min)*slope)
 
                     if debug: print('respective_cols',respective_cols)
                     cols_ar=10**respective_cols
@@ -1362,9 +1365,9 @@ class complete_model:
                         print('Slope',slope)
                         print('respective cols',respective_cols)
                         print('Cols ar',cols_ar)
-                        plt.plot(self.slab_parameters['temp'],cols_ar)
+                        plt.plot(self.slab_parameters[f'{specie}:temp'],cols_ar)
                         plt.scatter([t_min,t_max],[dens_min,dens_max])
-                        T_g_tot,NHtot_tot=np.meshgrid(self.slab_parameters['temp'],self.slab_parameters['col'])
+                        T_g_tot,NHtot_tot=np.meshgrid(self.slab_parameters[f'{specie}:temp'],self.slab_parameters[f'{specie}:col'])
                         plt.scatter(T_g_tot,NHtot_tot,marker='+')
                         plt.yscale('log')
                         if self.radial_version:
@@ -1382,8 +1385,8 @@ class complete_model:
                         idx_col_list=[]
                         dens=cols_ar[i]
 
-                        arg_min_dens=np.argmin(abs(self.slab_parameters['col']-dens))
-                        if self.slab_parameters['col'][arg_min_dens]<dens:
+                        arg_min_dens=np.argmin(abs(self.slab_parameters[f'{specie}:col']-dens))
+                        if self.slab_parameters[f'{specie}:col'][arg_min_dens]<dens:
                             idx_col_list.append(arg_min_dens)
                             idx_col_list.append(arg_min_dens+1)
                         else:
@@ -1391,16 +1394,16 @@ class complete_model:
                             idx_col_list.append(arg_min_dens)
                         #if the col dens are outside the trained range it is disregarded. 
                         in_array=True
-                        if idx_col_list[0]<0 or idx_col_list[1]>=len(self.slab_parameters['col']):
+                        if idx_col_list[0]<0 or idx_col_list[1]>=len(self.slab_parameters[f'{specie}:col']):
                             in_array=False
                         if in_array:
                             if debug:
                                 print(i,idx_col_list)
-                                print('Dens, dens in array',dens,self.slab_parameters['col'][idx_col_list])
-                            species_flux[i]=self.slab_data[specie][idx_col_list[0]][i]+(self.slab_data[specie][idx_col_list[1]][i]-self.slab_data[specie][idx_col_list[0]][i])*(cols_ar[i]-self.slab_parameters['col'][idx_col_list[0]])/(self.slab_parameters['col'][idx_col_list[1]]-self.slab_parameters['col'][idx_col_list[0]])  
-                        elif dens==self.slab_parameters['col'][0]:
+                                print('Dens, dens in array',dens,self.slab_parameters[f'{specie}:col'][idx_col_list])
+                            species_flux[i]=self.slab_data[specie][idx_col_list[0]][i]+(self.slab_data[specie][idx_col_list[1]][i]-self.slab_data[specie][idx_col_list[0]][i])*(cols_ar[i]-self.slab_parameters[f'{specie}:col'][idx_col_list[0]])/(self.slab_parameters[f'{specie}:col'][idx_col_list[1]]-self.slab_parameters[f'{specie}:col'][idx_col_list[0]])  
+                        elif dens==self.slab_parameters[f'{specie}:col'][0]:
                             species_flux[i]=self.slab_data[specie][0][i]
-                        elif dens==self.slab_parameters['col'][-1]:
+                        elif dens==self.slab_parameters[f'{specie}:col'][-1]:
                             species_flux[i]=self.slab_data[specie][-1][i]
 
 
@@ -1411,26 +1414,26 @@ class complete_model:
 
                     idx_dens_min=[]
 
-                    arg_min_dens=np.argmin(abs(self.slab_parameters['col']-dens_min))
-                    if self.slab_parameters['col'][arg_min_dens]<dens_min:
+                    arg_min_dens=np.argmin(abs(self.slab_parameters[f'{specie}:col']-dens_min))
+                    if self.slab_parameters[f'{specie}:col'][arg_min_dens]<dens_min:
                         idx_dens_min.append(arg_min_dens)
                         idx_dens_min.append(arg_min_dens+1)
                     else:
                         idx_dens_min.append(arg_min_dens-1)
                         idx_dens_min.append(arg_min_dens)
-                    dens_lower=self.slab_parameters['col'][idx_dens_min[0]]
-                    dens_upper=self.slab_parameters['col'][idx_dens_min[1]]
+                    dens_lower=self.slab_parameters[f'{specie}:col'][idx_dens_min[0]]
+                    dens_upper=self.slab_parameters[f'{specie}:col'][idx_dens_min[1]]
                     idx_temp_min=[]
-                    arg_min_temp=np.argmin(abs(self.slab_parameters['temp']-t_min))
-                    if self.slab_parameters['temp'][arg_min_temp]<t_min:
+                    arg_min_temp=np.argmin(abs(self.slab_parameters[f'{specie}:temp']-t_min))
+                    if self.slab_parameters[f'{specie}:temp'][arg_min_temp]<t_min:
                         idx_temp_min.append(arg_min_temp)
                         idx_temp_min.append(arg_min_temp+1)
                     else:
                         idx_temp_min.append(arg_min_temp-1)
                         idx_temp_min.append(arg_min_temp)
 
-                    temp_lower=self.slab_parameters['temp'][idx_temp_min[0]]
-                    temp_upper=self.slab_parameters['temp'][idx_temp_min[1]]
+                    temp_lower=self.slab_parameters[f'{specie}:temp'][idx_temp_min[0]]
+                    temp_upper=self.slab_parameters[f'{specie}:temp'][idx_temp_min[1]]
                     if debug_interp:
                         print('temp_lower',temp_lower)
                         print('temp_upper',temp_upper)
@@ -1473,19 +1476,19 @@ class complete_model:
                     # upper edge
 
                     idx_dens_max=[]
-                    arg_max_dens=np.argmin(abs(self.slab_parameters['col']-dens_max))
-                    if self.slab_parameters['col'][arg_max_dens]<dens_max:
+                    arg_max_dens=np.argmin(abs(self.slab_parameters[f'{specie}:col']-dens_max))
+                    if self.slab_parameters[f'{specie}:col'][arg_max_dens]<dens_max:
                         idx_dens_max.append(arg_max_dens)
                         idx_dens_max.append(arg_max_dens+1)
                     else:
                         idx_dens_max.append(arg_max_dens-1)
                         idx_dens_max.append(arg_max_dens)
 
-                    dens_lower=self.slab_parameters['col'][idx_dens_max[0]]
-                    dens_upper=self.slab_parameters['col'][idx_dens_max[1]]
+                    dens_lower=self.slab_parameters[f'{specie}:col'][idx_dens_max[0]]
+                    dens_upper=self.slab_parameters[f'{specie}:col'][idx_dens_max[1]]
                     idx_temp_max=[]
-                    arg_max_temp=np.argmin(abs(self.slab_parameters['temp']-t_max))
-                    if self.slab_parameters['temp'][arg_max_temp]<t_max:
+                    arg_max_temp=np.argmin(abs(self.slab_parameters[f'{specie}:temp']-t_max))
+                    if self.slab_parameters[f'{specie}:temp'][arg_max_temp]<t_max:
                         idx_temp_max.append(arg_max_temp)
                         idx_temp_max.append(arg_max_temp+1)
                     else:
@@ -1493,8 +1496,8 @@ class complete_model:
                         idx_temp_max.append(arg_max_temp)
 
 
-                    temp_lower=self.slab_parameters['temp'][idx_temp_max[0]]
-                    temp_upper=self.slab_parameters['temp'][idx_temp_max[1]]
+                    temp_lower=self.slab_parameters[f'{specie}:temp'][idx_temp_max[0]]
+                    temp_upper=self.slab_parameters[f'{specie}:temp'][idx_temp_max[1]]
 
                     if debug_interp:
                         print('temp_lower',temp_lower)
@@ -1547,12 +1550,12 @@ class complete_model:
                         output_dict[specie]['ColDens_slope']=0.0
                         output_dict[specie]['logColDens_min']=np.log10(dens)
                     idx_col_list=[]
-                    if dens in self.slab_parameters['col']:
-                        idx_col=np.where(self.slab_parameters['col']==dens)[0][0]
+                    if dens in self.slab_parameters[f'{specie}:col']:
+                        idx_col=np.where(self.slab_parameters[f'{specie}:col']==dens)[0][0]
                         idx_col_list.append(idx_col)
                     else:
-                        arg_min_dens=np.argmin(abs(self.slab_parameters['col']-dens))
-                        if self.slab_parameters['col'][arg_min_dens]<dens:
+                        arg_min_dens=np.argmin(abs(self.slab_parameters[f'{specie}:col']-dens))
+                        if self.slab_parameters[f'{specie}:col'][arg_min_dens]<dens:
                             idx_col_list.append(arg_min_dens)
                             idx_col_list.append(arg_min_dens+1)
                         else:
@@ -1561,17 +1564,17 @@ class complete_model:
 
                 min_found=False
                 max_found=False
-                for idx_t in range(len(self.slab_parameters['temp'])):
-                    if (self.slab_parameters['temp'][idx_t]>=t_min) and not min_found:
+                for idx_t in range(len(self.slab_parameters[f'{specie}:temp'])):
+                    if (self.slab_parameters[f'{specie}:temp'][idx_t]>=t_min) and not min_found:
                         idx_tmin=idx_t
                         min_found=True
-                    if (self.slab_parameters['temp'][idx_t]>t_max) and not max_found:
+                    if (self.slab_parameters[f'{specie}:temp'][idx_t]>t_max) and not max_found:
                         idx_tmax=idx_t-1
                         max_found=True
                         break
                 if debug:
                     print('Temp range', t_min,t_max)
-                    print('Temp inside range',self.slab_parameters['temp'][idx_tmin],self.slab_parameters['temp'][idx_tmax])
+                    print('Temp inside range',self.slab_parameters[f'{specie}:temp'][idx_tmin],self.slab_parameters[f'{specie}:temp'][idx_tmax])
                 #deciding if the small temperature range version needs to be used
                 grid_p=True
                 t_range=idx_tmax-idx_tmin
@@ -1605,9 +1608,9 @@ class complete_model:
                     #summing the flux at every relevant grid point
                     if range_version==0:
                         slab_data_select=species_flux[idx_tmin+1:idx_tmax].copy()          
-                        temp_paras=self.slab_parameters['temp'][idx_tmin+1:idx_tmax]**exp
+                        temp_paras=self.slab_parameters[f'{specie}:temp'][idx_tmin+1:idx_tmax]**exp
                         if output_quantities:
-                            output_dict[specie]['inner_part_temp']=self.slab_parameters['temp'][idx_tmin+1:idx_tmax]
+                            output_dict[specie]['inner_part_temp']=self.slab_parameters[f'{specie}:temp'][idx_tmin+1:idx_tmax]
                         #temp_paras=temp_paras/np.mean(temp_paras)
                         for i in range(len(temp_paras)):
                             slab_data_select[i]*=temp_paras[i]
@@ -1618,31 +1621,31 @@ class complete_model:
                         if range_version==0:
 
                             print(np.shape(slab_data_select))
-                            print('The inner part goes from/to',self.slab_parameters['temp'][idx_tmin+1],self.slab_parameters['temp'][idx_tmax-1])
+                            print('The inner part goes from/to',self.slab_parameters[f'{specie}:temp'][idx_tmin+1],self.slab_parameters[f'{specie}:temp'][idx_tmax-1])
                         else:
                             if debug:
                                 print('SKIPPING INNER PART')
 
-                        print('The slabs that are just inside are',self.slab_parameters['temp'][idx_tmin],self.slab_parameters['temp'][idx_tmax])
-                        print('The slabs that are just outside are',self.slab_parameters['temp'][idx_tmin-1],self.slab_parameters['temp'][idx_tmax+1])
+                        print('The slabs that are just inside are',self.slab_parameters[f'{specie}:temp'][idx_tmin],self.slab_parameters[f'{specie}:temp'][idx_tmax])
+                        print('The slabs that are just outside are',self.slab_parameters[f'{specie}:temp'][idx_tmin-1],self.slab_parameters[f'{specie}:temp'][idx_tmax+1])
 
                     upper_slab_in=species_flux[idx_tmax]
                     lower_slab_in=species_flux[idx_tmin]
 
 
-                    upper_slab_in_exp=upper_slab_in*(self.slab_parameters['temp'][idx_tmax])**exp
-                    lower_slab_in_exp=lower_slab_in*(self.slab_parameters['temp'][idx_tmin])**exp
+                    upper_slab_in_exp=upper_slab_in*(self.slab_parameters[f'{specie}:temp'][idx_tmax])**exp
+                    lower_slab_in_exp=lower_slab_in*(self.slab_parameters[f'{specie}:temp'][idx_tmin])**exp
                     if debug:
                         print('Temperature powerlaw begin and end')
-                        print(self.slab_parameters['temp'][idx_tmin],self.slab_parameters['temp'][idx_tmin]**exp)
-                        print(self.slab_parameters['temp'][idx_tmax],self.slab_parameters['temp'][idx_tmax]**exp)
+                        print(self.slab_parameters[f'{specie}:temp'][idx_tmin],self.slab_parameters[f'{specie}:temp'][idx_tmin]**exp)
+                        print(self.slab_parameters[f'{specie}:temp'][idx_tmax],self.slab_parameters[f'{specie}:temp'][idx_tmax]**exp)
 
                     upper_slab_out=species_flux[idx_tmax+1]
                     lower_slab_out=species_flux[idx_tmin-1]
 
                     if (not interp_edge_first) or debug_interp:
-                        upper_edge=(upper_slab_in+(upper_slab_out-upper_slab_in)*(t_max-self.slab_parameters['temp'][idx_tmax])/self.slab_temp_steps)*(t_max)**exp
-                        lower_edge=(lower_slab_out+(lower_slab_in-lower_slab_out)*(t_min-self.slab_parameters['temp'][idx_tmin-1])/self.slab_temp_steps)*(t_min)**exp
+                        upper_edge=(upper_slab_in+(upper_slab_out-upper_slab_in)*(t_max-self.slab_parameters[f'{specie}:temp'][idx_tmax])/self.slab_temp_steps)*(t_max)**exp
+                        lower_edge=(lower_slab_out+(lower_slab_in-lower_slab_out)*(t_min-self.slab_parameters[f'{specie}:temp'][idx_tmin-1])/self.slab_temp_steps)*(t_min)**exp
                     if debug_interp:
                         print('Old lower edge mean',np.mean(lower_edge))
                         print('Old upper edge mean',np.mean(upper_edge))
@@ -1664,8 +1667,8 @@ class complete_model:
                         upper_in=np.zeros_like(upper_edge)
                         lower_in=np.zeros_like(lower_edge)
                     if output_quantities:
-                        output_dict[specie]['upper_in_temp']=self.slab_parameters['temp'][idx_tmax]
-                        output_dict[specie]['lower_in_temp']=self.slab_parameters['temp'][idx_tmin]
+                        output_dict[specie]['upper_in_temp']=self.slab_parameters[f'{specie}:temp'][idx_tmax]
+                        output_dict[specie]['lower_in_temp']=self.slab_parameters[f'{specie}:temp'][idx_tmin]
 
                         if len(idx_col_list)==1:
                             output_dict[specie]['upper_in']=np.sum(upper_in)
@@ -1691,8 +1694,8 @@ class complete_model:
 
 
                     if grid_p:
-                        lower_out=(lower_edge+lower_slab_in_exp)/2*(self.slab_parameters['temp'][idx_tmin]-t_min)
-                        upper_out=(upper_slab_in_exp+upper_edge)/2*(t_max-self.slab_parameters['temp'][idx_tmax])
+                        lower_out=(lower_edge+lower_slab_in_exp)/2*(self.slab_parameters[f'{specie}:temp'][idx_tmin]-t_min)
+                        upper_out=(upper_slab_in_exp+upper_edge)/2*(t_max-self.slab_parameters[f'{specie}:temp'][idx_tmax])
 
                     else:
                         lower_out=np.zeros_like(lower_edge)
@@ -1733,23 +1736,23 @@ class complete_model:
                         print('--------------')
                         print('Contributions: (tmin, tmax, percent)')
                         if range_version==0:
-                            print('inner part',self.slab_parameters['temp'][idx_tmin+1]-self.slab_temp_steps/2,self.slab_parameters['temp'][idx_tmax-1]+self.slab_temp_steps/2,np.round(sum_in/tot_sum*100,1))
+                            print('inner part',self.slab_parameters[f'{specie}:temp'][idx_tmin+1]-self.slab_temp_steps/2,self.slab_parameters[f'{specie}:temp'][idx_tmax-1]+self.slab_temp_steps/2,np.round(sum_in/tot_sum*100,1))
                         else:
                             if debug:
                                 print('SKIPPING INNER PART')
                         if range_version==2:
-                            print('lower in',self.slab_parameters['temp'][idx_tmin],self.slab_parameters['temp'][idx_tmin],np.round(sum_low_in/tot_sum*100,1))
+                            print('lower in',self.slab_parameters[f'{specie}:temp'][idx_tmin],self.slab_parameters[f'{specie}:temp'][idx_tmin],np.round(sum_low_in/tot_sum*100,1))
                         else:
-                            print('lower in',self.slab_parameters['temp'][idx_tmin],self.slab_parameters['temp'][idx_tmin]+self.slab_temp_steps/2,np.round(sum_low_in/tot_sum*100,1))
+                            print('lower in',self.slab_parameters[f'{specie}:temp'][idx_tmin],self.slab_parameters[f'{specie}:temp'][idx_tmin]+self.slab_temp_steps/2,np.round(sum_low_in/tot_sum*100,1))
 
-                        print('lower out',t_min,self.slab_parameters['temp'][idx_tmin],np.round(sum_low_out/tot_sum*100,1))
+                        print('lower out',t_min,self.slab_parameters[f'{specie}:temp'][idx_tmin],np.round(sum_low_out/tot_sum*100,1))
                         if range_version==2:
-                            print('upper in',self.slab_parameters['temp'][idx_tmax],self.slab_parameters['temp'][idx_tmax],np.round(sum_upper_in/tot_sum*100,1))
+                            print('upper in',self.slab_parameters[f'{specie}:temp'][idx_tmax],self.slab_parameters[f'{specie}:temp'][idx_tmax],np.round(sum_upper_in/tot_sum*100,1))
                         else:
-                            print('upper in',self.slab_parameters['temp'][idx_tmax]-self.slab_temp_steps/2,self.slab_parameters['temp'][idx_tmax],np.round(sum_upper_in/tot_sum*100,1))
+                            print('upper in',self.slab_parameters[f'{specie}:temp'][idx_tmax]-self.slab_temp_steps/2,self.slab_parameters[f'{specie}:temp'][idx_tmax],np.round(sum_upper_in/tot_sum*100,1))
                         if grid_p:
 
-                            print('upper out',self.slab_parameters['temp'][idx_tmax],t_max,np.round(sum_upper_out/tot_sum*100,1))
+                            print('upper out',self.slab_parameters[f'{specie}:temp'][idx_tmax],t_max,np.round(sum_upper_out/tot_sum*100,1))
                         else:
                             print('upper out',t_min,t_max,np.round(sum_upper_out/tot_sum*100,1))
                         print('--------------')
@@ -1776,19 +1779,19 @@ class complete_model:
 
                                     power_in=0.0
                                 if range_version!=2:
-                                    powers_edges_1=((self.slab_parameters['temp'][idx_tmax])**exp)*(self.slab_temp_steps/2+(t_max-self.slab_parameters['temp'][idx_tmax])/2)
-                                    powers_edges_2=((self.slab_parameters['temp'][idx_tmin])**exp)*(self.slab_temp_steps/2+(self.slab_parameters['temp'][idx_tmin]-t_min)/2)
+                                    powers_edges_1=((self.slab_parameters[f'{specie}:temp'][idx_tmax])**exp)*(self.slab_temp_steps/2+(t_max-self.slab_parameters[f'{specie}:temp'][idx_tmax])/2)
+                                    powers_edges_2=((self.slab_parameters[f'{specie}:temp'][idx_tmin])**exp)*(self.slab_temp_steps/2+(self.slab_parameters[f'{specie}:temp'][idx_tmin]-t_min)/2)
                                 else:
                                     if grid_p:
 
-                                        powers_edges_1=((self.slab_parameters['temp'][idx_tmax])**exp)*((t_max-self.slab_parameters['temp'][idx_tmax])/2)
-                                        powers_edges_2=((self.slab_parameters['temp'][idx_tmin])**exp)*((self.slab_parameters['temp'][idx_tmin]-t_min)/2)
+                                        powers_edges_1=((self.slab_parameters[f'{specie}:temp'][idx_tmax])**exp)*((t_max-self.slab_parameters[f'{specie}:temp'][idx_tmax])/2)
+                                        powers_edges_2=((self.slab_parameters[f'{specie}:temp'][idx_tmin])**exp)*((self.slab_parameters[f'{specie}:temp'][idx_tmin]-t_min)/2)
                                     else:
                                         powers_edges_1=0.0
                                         powers_edges_2=0.0
                                 if grid_p:        
-                                    power_edges_up=(t_max)**exp*(t_max-self.slab_parameters['temp'][idx_tmax])/2
-                                    power_edges_low=(t_min)**exp*(self.slab_parameters['temp'][idx_tmin]-t_min)/2
+                                    power_edges_up=(t_max)**exp*(t_max-self.slab_parameters[f'{specie}:temp'][idx_tmax])/2
+                                    power_edges_low=(t_min)**exp*(self.slab_parameters[f'{specie}:temp'][idx_tmin]-t_min)/2
                                 else:
                                     power_edges_up=(t_max)**exp*(t_max-t_min)/2
                                     power_edges_low=(t_min)**exp*(t_max-t_min)/2
@@ -1826,8 +1829,8 @@ class complete_model:
 
                 if len(idx_col_list)>1:
                     flux_species_1=flux_species.copy()
-                    lower_dens=self.slab_parameters['col'][idx_col_list[0]]
-                    higher_dens=self.slab_parameters['col'][idx_col_list[1]]
+                    lower_dens=self.slab_parameters[f'{specie}:col'][idx_col_list[0]]
+                    higher_dens=self.slab_parameters[f'{specie}:col'][idx_col_list[1]]
                     flux_species=flux_species_0+(flux_species_1-flux_species_0)*(dens-lower_dens)/(higher_dens-lower_dens)
                     fact=(dens-lower_dens)/(higher_dens-lower_dens)
 
