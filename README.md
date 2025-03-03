@@ -79,7 +79,8 @@ Run one of the following commands
 > python retrieval-input.py ./Input_files/example_input-wo_extinction.txt  
 > python retrieval-input.py ./Input_files/example_input-wo_extinction_multinest.txt   
 > python retrieval-input.py ./Input_files/example_input-extinction.txt  
-> python retrieval-input.py ./Input_files/example_input-absorption.txt   
+> python retrieval-input.py ./Input_files/example_input-absorption.txt  
+> python retrieval-input.py ./Input_files/example_input-dust_only.txt   
 
 to start the retrieval.
 
