@@ -574,7 +574,7 @@ else:
         plt.ylim([temp_range[0],temp_range[1]]) 
     plt.legend(custom_lines,custom_labels,loc=(-0.1,1.05),ncol=max(len(custom_lines)//2,1))
         
-    plt.savefig(prefix_fig+'_molecular_contidions_radius.pdf',bbox_inches='tight')
+    plt.savefig(prefix_fig+'_molecular_conditions_radius.pdf',bbox_inches='tight')
     if close_plots:
         plt.close()
     else:
