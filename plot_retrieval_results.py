@@ -1688,10 +1688,7 @@ except NameError:
     elif 'sigma_obs_abs' in complete_header:
         idx_sigma=np.where(complete_header=='sigma_ob_abs')[0]
         sig_obs=np.median(tot_samples[:,idx_sigma])
-        try:
-            sig_obs_full
-        except NameError:
-            sig_obs_full=np.ones_like(lam_obs_full)*sig_obs
+
 
     elif 'sigma_obs'in fixed_dict:
         sig_obs=fixed_dict['sigma_obs']*flux_obs
@@ -1708,7 +1705,10 @@ except NameError:
         sig_obs=np.zeros_like(flux_obs)
         print('Plot sig obs as 0')
 
-
+try:
+    sig_obs_full
+except NameError:
+    sig_obs_full=np.ones_like(lam_obs_full)*sig_obs
 
 if not ignore_spectrum_plot:
     if save_flux:
@@ -2157,7 +2157,7 @@ if not ignore_spectrum_plot:
     if plot_dust_individual:
 
 
-        list_style_dust=['dotted','dashdot','dashed','densely dashed','densely dashdotted','solid']
+        list_style_dust=['dotted','dashdot','dashed',(0, (5, 1)),(0, (3, 1, 1, 1)),'solid']
 
         list_color_dust=['tab:orange','tab:green','tab:red','tab:purple','tab:brown','tab:pink','tab:cyan']
                 
