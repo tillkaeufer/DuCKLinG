@@ -491,6 +491,23 @@ class complete_model:
                 self.slab_data[mol_name_init]*=(-1) # for absorption we are simply turning around the molecular component
         first=True
         for mol_name_init in slab_list:
+            mol_absorp=False
+            if '_absorp' in mol_name_init:
+                mol_absorp=True
+                idx_comp=mol_name_init.find('_absorp')
+                mol_name=mol_name_init[:idx_comp]
+                print(mol_name_init)
+                print('Will be used in absorption')
+                print('The follwoing slab data is used:')
+                print(mol_name)
+            elif '_comp' in mol_name_init:
+                idx_comp=mol_name_init.find('_comp')
+                mol_name=mol_name_init[:idx_comp]
+                print(mol_name_init)
+                print('is changed to')
+                print(mol_name)
+            else:
+                mol_name=mol_name_init
             self.slab_parameters[f'{mol_name_init}:col']=np.load(f'{slab_folder}{slab_prefix}{mol_name}_parameter_col.npy')
             self.slab_parameters[f'{mol_name_init}:temp']=np.load(f'{slab_folder}{slab_prefix}{mol_name}_parameter_temp.npy')
             if first:
