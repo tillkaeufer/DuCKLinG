@@ -1667,7 +1667,7 @@ except NameError:
         try:
             sig_obs_full
         except NameError:
-            sig_obs_full=flux_obs_full*np.median(tot_samples[:,idx_sigma])
+            sig_obs_full=flux_obs_full*10**np.median(tot_samples[:,idx_sigma])
     elif 'sigma_obs' in complete_header:
         idx_sigma=np.where(complete_header=='sigma_obs')[0]
         sig_obs=flux_obs*np.median(tot_samples[:,idx_sigma])
@@ -1688,27 +1688,41 @@ except NameError:
     elif 'sigma_obs_abs' in complete_header:
         idx_sigma=np.where(complete_header=='sigma_ob_abs')[0]
         sig_obs=np.median(tot_samples[:,idx_sigma])
-
+        try:
+            sig_obs_full
+        except NameError:
+            sig_obs_full=np.ones_like(lam_obs_full)*sig_obs
 
     elif 'sigma_obs'in fixed_dict:
         sig_obs=fixed_dict['sigma_obs']*flux_obs
-
+        try:
+            sig_obs_full
+        except NameError:
+            sig_obs_full=flux_obs_full*fixed_dict['sigma_obs']
         
     elif 'log_sigma_obs'in fixed_dict:
         sig_obs=10**fixed_dict['log_sigma_obs']*flux_obs
+        try:
+            sig_obs_full
+        except NameError:
+            sig_obs_full=flux_obs_full*10**fixed_dict['log_sigma_obs']
     elif 'sigma_obs'in fixed_dict:
         sig_obs=fixed_dict['sigma_obs_abs']
-        
+        try:
+            sig_obs_full
+        except NameError:
+            sig_obs_full=np.ones_like(lam_obs_full)*sig_obs
     elif 'sigma_obs'in fixed_dict:
         sig_obs=10**fixed_dict['log_sigma_obs_abs']
+        try:
+            sig_obs_full
+        except NameError:
+            sig_obs_full=np.ones_like(lam_obs_full)*sig_obs
     else:
         sig_obs=np.zeros_like(flux_obs)
+        sig_obs_full=np.zeros_like(lam_obs_full)
         print('Plot sig obs as 0')
 
-try:
-    sig_obs_full
-except NameError:
-    sig_obs_full=np.ones_like(lam_obs_full)*sig_obs
 
 if not ignore_spectrum_plot:
     if save_flux:
@@ -1915,7 +1929,7 @@ if not ignore_spectrum_plot:
                     if dict_dust_info[comp_names_dust[idx_comp]]['style'] not in styles_used:
                         styles_used.append(dict_dust_info[comp_names_dust[idx_comp]]['style'])
                         custom_lines.append(Line2D([0], [0], color='black', lw=1,linestyle=dict_dust_info[comp_names_dust[idx_comp]]['style']))
-                        custom_labels.append(dict_dust_info[comp_names_dust[idx_comp]]['Size'])
+                        custom_labels.append(dict_dust_info[comp_names_dust[idx_comp]]['Size'] +r"$\mu m$")
                         idx_style.append(idx_run)
                         idx_run+=1
                     if max_dust_new>max_dust:
@@ -2157,7 +2171,7 @@ if not ignore_spectrum_plot:
     if plot_dust_individual:
 
 
-        list_style_dust=['dotted','dashdot','dashed',(0, (5, 1)),(0, (3, 1, 1, 1)),'solid']
+        list_style_dust=['dotted','dashdot','dashed',(0, (3, 5, 1, 5, 1, 5)),(0, (3, 1, 1, 1)),'solid']
 
         list_color_dust=['tab:orange','tab:green','tab:red','tab:purple','tab:brown','tab:pink','tab:cyan']
                 
