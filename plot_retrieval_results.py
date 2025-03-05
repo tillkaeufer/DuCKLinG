@@ -1753,7 +1753,7 @@ if not ignore_spectrum_plot:
                                        plot_components=True,stellar_components=stellar_components,
                                        rim_components=rim_components,midplane_components=midplane_components,
                                        surface_components=surface_components,absorp_components=absorp_components,emission_components=emission_components,
-                                       individual_surface=dict_individual_flux, individual_absorp=dict_individual_flux_absorp,
+                                       individual_surface=dict_individual_flux, individual_absorp=dict_individual_flux_absorp,dict_dust_info={},
                                        plot_individual_surface=False,number_plotted_dust=0,debug=True):
         comp_dict={}
         indi_dust_dict={}
@@ -1762,7 +1762,6 @@ if not ignore_spectrum_plot:
         xmin = 0.07
         xmax = np.amax(model_wave)*1.5
 
-        ax.set_xscale('log')
         ax.set_xlim([xmin,xmax])
         ax.set_xlabel(r'$\lambda\rm [\mu m]$', fontsize=20)
         ax.set_ylabel(r'$F_\nu\rm [Jy]$', fontsize=20)
@@ -1776,20 +1775,21 @@ if not ignore_spectrum_plot:
             x_model=model_wave
             y_model=y_predict_set
         #print(np.shape(y_model))
-        y_median=np.median(y_model,axis=0)
-        y_std=np.percentile(y_model,50+68/2,axis=0)
-        y_2std=np.percentile(y_model,50+95/2,axis=0)
-        y_3std=np.percentile(y_model,50+99.9/2,axis=0)
-        y_std_min=np.percentile(y_model,50-68/2,axis=0)
-        y_2std_min=np.percentile(y_model,50-95/2,axis=0)
-        y_3std_min=np.percentile(y_model,50-99.9/2,axis=0)
-        #print(np.shape(y_3std_min),np.shape(y_3std_min),np.shape(x_model))
-        ax.fill_between(x_model,y_3std_min,y_3std,color='black',alpha=0.1,zorder=100)
-        ax.fill_between(x_model,y_2std_min,y_2std,color='black',alpha=0.3,zorder=100)
-        ax.fill_between(x_model,y_std_min,y_std,color='black',alpha=0.5,zorder=100)
-        ax.plot(x_model,y_median,label='Model',alpha=1,color='black',zorder=100)
-        min_val=np.min(y_median)
-        max_val=np.max(y_median)
+        if not plot_individual_surface:
+            y_median=np.median(y_model,axis=0)
+            y_std=np.percentile(y_model,50+68/2,axis=0)
+            y_2std=np.percentile(y_model,50+95/2,axis=0)
+            y_3std=np.percentile(y_model,50+99.9/2,axis=0)
+            y_std_min=np.percentile(y_model,50-68/2,axis=0)
+            y_2std_min=np.percentile(y_model,50-95/2,axis=0)
+            y_3std_min=np.percentile(y_model,50-99.9/2,axis=0)
+            #print(np.shape(y_3std_min),np.shape(y_3std_min),np.shape(x_model))
+            ax.fill_between(x_model,y_3std_min,y_3std,color='black',alpha=0.1,zorder=100)
+            ax.fill_between(x_model,y_2std_min,y_2std,color='black',alpha=0.3,zorder=100)
+            ax.fill_between(x_model,y_std_min,y_std,color='black',alpha=0.5,zorder=100)
+            ax.plot(x_model,y_median,label='Model',alpha=1,color='black',zorder=100)
+            min_val=np.min(y_median)
+            max_val=np.max(y_median)
         if plot_components:
             comp_names=['Stellar flux','Stellar + rim flux','Midplane flux']
             if use_dust_emis:
@@ -1805,6 +1805,8 @@ if not ignore_spectrum_plot:
             
             comp_list=[stellar_components,rim_components,midplane_components]
             
+
+
             if use_dust_emis:
                 comp_list.append(surface_components)
             if use_dust_absorp:
@@ -1814,29 +1816,30 @@ if not ignore_spectrum_plot:
                     comp_list.append(emission_components)
                 else:      
                     comp_list.append(emission_components*(-1.0))
-            for idx_comp in range(len(comp_list)):
-                print('Adding ',comp_names[idx_comp])
-                comp=comp_list[idx_comp]
-                y_median_comp=np.median(comp,axis=0)
-                y_std_comp=np.percentile(comp,50+68/2,axis=0)
-                y_2std_comp=np.percentile(comp,50+95/2,axis=0)
-                y_3std_comp=np.percentile(comp,50+99.9/2,axis=0)
-                y_std_min_comp=np.percentile(comp,50-68/2,axis=0)
-                y_2std_min_comp=np.percentile(comp,50-95/2,axis=0)
-                y_3std_min_comp=np.percentile(comp,50-99.9/2,axis=0)
-                comp_dict[comp_names[idx_comp]]={}
-                comp_dict[comp_names[idx_comp]]['median']=y_median_comp
-                comp_dict[comp_names[idx_comp]]['std']=y_std_comp
-                comp_dict[comp_names[idx_comp]]['std2']=y_2std_comp
-                comp_dict[comp_names[idx_comp]]['std3']=y_3std_comp
-                comp_dict[comp_names[idx_comp]]['std_min']=y_std_min_comp
-                comp_dict[comp_names[idx_comp]]['std2_min']=y_2std_min_comp
-                comp_dict[comp_names[idx_comp]]['std3_min']=y_3std_min_comp
+            if not plot_individual_surface:
+                for idx_comp in range(len(comp_list)):
+                    print('Adding ',comp_names[idx_comp])
+                    comp=comp_list[idx_comp]
+                    y_median_comp=np.median(comp,axis=0)
+                    y_std_comp=np.percentile(comp,50+68/2,axis=0)
+                    y_2std_comp=np.percentile(comp,50+95/2,axis=0)
+                    y_3std_comp=np.percentile(comp,50+99.9/2,axis=0)
+                    y_std_min_comp=np.percentile(comp,50-68/2,axis=0)
+                    y_2std_min_comp=np.percentile(comp,50-95/2,axis=0)
+                    y_3std_min_comp=np.percentile(comp,50-99.9/2,axis=0)
+                    comp_dict[comp_names[idx_comp]]={}
+                    comp_dict[comp_names[idx_comp]]['median']=y_median_comp
+                    comp_dict[comp_names[idx_comp]]['std']=y_std_comp
+                    comp_dict[comp_names[idx_comp]]['std2']=y_2std_comp
+                    comp_dict[comp_names[idx_comp]]['std3']=y_3std_comp
+                    comp_dict[comp_names[idx_comp]]['std_min']=y_std_min_comp
+                    comp_dict[comp_names[idx_comp]]['std2_min']=y_2std_min_comp
+                    comp_dict[comp_names[idx_comp]]['std3_min']=y_3std_min_comp
 
-                ax.fill_between(x_model,comp_dict[comp_names[idx_comp]]['std3_min'],comp_dict[comp_names[idx_comp]]['std3'],color=comp_colors[idx_comp],alpha=0.1)
-                ax.fill_between(x_model,comp_dict[comp_names[idx_comp]]['std2_min'],comp_dict[comp_names[idx_comp]]['std2'],color=comp_colors[idx_comp],alpha=0.3)
-                ax.fill_between(x_model,comp_dict[comp_names[idx_comp]]['std_min'],comp_dict[comp_names[idx_comp]]['std'],color=comp_colors[idx_comp],alpha=0.5)
-                ax.plot(x_model,comp_dict[comp_names[idx_comp]]['median'],label=comp_names[idx_comp],alpha=1,color=comp_colors[idx_comp])
+                    ax.fill_between(x_model,comp_dict[comp_names[idx_comp]]['std3_min'],comp_dict[comp_names[idx_comp]]['std3'],color=comp_colors[idx_comp],alpha=0.1)
+                    ax.fill_between(x_model,comp_dict[comp_names[idx_comp]]['std2_min'],comp_dict[comp_names[idx_comp]]['std2'],color=comp_colors[idx_comp],alpha=0.3)
+                    ax.fill_between(x_model,comp_dict[comp_names[idx_comp]]['std_min'],comp_dict[comp_names[idx_comp]]['std'],color=comp_colors[idx_comp],alpha=0.5)
+                    ax.plot(x_model,comp_dict[comp_names[idx_comp]]['median'],label=comp_names[idx_comp],alpha=1,color=comp_colors[idx_comp])
             if plot_individual_surface:
                 dust_emission_plot=True
                 if len(list(individual_surface.keys()))==0:
@@ -1848,9 +1851,6 @@ if not ignore_spectrum_plot:
                 for lab in comp_keys:
                     comp_names_dust.append(nicer_labels_single(lab))
 
-                comp_colors_dust=['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0',
-                                '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000',
-                                '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000']
                 comp_list_dust=[]
                 max_vals_dust=[]
                 for comp in comp_keys:
@@ -1870,11 +1870,11 @@ if not ignore_spectrum_plot:
                     indi_dust_dict[comp_names_dust[idx_comp]]={}
                     indi_dust_dict[comp_names_dust[idx_comp]]['median']=y_median_comp
                     indi_dust_dict[comp_names_dust[idx_comp]]['std']=y_std_comp
-                    indi_dust_dict[comp_names_dust[idx_comp]]['std2']=y_2std_comp
-                    indi_dust_dict[comp_names_dust[idx_comp]]['std3']=y_3std_comp
+                    #indi_dust_dict[comp_names_dust[idx_comp]]['std2']=y_2std_comp
+                    #indi_dust_dict[comp_names_dust[idx_comp]]['std3']=y_3std_comp
                     indi_dust_dict[comp_names_dust[idx_comp]]['std_min']=y_std_min_comp
-                    indi_dust_dict[comp_names_dust[idx_comp]]['std2_min']=y_2std_min_comp
-                    indi_dust_dict[comp_names_dust[idx_comp]]['std3_min']=y_3std_min_comp
+                    #indi_dust_dict[comp_names_dust[idx_comp]]['std2_min']=y_2std_min_comp
+                    #indi_dust_dict[comp_names_dust[idx_comp]]['std3_min']=y_3std_min_comp
                     max_vals_dust.append(np.max(y_median_comp))
 
                 max_vals_dust=np.array(max_vals_dust)
@@ -1892,32 +1892,106 @@ if not ignore_spectrum_plot:
                 else:
                     comp_list_select=np.arange(0,len(comp_list_dust),1)
 
-                idx_colour_count=0
+                max_dust=0.0
+                custom_lines=[]
+                custom_labels=[]
+                colors_used=[]
+                styles_used=[]
+                idx_run=0
+                idx_style=[]
                 for idx_comp in comp_list_select:
 
-                    if debug:
-                        print('idx comp', idx_comp)
-                        print('dust name',comp_names_dust[idx_comp])
-                    idx_comp_color=idx_colour_count
-                    while idx_comp_color>=len(comp_colors_dust):
-                        idx_comp_color-=len(comp_colors_dust)
-                        if debug:
-                            print('Adjust color to',idx_comp_color)
-                    ax.fill_between(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['std3_min'],indi_dust_dict[comp_names_dust[idx_comp]]['std3'],color=comp_colors_dust[idx_comp_color],alpha=0.1)
-                    ax.fill_between(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['std2_min'],indi_dust_dict[comp_names_dust[idx_comp]]['std2'],color=comp_colors_dust[idx_comp_color],alpha=0.3)
-                    ax.fill_between(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['std_min'],indi_dust_dict[comp_names_dust[idx_comp]]['std'],color=comp_colors_dust[idx_comp_color],alpha=0.5)
-                    ax.plot(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['median'],label=comp_names_dust[idx_comp],alpha=1,color=comp_colors_dust[idx_comp_color])
-                    idx_colour_count+=1
+                    #ax.fill_between(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['std3_min'],indi_dust_dict[comp_names_dust[idx_comp]]['std3'],color=dict_dust_info[comp_names_dust[idx_comp]]['color'],alpha=0.1)
+                    #ax.fill_between(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['std2_min'],indi_dust_dict[comp_names_dust[idx_comp]]['std2'],color=dict_dust_info[comp_names_dust[idx_comp]]['color'],alpha=0.3)
+                    ax.fill_between(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['std_min'],indi_dust_dict[comp_names_dust[idx_comp]]['std'],color=dict_dust_info[comp_names_dust[idx_comp]]['color'],alpha=0.5)
+                    ax.plot(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['median'],label=comp_names_dust[idx_comp],alpha=1,color=dict_dust_info[comp_names_dust[idx_comp]]['color'],linestyle=dict_dust_info[comp_names_dust[idx_comp]]['style'])
+                    max_dust_new=np.max(indi_dust_dict[comp_names_dust[idx_comp]]['median'])
+
+                    if dict_dust_info[comp_names_dust[idx_comp]]['color'] not in colors_used:
+                        colors_used.append(dict_dust_info[comp_names_dust[idx_comp]]['color'])
+                        custom_lines.append(Line2D([0], [0], color=dict_dust_info[comp_names_dust[idx_comp]]['color'], lw=4))
+                        custom_labels.append(dict_dust_info[comp_names_dust[idx_comp]]['Compo'])
+                        idx_run+=1
+                    if dict_dust_info[comp_names_dust[idx_comp]]['style'] not in styles_used:
+                        styles_used.append(dict_dust_info[comp_names_dust[idx_comp]]['style'])
+                        custom_lines.append(Line2D([0], [0], color='black', lw=1,linestyle=dict_dust_info[comp_names_dust[idx_comp]]['style']))
+                        custom_labels.append(dict_dust_info[comp_names_dust[idx_comp]]['Size'])
+                        idx_style.append(idx_run)
+                        idx_run+=1
+                    if max_dust_new>max_dust:
+                        max_dust=max_dust_new
         sig_obs=np.array(sig_obs)
 
         if obs_as_line:
-
+            
             print('Adding  Observation')
-            ax.fill_between(wave_obs,flux_obs-sig_obs,flux_obs+sig_obs,alpha=0.5,color='tab:blue',zorder=1000)
-            ax.plot(wave_obs,flux_obs,label='Observation',color='tab:blue',alpha=0.7,zorder=1000)
+            if plot_individual_surface:
+                for idx_check in idx_style:
+                    custom_labels.insert(0, custom_labels.pop(idx_check))
+                    custom_lines.insert(0, custom_lines.pop(idx_check))
+
+                offset=max_dust-np.min(flux_obs)
+                print('Max dust',max_dust)
+                print('offset',offset)
+                print('max flux',np.max(flux_obs))
+                tot_model=rim_components+midplane_components
+                if use_dust_emis:
+                    tot_model+=surface_components
+                if use_dust_absorp:
+                    tot_model+=absorp_components*(-1.0)
+                idx_lam_obs=[]
+                for idx_mod in range(len(x_model)):
+                    if x_model[idx_mod] in wave_obs:
+                        idx_lam_obs.append(idx_mod)
+                idx_lam_obs=np.array(idx_lam_obs)
+                print(np.shape(tot_model))
+                tot_model=tot_model[:,idx_lam_obs]
+                y_median_comp=np.median(tot_model,axis=0)
+                y_std_comp=np.percentile(tot_model,50+68/2,axis=0)
+                y_std_min_comp=np.percentile(tot_model,50-68/2,axis=0)
+                ax.fill_between(wave_obs,y_std_min_comp+offset,y_std_comp+offset,alpha=0.5,color='tab:olive',zorder=1000)
+                ax.plot(wave_obs,y_median_comp+offset,color='tab:olive',alpha=0.7,zorder=1000)  
+                custom_labels.append('Continuum (offset)')
+                custom_lines.append(Line2D([0], [0], color='tab:olive', lw=4))
+                #ax.fill_between(wave_obs,flux_obs-sig_obs+offset,flux_obs+sig_obs+offset,alpha=0.5,color='tab:blue',zorder=1000)
+                ax.plot(wave_obs,flux_obs+offset,label='Observation (offset)',color='tab:blue',alpha=1,zorder=1000)  
+                custom_labels.append('Observation (offset)')
+                custom_lines.append(Line2D([0], [0], color='tab:blue', lw=4))
+                min_val=max_dust/10
+                max_val=np.max(flux_obs+sig_obs+offset)   
+                print(min_val,max_val)       
+            else:
+                ax.fill_between(wave_obs,flux_obs-sig_obs,flux_obs+sig_obs,alpha=0.5,color='tab:blue',zorder=1000)
+                ax.plot(wave_obs,flux_obs,label='Observation',color='tab:blue',alpha=0.7,zorder=1000)
 
         else:
-            ax.errorbar(wave_obs,flux_obs,yerr=sig_obs, label='Observation',alpha=0.7,zorder=1000)    
+            if plot_individual_surface:
+                for idx_check in idx_style:
+                    custom_labels.insert(0, custom_labels.pop(idx_check))
+                    custom_lines.insert(0, custom_lines.pop(idx_check))
+                offset=max_dust-np.min(flux_obs)
+                tot_model=rim_components+midplane_components
+                idx_lam_obs=[]
+                for idx_mod in range(len(x_model)):
+                    if x_model[idx_mod] in wave_obs:
+                        idx_lam_obs.append(idx_mod)
+                idx_lam_obs=np.array(idx_lam_obs)
+                tot_model=tot_model[:,idx_lam_obs]
+                y_median_comp=np.median(tot_model,axis=0)                
+                y_std_comp=np.percentile(tot_model,50+68/2,axis=0)
+                y_std_min_comp=np.percentile(tot_model,50-68/2,axis=0)
+                ax.fill_between(wave_obs,y_std_min_comp+offset,offset+y_std_comp,alpha=0.5,color='tab:olive',zorder=1000)
+                ax.plot(wave_obs,y_median_comp+offset,color='tab:olive',alpha=0.7,zorder=1000)  
+                custom_labels.append('Continuum (offset)')
+                custom_lines.append(Line2D([0], [0], color='tab:olive', lw=4))
+                ax.errorbar(wave_obs,flux_obs+offset,yerr=sig_obs,color='tab:blue',alpha=0.7,zorder=1000)  
+                custom_labels.append('Observation (offset)')
+                custom_lines.append(Line2D([0], [0], color='tab:blue', lw=4))
+                min_val=max_dust/10
+                max_val=np.max(flux_obs+offset+sig_obs)   
+      
+            else:
+                ax.errorbar(wave_obs,flux_obs,yerr=sig_obs, label='Observation',alpha=0.7,zorder=1000)    
 
         axbox = ax.get_position()
 
@@ -1926,22 +2000,32 @@ if not ignore_spectrum_plot:
             ax.set_ylim(bottom=ylim[0],top=ylim[1])
         else:
             ax.set_ylim(bottom=min_val*0.9,top=max_val*1.1)
-
-        ax.set_xscale('log')
+        if not plot_individual_surface:
+            ax.set_xscale('log')
         if not fit_gas_only:
             ax.set_yscale('log')
         if max_wave!=' ':
             ax.set_xlim(right=max_wave)
         else:
-            ax.set_xlim(left=np.min(x_model),right=np.max(x_model))
-        legend = ax.legend(frameon=True,ncol=1,markerscale=0.7,scatterpoints=1,labelspacing=0.0,fancybox=True)
+            if plot_individual_surface:
+                ax.set_xlim(left=np.min(lam_obs),right=np.max(lam_obs)) 
+            else:
+                ax.set_xlim(left=np.min(x_model),right=np.max(x_model))
+        if plot_individual_surface:
+
+            legend=ax.legend(custom_lines,custom_labels,loc=(-0.0,1.05),ncol=max(1,len(custom_lines)//3))
+        else:
+            legend = ax.legend(frameon=True,ncol=1,markerscale=0.7,scatterpoints=1,labelspacing=0.0,fancybox=True)
         for label in legend.get_texts():
             label.set_fontsize('large')
 
         plt.tight_layout()
         if save:
             if plot_individual_surface:
-                plt.savefig(save_name+reduce_str+'_dust'+f'.{filetype_fig}',bbox_inches='tight')
+                if number_plotted_dust!=0:
+                    plt.savefig(save_name+reduce_str+'_dust_'+str(number_plotted_dust)+f'.{filetype_fig}',bbox_inches='tight')
+                else:
+                    plt.savefig(save_name+reduce_str+'_dust'+f'.{filetype_fig}',bbox_inches='tight')
             else:
                 plt.savefig(save_name+reduce_str+f'.{filetype_fig}',bbox_inches='tight')
         if close_plots:
@@ -1950,7 +2034,7 @@ if not ignore_spectrum_plot:
 
             plt.show()
 
-        if zoom:
+        if zoom and not plot_individual_surface:
             for zoom_in in zoom_in_list:
                 print('Plotting zoomed in')
                 print('at',zoom_in)
@@ -2045,10 +2129,7 @@ if not ignore_spectrum_plot:
 
                 plt.tight_layout()
                 if save:
-                    if plot_individual_surface:
-                        plt.savefig(f'{save_name}_zoom_{str(zoom_in[0])}_{str(zoom_in[1])}{reduce_str}_dust.{filetype_fig}',bbox_inches='tight')
-                    else:
-                        plt.savefig(f'{save_name}_zoom_{str(zoom_in[0])}_{str(zoom_in[1])}{reduce_str}.{filetype_fig}',bbox_inches='tight')
+                    plt.savefig(f'{save_name}_zoom_{str(zoom_in[0])}_{str(zoom_in[1])}{reduce_str}.{filetype_fig}',bbox_inches='tight')
 
                 if close_plots:
                     plt.close()
@@ -2064,15 +2145,6 @@ if not ignore_spectrum_plot:
     print('Plotting component plot...')
     print('Zoom list',zoom_list)
 
-    if plot_dust_individual:
-        print('Plotting dust version of the component plot')
-        plot_model_uncertainties_names(flux_obs_full,sig_obs_full,lam_obs_full,array_flux,con_model_new.xnew,wave_obs_fitted=lam_obs,
-                                   folder='folder',zoom_in_list=zoom_list,save=True,
-                                       save_name=save_folder+str(run_number)+'_Component_plot',
-                                       min_wave=min_wave,ylim='',max_wave=max_wave,
-                                       individual_surface=dict_individual_flux,
-                                       plot_individual_surface=True,number_plotted_dust=number_plotted_dust)
-
     if fit_gas_only:
         plot_model_uncertainties_names(flux_obs_full,sig_obs_full,lam_obs_full,array_flux,con_model_new.xnew,wave_obs_fitted=lam_obs,
                                    folder='folder', zoom_in_list=zoom_list, save=True, save_name=save_folder+str(run_number)+'_Component_plot', min_wave=min_wave,ylim='',max_wave=max_wave,plot_components=False)
@@ -2082,6 +2154,56 @@ if not ignore_spectrum_plot:
                                    folder='folder', zoom_in_list=zoom_list, save=True, save_name=save_folder+str(run_number)+'_Component_plot', min_wave=min_wave,ylim='',max_wave=max_wave)
 
 
+    if plot_dust_individual:
+
+
+        list_style_dust=['dotted','dashdot','dashed','densely dashed','densely dashdotted','solid']
+
+        list_color_dust=['tab:orange','tab:green','tab:red','tab:purple','tab:brown','tab:pink','tab:cyan']
+                
+        dust_emission_plot=True
+        if len(list(dict_individual_flux.keys()))==0:
+            comp_keys=list(dict_individual_flux_absorp.keys())
+            dust_emission_plot=False
+        else:
+            comp_keys=list(dict_individual_flux.keys())
+        comp_names_dust=[]
+
+        dict_dust_info={}
+        idx_color=-1
+        compo_test=''
+        for lab in comp_keys:
+            nicer_lab_out=nicer_labels_single(lab,with_size=True)
+            dict_dust_info[nicer_lab_out]={}
+            dict_dust_info[nicer_lab_out]['Compo']=nicer_labels_single(lab,with_size=False)
+            size=nicer_labels_single(lab,with_size=True)[-3:]
+            dict_dust_info[nicer_lab_out]['Size']=size
+            if float(size)==0.1:
+                dict_dust_info[nicer_lab_out]['style']=list_style_dust[0]
+            elif float(size)==1.0:
+                dict_dust_info[nicer_lab_out]['style']=list_style_dust[1]
+            elif float(size)==2.0:
+                dict_dust_info[nicer_lab_out]['style']=list_style_dust[2]
+            elif float(size)==3.0:
+                dict_dust_info[nicer_lab_out]['style']=list_style_dust[3]
+            elif float(size)==4.0:
+                dict_dust_info[nicer_lab_out]['style']=list_style_dust[4]
+            elif float(size)==5.0:
+                dict_dust_info[nicer_lab_out]['style']=list_style_dust[5]
+            if dict_dust_info[nicer_lab_out]['Compo']!=compo_test:
+                idx_color+=1
+                compo_test=dict_dust_info[nicer_lab_out]['Compo']
+            dict_dust_info[nicer_lab_out]['color']=list_color_dust[idx_color]
+ 
+        print('Plotting dust version of the component plot')
+        plot_model_uncertainties_names(flux_obs_full,sig_obs_full,lam_obs_full,array_flux,con_model_new.xnew,wave_obs_fitted=lam_obs,
+                                   folder='folder',zoom_in_list=zoom_list,save=True,
+                                       save_name=save_folder+str(run_number)+'_Component_plot',
+                                       min_wave=min_wave,ylim='',max_wave=max_wave,
+                                       individual_surface=dict_individual_flux,dict_dust_info=dict_dust_info,
+                                       plot_individual_surface=True,number_plotted_dust=number_plotted_dust)
+
+ 
 
 
     print('...Saved')        
