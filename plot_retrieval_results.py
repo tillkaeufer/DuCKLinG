@@ -1968,9 +1968,9 @@ if not ignore_spectrum_plot:
                 custom_labels.append('Continuum (offset)')
                 custom_lines.append(Line2D([0], [0], color='tab:olive', lw=4))
                 #ax.fill_between(wave_obs,flux_obs-sig_obs+offset,flux_obs+sig_obs+offset,alpha=0.5,color='tab:blue',zorder=1000)
-                ax.plot(wave_obs,flux_obs+offset,label='Observation (offset)',color='tab:blue',alpha=1,zorder=1000)  
+                ax.plot(wave_obs,flux_obs+offset,label='Observation (offset)',color='black',alpha=0.7,zorder=1001)  
                 custom_labels.append('Observation (offset)')
-                custom_lines.append(Line2D([0], [0], color='tab:blue', lw=4))
+                custom_lines.append(Line2D([0], [0], color='black', lw=4))
                 min_val=max_dust/10
                 max_val=np.max(flux_obs+sig_obs+offset)   
                 print(min_val,max_val)       
@@ -1998,9 +1998,9 @@ if not ignore_spectrum_plot:
                 ax.plot(wave_obs,y_median_comp+offset,color='tab:olive',alpha=0.7,zorder=1000)  
                 custom_labels.append('Continuum (offset)')
                 custom_lines.append(Line2D([0], [0], color='tab:olive', lw=4))
-                ax.errorbar(wave_obs,flux_obs+offset,yerr=sig_obs,color='tab:blue',alpha=0.7,zorder=1000)  
+                ax.errorbar(wave_obs,flux_obs+offset,yerr=sig_obs,color='black',alpha=0.7,zorder=1000)  
                 custom_labels.append('Observation (offset)')
-                custom_lines.append(Line2D([0], [0], color='tab:blue', lw=4))
+                custom_lines.append(Line2D([0], [0], color='black', lw=4))
                 min_val=max_dust/10
                 max_val=np.max(flux_obs+offset+sig_obs)   
       
@@ -2173,7 +2173,7 @@ if not ignore_spectrum_plot:
 
         list_style_dust=['dotted','dashdot','dashed',(0, (3, 5, 1, 5, 1, 5)),(0, (3, 1, 1, 1)),'solid']
 
-        list_color_dust=['tab:orange','tab:green','tab:red','tab:purple','tab:brown','tab:pink','tab:cyan']
+        list_color_dust=['tab:blue','tab:orange','tab:green','tab:red','tab:purple','tab:brown','tab:pink','tab:cyan']
                 
         dust_emission_plot=True
         if len(list(dict_individual_flux.keys()))==0:
