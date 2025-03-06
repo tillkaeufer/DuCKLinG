@@ -48,6 +48,8 @@ Generally, my experience is that ultranest is the only reliable option for very 
 
 ### Download gas files
 
+If you are only interested in fitting the dust component you do not need to download the slab files. Instead you can create an empty folder caleld 'LineData' in the DuCKLinG directory and everything should be working.
+
 The molecular emission in DuCKLinG is calculated from a grid of 0D ProDiMo-slab models calculated by [Arabhavi et al. (2024)](https://doi.org/10.1126/science.adi8147).  
 The files are available in this [folder](https://drive.google.com/drive/folders/1XAEgrss9oupWWGo_nNQyHwQFsfMxEiKq?usp=sharing).  
 Download the folder and add it in DuCKLinG/LineData to have the example work without changing the paths.  
