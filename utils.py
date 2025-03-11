@@ -3702,3 +3702,81 @@ def calc_weights(lam_obs,target_res=2500):
     print('Max and min weight:',np.max(weights),np.min(weights))
     #print(weights)
     return weights
+
+
+def check_if_priors_in_linedata(slab_prior_dict,fixed_dict,slab_folder='./LineData/', slab_prefix='1_',log_coldens=True):
+    print('------------------------------------')
+    print('------------------------------------')
+    print('Checking if all priors are in the line data')
+    for mol in slab_prior_dict:
+        if '_comp' in mol:
+            idx_comp=mol.find('_comp')
+            mol_name=mol[:idx_comp]
+        elif '_absorp' in mol:
+            idx_abs=mol.find('_absorp')
+            mol_name=mol[:idx_abs]        
+        else:
+            mol_name=mol
+        temp_grid=np.load(f'{slab_folder}/{slab_prefix}{mol_name}_parameter_temp.npy')
+        col_grid=np.load(f'{slab_folder}/{slab_prefix}{mol_name}_parameter_col.npy')
+        temp_test=[]
+        col_test=[]
+        if 'temis' in slab_prior_dict[mol]:
+            temp_list=slab_prior_dict[mol]['temis']
+            for temp in temp_list:
+                temp_test.append(temp)
+
+        else:
+            temp_list=slab_prior_dict[mol]['tmax']
+            for temp in temp_list:
+                temp_test.append(temp)
+            temp_list=slab_prior_dict[mol]['tmin']
+            for temp in temp_list:
+                temp_test.append(temp)
+        if 'ColDens' in slab_prior_dict[mol]:
+            col_list=slab_prior_dict[mol]['ColDens']
+            for col in col_list:
+                if log_coldens:
+                    col_test.append(10**col)
+                else:
+                    col_test.append(col)
+        else:
+            col_list=slab_prior_dict[mol]['ColDens_tmax']
+            for col in col_list:
+                if log_coldens:
+                    col_test.append(10**col)
+                else:
+                    col_test.append(col)
+            col_list=slab_prior_dict[mol]['ColDens_tmin']
+            for col in col_list:
+                if log_coldens:
+                    col_test.append(10**col)
+                else:
+                    col_test.append(col)
+
+        col_test=np.array(col_test)
+        temp_test=np.array(temp_test)
+        if np.max(temp_test)>np.max(temp_grid):
+            print('Temperature prior not in grid for',mol)
+            print('Max grid',np.max(temp_grid))
+            print('Max prior',np.max(temp_test))
+            exit()
+        if np.min(temp_test)<np.min(temp_grid):
+            print('Temperature prior not in grid for',mol)
+            print('Min grid',np.min(temp_grid))
+            print('Min prior',np.min(temp_test))
+            exit()
+        if np.max(col_test)>np.max(col_grid):
+            print('Column density prior not in grid for',mol)
+            print('Max grid',np.max(col_grid))
+            print('Max prior',np.max(col_test))
+            exit()
+        if np.min(col_test)<np.min(col_grid):
+            print('Column density prior not in grid for',mol)
+            print('Min grid',np.min(col_grid))
+            print('Min prior',np.min(col_test))
+            exit()
+    print('All priors are within the line data!')
+    print('------------------------------------')
+    print('------------------------------------')
+

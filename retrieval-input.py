@@ -267,6 +267,13 @@ except NameError:
 
 debug=False
 
+
+
+# Checking if all the slab priors are within the allowed ranges of the line data
+check_if_priors_in_linedata(slab_prior_dict=slab_prior_dict,fixed_dict=fixed_dict,slab_folder=slab_folder, slab_prefix=slab_prefix,log_coldens=log_coldens)
+
+
+
 sigma_dict={}
 
 # # here starts the part where you have to adjust things
