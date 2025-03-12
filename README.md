@@ -295,6 +295,7 @@ This function has a couple of options that allow you to change the plotting. The
 - If the path to output directory is too long, Multinest cannot save its output file names properly due to the limits on fortran.
 - If you are running the plotting routine on a mac, there might be an error if you are using the custom_list argument (e.g python plot_retrieval_results.py custom_list [[5,40]]), you can fix it by adding 'noglob' to the line (e.g. noglob python plot_retrieval_results.py custom_list [[5,40]])
 - If you get errors that some functions are unknown, make sure that you are in the DuCKLinG directory when running your code. This is necessary because functions are loaded from utils.py.
+- If a stellar spectrum is provided, it has to be longer than the observational data. Otherwise, you might get "ValueError: A value (---) in x_new is above the interpolation range's maximum value (---)."
   
 ## Paper that use the model
 
