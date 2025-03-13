@@ -1873,14 +1873,15 @@ if not ignore_spectrum_plot:
                     else:
                         comp_list_dust.append(individual_absorp[comp]*-1.0)
                 for idx_comp in range(len(comp_list_dust)):
+                    print('Calculating:',comp_names_dust[idx_comp])
                     comp=comp_list_dust[idx_comp]
                     y_median_comp=np.median(comp,axis=0)
                     y_std_comp=np.percentile(comp,50+68/2,axis=0)
-                    y_2std_comp=np.percentile(comp,50+95/2,axis=0)
-                    y_3std_comp=np.percentile(comp,50+99.9/2,axis=0)
+                    #y_2std_comp=np.percentile(comp,50+95/2,axis=0)
+                    #y_3std_comp=np.percentile(comp,50+99.9/2,axis=0)
                     y_std_min_comp=np.percentile(comp,50-68/2,axis=0)
-                    y_2std_min_comp=np.percentile(comp,50-95/2,axis=0)
-                    y_3std_min_comp=np.percentile(comp,50-99.9/2,axis=0)
+                    #y_2std_min_comp=np.percentile(comp,50-95/2,axis=0)
+                    #y_3std_min_comp=np.percentile(comp,50-99.9/2,axis=0)
                     indi_dust_dict[comp_names_dust[idx_comp]]={}
                     indi_dust_dict[comp_names_dust[idx_comp]]['median']=y_median_comp
                     indi_dust_dict[comp_names_dust[idx_comp]]['std']=y_std_comp
@@ -1955,7 +1956,7 @@ if not ignore_spectrum_plot:
                     tot_model+=absorp_components*(-1.0)
                 idx_lam_obs=[]
                 for idx_mod in range(len(x_model)):
-                    if x_model[idx_mod] in wave_obs:
+                    if x_model[idx_mod] in wave_obs_fitted:
                         idx_lam_obs.append(idx_mod)
                 idx_lam_obs=np.array(idx_lam_obs)
                 print(np.shape(tot_model))
@@ -1963,8 +1964,8 @@ if not ignore_spectrum_plot:
                 y_median_comp=np.median(tot_model,axis=0)
                 y_std_comp=np.percentile(tot_model,50+68/2,axis=0)
                 y_std_min_comp=np.percentile(tot_model,50-68/2,axis=0)
-                ax.fill_between(wave_obs,y_std_min_comp+offset,y_std_comp+offset,alpha=0.5,color='tab:olive',zorder=1000)
-                ax.plot(wave_obs,y_median_comp+offset,color='tab:olive',alpha=0.7,zorder=1000)  
+                ax.fill_between(wave_obs_fitted,y_std_min_comp+offset,y_std_comp+offset,alpha=0.5,color='tab:olive',zorder=1000)
+                ax.plot(wave_obs_fitted,y_median_comp+offset,color='tab:olive',alpha=0.7,zorder=1000)  
                 custom_labels.append('Continuum (offset)')
                 custom_lines.append(Line2D([0], [0], color='tab:olive', lw=4))
                 #ax.fill_between(wave_obs,flux_obs-sig_obs+offset,flux_obs+sig_obs+offset,alpha=0.5,color='tab:blue',zorder=1000)
@@ -1987,18 +1988,18 @@ if not ignore_spectrum_plot:
                 tot_model=rim_components+midplane_components
                 idx_lam_obs=[]
                 for idx_mod in range(len(x_model)):
-                    if x_model[idx_mod] in wave_obs:
+                    if x_model[idx_mod] in wave_obs_fitted:
                         idx_lam_obs.append(idx_mod)
                 idx_lam_obs=np.array(idx_lam_obs)
                 tot_model=tot_model[:,idx_lam_obs]
                 y_median_comp=np.median(tot_model,axis=0)                
                 y_std_comp=np.percentile(tot_model,50+68/2,axis=0)
                 y_std_min_comp=np.percentile(tot_model,50-68/2,axis=0)
-                ax.fill_between(wave_obs,y_std_min_comp+offset,offset+y_std_comp,alpha=0.5,color='tab:olive',zorder=1000)
-                ax.plot(wave_obs,y_median_comp+offset,color='tab:olive',alpha=0.7,zorder=1000)  
+                ax.fill_between(wave_obs_fitted,y_std_min_comp+offset,offset+y_std_comp,alpha=0.5,color='tab:olive',zorder=1000)
+                ax.plot(wave_obs_fitted,y_median_comp+offset,color='tab:olive',alpha=0.7,zorder=1000)  
                 custom_labels.append('Continuum (offset)')
                 custom_lines.append(Line2D([0], [0], color='tab:olive', lw=4))
-                ax.errorbar(wave_obs,flux_obs+offset,yerr=sig_obs,color='black',alpha=0.7,zorder=1000)  
+                ax.errorbar(wave_obs_fitted,flux_obs+offset,yerr=sig_obs,color='black',alpha=0.7,zorder=1000)  
                 custom_labels.append('Observation (offset)')
                 custom_lines.append(Line2D([0], [0], color='black', lw=4))
                 min_val=max_dust/10

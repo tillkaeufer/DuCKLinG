@@ -3694,7 +3694,7 @@ def calc_weights(lam_obs,target_res=2500):
 
     for i in range(len(lam_obs)-1):
         if (lam_obs[i+1]-lam_obs[i]) == 0:
-            print(i,wave[i])
+            print(i,lam_obs[i])
         spec_res=lam_obs[i]/(lam_obs[i+1]-lam_obs[i])
         weights[i]=target_res/spec_res
 
