@@ -115,6 +115,8 @@ class complete_model:
         self.absorp_flux_individual={}
         self.absorp_flux_individual_scaled={}
         self.run_tzones=False
+        self.two_dust_comp=False
+        self.two_dust_comp_abs=False
           
         self.bb_array=[]
         self.interp_bbody=False
@@ -571,16 +573,27 @@ class complete_model:
             # they are linearly interpolated to the wavlength grid
             # they are saved in a dictonary (self.data_dict) under the name of the specie
             for key in self.abundance_dict:
-                if debug: print('Load '+key+'...')
+                if '_hot' in key:
+                    idx_part=key.find('_hot')
+                    key_load=key[:idx_part]
+                    self.two_dust_comp=True
+                elif '_cold' in key:
+                    idx_part=key.find('_cold')
+                    key_load=key[:idx_part]
+                    self.two_dust_comp=True
+                else:
+                    key_load=key
+                    self.two_dust_comp=False
+                if debug: print('Load '+key_load+'...')
                 if '/' in key:
                     print('Make sure not to mix up dust species from different opacity mechanisms!!')
                     print(key)
 
                 if q_files:
-                    wavelength,kabs = np.loadtxt(dust_path+key,skiprows=1,usecols=(0,1),unpack=True)  
+                    wavelength,kabs = np.loadtxt(dust_path+key_load,skiprows=1,usecols=(0,1),unpack=True)  
 
                 else:
-                    wavelength,kabs = np.loadtxt(dust_path+key, comments="#", skiprows=0,
+                    wavelength,kabs = np.loadtxt(dust_path+key_load, comments="#", skiprows=0,
                                                           usecols=(0,1), unpack=True) 
                 if debug:
                     print('wavelength min max',np.min(wavelength),np.max(wavelength))
@@ -596,15 +609,25 @@ class complete_model:
             # they are linearly interpolated to the wavelength grid
             # they are saved in a dictionary (self.data_absorp_dict) under the name of the species
             for key in self.abundance_dict_absorp:
-                if debug: print('Load '+key+'...')
+                if '_hot' in key:
+                    idx_part=key.find('_hot')
+                    key_load=key[:idx_part]
+                    self.two_dust_comp_abs=True
+                elif '_cold' in key:
+                    idx_part=key.find('_cold')
+                    key_load=key[:idx_part]
+                    self.two_dust_comp_abs=True
+                else:
+                    key_load=key
+                    self.two_dust_comp_abs=False
                 if '/' in key:
                     print('Make sure not to mix up dust species from different opacity mechanisms!!')
                     print(key)
                 if q_files:
-                    wavelength,kabs = np.loadtxt(dust_path+key,skiprows=1,usecols=(0,1),unpack=True)  
+                    wavelength,kabs = np.loadtxt(dust_path+key_load,skiprows=1,usecols=(0,1),unpack=True)  
     
                 else:
-                    wavelength,kabs = np.loadtxt(dust_path+key, comments="#", skiprows=0,
+                    wavelength,kabs = np.loadtxt(dust_path+key_load, comments="#", skiprows=0,
                                                           usecols=(0,1), unpack=True) 
                 if debug:
                     print('wavelength min max',np.min(wavelength),np.max(wavelength))
@@ -916,7 +939,7 @@ class complete_model:
 
 
 
-    def set_surface(self,one_output=False,new_surface=True,small_window=False,timeit=False,absorption=False):
+    def set_surface(self,one_output=False,new_surface=True,small_window=False,timeit=False,absorption=False,comp='one'):
 
         '''
         The surface is in general:
@@ -933,10 +956,23 @@ class complete_model:
         
         if self.sur_powerlaw: # using a power law for the temperature distribution in the surface layer
             if not absorption:
-                tmin,tmax=self.variables['tmin_s'],self.variables['tmax_s']
+                if comp=='one':
+                
+                    tmin,tmax=self.variables['tmin_s'],self.variables['tmax_s']
+                elif comp=='hot':
+                    tmin,tmax=self.variables['tmin_hot_s'],self.variables['tmax_s']
+                elif comp=='cold':
+                    tmin,tmax=self.variables['tmin_s'],self.variables['tmax_cold_s']
+                    
                 used_exp=self.variables['exp_surface']
             else:
-                tmin,tmax=self.variables['tmin_abs'],self.variables['tmax_abs']
+                if comp=='one':
+                    tmin,tmax=self.variables['tmin_abs'],self.variables['tmax_abs']
+                elif comp=='hot':
+                    tmin,tmax=self.variables['tmin_hot_abs'],self.variables['tmax_abs']
+                elif comp=='cold':
+                    tmin,tmax=self.variables['tmin_abs'],self.variables['tmax_cold_abs']
+    
                 used_exp=self.variables['exp_abs']
                 
             if timeit: time1=time()
@@ -978,11 +1014,20 @@ class complete_model:
                     tot_bb_exp=np.trapz(fluxes,ar_temp,axis=0)
                     dust_abs=np.zeros_like(tot_bb_exp)
 
-                    for key in self.abundance_dict:
-                        if one_output:
-                            dust_abs+=self.abundance_dict[key]*self.data_dict[key] 
-                        else:
-                            self.surface_flux_individual[key]=self.data_dict[key]*tot_bb_exp
+                    if not absorption:
+                        for key in self.abundance_dict:
+                            if comp=='one' or comp in key:
+                                if one_output:
+                                    dust_abs+=self.abundance_dict[key]*self.data_dict[key] 
+                                else:
+                                    self.surface_flux_individual[key]=self.data_dict[key]*tot_bb_exp
+                    else:
+                        for key in self.abundance_dict_absorp:
+                            if comp=='one' or comp in key:
+                                if one_output:
+                                    dust_abs+=self.abundance_dict_absorp[key]*self.data_absorp_dict[key] 
+                                else:
+                                    self.absorp_flux_individual[key]=self.data_absorp_dict[key]*tot_bb_exp
 
                     if one_output:
                         flux_surface_tot=tot_bb_exp*dust_abs
@@ -1040,16 +1085,18 @@ class complete_model:
                     dust_abs=np.zeros_like(tot_bb_exp)
                     if not absorption:
                         for key in self.abundance_dict:
-                            if one_output:
-                                dust_abs+=self.abundance_dict[key]*self.data_dict[key] 
-                            else:
-                                self.surface_flux_individual[key]=self.data_dict[key]*tot_bb_exp
+                            if comp=='one' or comp in key:
+                                if one_output:
+                                    dust_abs+=self.abundance_dict[key]*self.data_dict[key] 
+                                else:
+                                    self.surface_flux_individual[key]=self.data_dict[key]*tot_bb_exp
                     else:
                         for key in self.abundance_dict_absorp:
-                            if one_output:
-                                dust_abs+=self.abundance_dict_absorp[key]*self.data_absorp_dict[key] 
-                            else:
-                                self.absorp_flux_individual[key]=self.data_absorp_dict[key]*tot_bb_exp
+                            if comp=='one' or comp in key:
+                                if one_output:
+                                    dust_abs+=self.abundance_dict_absorp[key]*self.data_absorp_dict[key] 
+                                else:
+                                    self.absorp_flux_individual[key]=self.data_absorp_dict[key]*tot_bb_exp
 
                     if one_output:
                         flux_surface_tot=tot_bb_exp*dust_abs
@@ -1089,22 +1136,24 @@ class complete_model:
                     i+=1
                 flux_sur=np.sum(flux,axis=0)
 
-                if absorption:
+                if not absorption:
                     for key in self.abundance_dict:
-                        dust_abs=self.data_dict[key] 
-                        dust_flux=dust_abs*flux_sur
-                        self.surface_flux_individual[key]=dust_flux
-                        if one_output:
-                            flux_surface_tot+=self.abundance_dict[key]*self.surface_flux_individual[key]
+                        if comp=='one' or comp in key:
+                            dust_abs=self.data_dict[key] 
+                            dust_flux=dust_abs*flux_sur
+                            self.surface_flux_individual[key]=dust_flux
+                            if one_output:
+                                flux_surface_tot+=self.abundance_dict[key]*self.surface_flux_individual[key]
                     if one_output:        
                         return flux_surface_tot
                 else:
                     for key in self.abundance_dict_absorp:
-                        dust_abs=self.data_absorp_dict[key] 
-                        dust_flux=dust_abs*flux_sur
-                        self.absorp_flux_individual[key]=dust_flux
-                        if one_output:
-                            flux_surface_tot+=self.abundance_dict_absorp[key]*self.absorp_flux_individual[key]
+                        if comp=='one' or comp in key:
+                            dust_abs=self.data_absorp_dict[key] 
+                            dust_flux=dust_abs*flux_sur
+                            self.absorp_flux_individual[key]=dust_flux
+                            if one_output:
+                                flux_surface_tot+=self.abundance_dict_absorp[key]*self.absorp_flux_individual[key]
                     if one_output:
                         return flux_surface_tot
 
@@ -1118,7 +1167,7 @@ class complete_model:
             flux_sur=self.bbody(used_temp,from_array=True)
             if one_output:
                 flux_surface_tot = np.zeros((self.nwav))
-            if absorption:
+            if not absorption:
                 for key in self.abundance_dict:
                     dust_abs=self.data_dict[key] 
                     dust_flux=dust_abs*flux_sur
@@ -2340,11 +2389,18 @@ class complete_model:
                 self.abundance_dict=dust_species
                 q_thin=self.variables['q_thin']
                 self.variables['exp_surface'] = (2.0 - q_thin)/q_thin
+                if self.two_dust_comp:
+                    self.variables['tmax_cold_s']=self.variables['tmin_s']+(self.variables['tmax_s']-self.variables['tmin_s'])*self.variables['t_change_s']
+                    self.variables['tmin_hot_s']=self.variables['tmax_cold_s']
 
             if self.use_dust_absorp:
                 self.abundance_dict_absorp=absorp_species
                 q_abs=self.variables['q_abs']
                 self.variables['exp_abs'] = (2.0 - q_abs)/q_abs
+                if self.two_dust_comp_abs:
+                    self.variables['tmax_cold_abs']=self.variables['tmin_abs']+(self.variables['tmax_abs']-self.variables['tmin_abs'])*self.variables['t_change_abs']
+                    self.variables['tmin_hot_abs']=self.variables['tmax_cold_abs']
+                    
                 
             q=self.variables['q_mid']
             self.variables['exp_midplane'] = (2.0 - q)/q
@@ -2396,9 +2452,19 @@ class complete_model:
                 midplane_flux=self.set_midplane()
 
                 if self.use_dust_emis:
-                    self.set_surface(timeit=timeit,absorption=False)
+                    if self.two_dust_comp:
+                        self.set_surface(timeit=timeit,absorption=False,comp='hot')
+                        self.set_surface(timeit=timeit,absorption=False,comp='cold')
+               
+                    else:
+                        self.set_surface(timeit=timeit,absorption=False)
                 if self.use_dust_absorp:
-                    self.set_surface(timeit=timeit,absorption=True)
+                    if self.two_dust_comp_abs:
+                        self.set_surface(timeit=timeit,absorption=True,comp='hot')
+                        self.set_surface(timeit=timeit,absorption=True,comp='cold')
+
+                    else:
+                        self.set_surface(timeit=timeit,absorption=True)
 
 
             self.set_emission_lines(one_output=False,scaled=False)
@@ -2459,11 +2525,20 @@ class complete_model:
                 midplane_flux=self.variables['sc_mid']*self.set_midplane()
                 if timeit: time5=time()
                 if self.use_dust_emis:
-                    surface_flux=self.set_surface(absorption=False,one_output=True)
+                    if self.two_dust_comp:
+                        surface_flux=self.set_surface(timeit=timeit,absorption=False,one_output=True,comp='hot')
+                        surface_flux+=self.set_surface(timeit=timeit,absorption=False,one_output=True,comp='cold')
+                    else:
+                        
+                        surface_flux=self.set_surface(absorption=False,one_output=True)
                 else:
                     surface_flux=np.zeros_like(rim_flux)
                 if self.use_dust_absorp:
-                    absorption_flux=self.set_surface(absorption=True,one_output=True)
+                    if self.two_dust_comp_abs:
+                        absorption_flux=self.set_surface(timeit=timeit,one_output=True,absorption=True,comp='hot')
+                        absorption_flux+=self.set_surface(timeit=timeit,one_output=True,absorption=True,comp='cold')
+                    else:
+                        absorption_flux=self.set_surface(absorption=True,one_output=True)
                 else:
                     absorption_flux=np.zeros_like(rim_flux)
                 if timeit: time6=time()
@@ -2544,11 +2619,19 @@ class complete_model:
         
         q=self.variables['q_mid']
         if self.use_dust_emis and  self.sur_powerlaw:
+
             q_thin=self.variables['q_thin']
             self.variables['exp_surface'] = (2.0 - q_thin)/q_thin
+            if self.two_dust_comp:
+                self.variables['tmax_cold_s']=self.variables['tmin_s']+(self.variables['tmax_s']-self.variables['tmin_s'])*self.variables['t_change_s']
+                self.variables['tmin_hot_s']=self.variables['tmax_cold_s']
         if self.use_dust_absorp and  self.abs_powerlaw:
             q_abs=self.variables['q_abs']
             self.variables['exp_abs'] = (2.0 - q_abs)/q_abs
+            if self.two_dust_comp_abs:
+                self.variables['tmax_cold_abs']=self.variables['tmin_abs']+(self.variables['tmax_abs']-self.variables['tmin_abs'])*self.variables['t_change_abs']
+                self.variables['tmin_hot_abs']=self.variables['tmax_cold_abs']
+           
         
         if 'q_emis' in self.variables:
             q_emis=self.variables['q_emis']
@@ -2593,9 +2676,19 @@ class complete_model:
         if timeit: time5=time()
 
         if self.use_dust_emis:
-            self.set_surface(absorption=False)
+            if self.two_dust_comp:
+                self.set_surface(timeit=timeit,absorption=False,comp='hot')
+                self.set_surface(timeit=timeit,absorption=False,comp='cold')
+        
+            else:
+                self.set_surface(timeit=timeit,absorption=False)
         if self.use_dust_absorp:
-            self.set_surface(absorption=True)
+            if self.two_dust_comp_abs:
+                self.set_surface(timeit=timeit,absorption=True,comp='hot')
+                self.set_surface(timeit=timeit,absorption=True,comp='cold')
+
+            else:
+                self.set_surface(timeit=timeit,absorption=True)
         if timeit: time6=time()
 
         self.set_emission_lines(one_output=False,scaled=True)
@@ -2896,9 +2989,17 @@ class complete_model:
             used_dict=self.abundance_dict
         else:
             used_dict=self.abundance_dict_absorp
-        for key in used_dict:
 
-            with open(dust_path+key,'r') as f:
+        for key in used_dict:
+            if '_hot' in key:
+                idx_part=key.find('_hot')
+                key_load=key[:idx_part]
+            elif '_cold' in key:
+                idx_part=key.find('_cold')
+                key_load=key[:idx_part]
+            else:
+                key_load=key
+            with open(dust_path+key_load,'r') as f:
                 lines=f.readlines()
             old_data=True
             for line in lines:
@@ -2910,7 +3011,7 @@ class complete_model:
             idx_rv=key.find('rv')
             rad=key[idx_rv+2:-4]
             if old_data:
-                with open(dust_path+key,'r') as f:
+                with open(dust_path+key_load,'r') as f:
                     rad,dens=f.readline().split()[1:3]
             #print(key,rad,dens)
             rad=float(rad)
@@ -3423,6 +3524,8 @@ class complete_model:
         plt.ylabel(r'$F_\nu$ [Jy]')
         plt.show()
 
+
+
 def create_header(var_dict,abundance_dict,slab_dict,fit_obs_err,fit_conti_err,fit_abs_err,fixed_dict,prior_dict,abundance_dict_absorption):
     header=[]
     header_para=[]
@@ -3583,7 +3686,7 @@ def cube_to_dicts(data,header_para,header_abund,header_all,scale_prior,header_ab
 
 
 
-def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_gas_only=False,use_dust_emis=True,use_dust_absorp=False,use_extinction=False,sur_powerlaw=True,abs_powerlaw=True,mol_powerlaw=True):
+def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_gas_only=False,use_dust_emis=True,use_dust_absorp=False,use_extinction=False,sur_powerlaw=True,abs_powerlaw=True,mol_powerlaw=True,two_dust_comp=False,two_dust_comp_abs=False):
     if fit_gas_only:
         var_dict={'distance':None}
         if mol_powerlaw:
@@ -3595,8 +3698,11 @@ def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_gas_only
             if sur_powerlaw:
                 var_dict['tmin_s']=None
                 var_dict['tmax_s']=None
+                if two_dust_comp:
+                    var_dict['t_change_s']=None
             else:
-                var_dict['temp_abs']=None
+                var_dict['temp_s']=None
+
                 
         var_dict['tmin_mp']=None
         var_dict['tmax_mp']=None
@@ -3608,6 +3714,8 @@ def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_gas_only
                 var_dict['tmax_abs']=None
                 var_dict['tmin_abs']=None
                 var_dict['q_abs']=None
+                if two_dust_comp_abs:
+                    var_dict['t_change_abs']=None
             else:
                 var_dict['temp_abs']=None
 

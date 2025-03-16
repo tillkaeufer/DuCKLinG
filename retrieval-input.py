@@ -367,19 +367,25 @@ if sample_all:
     for key in prior_dict_dust_abs:
         prior_dict_dust_abs[key]=prior_scaling_abs
 
-
+two_dust_comp=False
+two_dust_comp_abs=False
 if 'tmax_s' in prior_dict or 'temp_s' in prior_dict:
     use_dust_emis=True
-    if 'tmax_s' in prior_dict:
+    if 'tmax_s' in prior_dict or 'tmax_s' in fixed_dict:
         sur_powerlaw=True
+        if 't_change_s' in prior_dict:
+            two_dust_comp=True
+
     else:
         sur_powerlaw=False
 else:
     use_dust_emis=False
 if 'tmax_abs' in prior_dict or 'temp_abs' in prior_dict:
     use_dust_absorp=True
-    if 'tmax_abs' in prior_dict:
+    if 'tmax_abs' in prior_dict or 'tmax_abs' in fixed_dict:
         abs_powerlaw=True
+        if 't_change_abs' in prior_dict:
+            two_dust_comp_abs=True
     else:
         abs_powerlaw=False
 else:
@@ -392,7 +398,8 @@ if 'q_emis' in prior_dict or 'q_emis' in fixed_dict:
 
 # In[19]:
 init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw,fit_gas_only=fit_gas_only,
-                           prior_dict=prior_dict,fixed_dict=fixed_dict,use_extinction=use_extinction,use_dust_emis=use_dust_emis,use_dust_absorp=use_dust_absorp,sur_powerlaw=sur_powerlaw,abs_powerlaw=abs_powerlaw,mol_powerlaw=use_mol_powerlaw)
+                           prior_dict=prior_dict,fixed_dict=fixed_dict,use_extinction=use_extinction,use_dust_emis=use_dust_emis,use_dust_absorp=use_dust_absorp,
+                           sur_powerlaw=sur_powerlaw,abs_powerlaw=abs_powerlaw,mol_powerlaw=use_mol_powerlaw,two_dust_comp=two_dust_comp,two_dust_comp_abs=two_dust_comp_abs)
 
 
 
@@ -413,12 +420,13 @@ if 'log_sigma_conti' in prior_dict:
     fit_conti_err=True
 else:
     fit_conti_err=False
+
 header,header_para,header_abund,header_slab,header_absorp,header_sigma=create_header(var_dict=init_dict,
                                                               abundance_dict=init_abundance,
                                                               slab_dict=slab_prior_dict,
                                                               fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,fit_abs_err=fit_abs_err,
                                                               fixed_dict=fixed_dict,prior_dict=prior_dict,abundance_dict_absorption=init_abundance_absorp)
-                                                              
+                                                            
 upper_lim=[]
 lower_lim=[]
 complete_header=[]
@@ -476,6 +484,7 @@ lower_lim=np.array(lower_lim)
 
 print('Upper lim', upper_lim)
 print('Lower lim', lower_lim)
+
 
 
 def prior_fast(cube):

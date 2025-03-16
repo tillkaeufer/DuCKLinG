@@ -60,6 +60,8 @@ sur_powerlaw=False
 abs_powerlaw=False
 close_plots=False
 run_all=False
+savetxt=False
+
 
 if __name__ == "__main__":
     input_file=sys.argv[1]
@@ -77,6 +79,7 @@ if __name__ == "__main__":
             elif argument=='save_all':
                 save_output=True
                 save_flux=True   
+                savetxt=True
             elif argument=='custom_list':
                 zoom_list=np.array(literal_eval(arg_list[int(i+1)]),dtype='float64')
 
@@ -107,7 +110,9 @@ if __name__ == "__main__":
             elif argument=='all_plus':
                 run_all=True
                 save_output=True
-                save_flux=True  
+                save_flux=True 
+            elif argument=='savetxt':
+                savetxt=True
             else:
                 print('--------------')
                 print('--------------')
@@ -126,7 +131,10 @@ print(number_plotted_dust)
 print('Plot only the parameters and not the spectra')
 print(ignore_spectrum_plot)
 
-
+if savetxt:
+    print('The model components will be saved in a txt file')
+else:
+    print('The model component will not be saved in a txt file')
 
 low_contribution=0.15
 high_contribution=0.85
@@ -917,11 +925,14 @@ if sample_all:
 
 
 
-
+two_dust_comp_abs=False
+two_dust_comp=False
 if 'tmax_s' in prior_dict or 'temp_s' in prior_dict or 'tmax_s' in fixed_dict or 'temp_s' in fixed_dict:
     use_dust_emis=True
     if 'tmax_s' in prior_dict or 'tmax_s' in fixed_dict:
         sur_powerlaw=True
+        if 't_change_s' in prior_dict:
+            two_dust_comp=True
     else:
         sur_powerlaw=False
 else:
@@ -930,6 +941,8 @@ if 'tmax_abs' in prior_dict or 'temp_abs' in prior_dict or 'tmax_abs' in fixed_d
     use_dust_absorp=True
     if 'tmax_abs' in prior_dict or 'tmax_abs' in fixed_dict:
         abs_powerlaw=True
+        if 't_change_abs' in prior_dict:
+            two_dust_comp_abs=True
     else:
         abs_powerlaw=False
 else:
@@ -943,7 +956,8 @@ if 'q_emis' in prior_dict or 'q_emis' in fixed_dict:
 # setting up the dictonaries and headers that will be used
 
 init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw,fit_gas_only=fit_gas_only,
-                           prior_dict=prior_dict,fixed_dict=fixed_dict,use_extinction=use_extinction,use_dust_emis=use_dust_emis,use_dust_absorp=use_dust_absorp,sur_powerlaw=sur_powerlaw,abs_powerlaw=abs_powerlaw,mol_powerlaw=use_mol_powerlaw)
+                           prior_dict=prior_dict,fixed_dict=fixed_dict,use_extinction=use_extinction,use_dust_emis=use_dust_emis,use_dust_absorp=use_dust_absorp,sur_powerlaw=sur_powerlaw,
+                           abs_powerlaw=abs_powerlaw,mol_powerlaw=use_mol_powerlaw,two_dust_comp=two_dust_comp,two_dust_comp_abs=two_dust_comp_abs)
 
 if 'log_sigma_obs' in prior_dict:
     fit_obs_err=True
@@ -1293,11 +1307,11 @@ def get_scales_parallel(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=Fa
     var_dict['sc_mid']=scale_facs[1]
     i=2
     if use_dust_emis:
-        for key in abundance_dict:
+        for key in con_model.surface_flux_individual_scaled:
             abundance_dict[key]=scale_facs[i]
             i+=1
     if use_dust_absorp:
-        for key in abundance_dict_absorp:
+        for key in con_model.absorp_flux_individual_scaled:
             abundance_dict_absorp[key]=scale_facs[i]
             i+=1
 
@@ -1342,16 +1356,26 @@ def get_scales_parallel(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=Fa
             print('Dust mass absorption array')
             print(dust_mass_absorp_ar)
     if plot_dust_individual:
-        con_model_new.set_surface(one_output=False)
+
         scale_components=con_model_new.trans_flux
         if use_dust_emis:     
+            if con_model.two_dust_comp:
+                con_model_new.set_surface(one_output=False,absorption=False,comp='hot')
+                con_model_new.set_surface(one_output=False,absorption=False,comp='cold')
+            else:
+                con_model_new.set_surface(one_output=False,absorption=False)
             dict_fluxes['individual_surface']={}
             for key in abundance_dict:    
                 dict_fluxes['individual_surface'][key]=scale_components*con_model_new.surface_flux_individual[key]*abundance_dict[key]
                 if debug:
                     print(np.max(dict_fluxes['individual_surface'][key]))
             dict_fluxes['interp_flux']=interp_flux
-        if use_dust_absorp:     
+        if use_dust_absorp:  
+            if con_model.two_dust_comp_abs:
+                con_model_new.set_surface(one_output=False,absorption=True,comp='hot')
+                con_model_new.set_surface(one_output=False,absorption=True,comp='cold')
+            else:
+                con_model_new.set_surface(one_output=False,absorption=True)   
             dict_fluxes['individual_absorp']={}
             for key in abundance_dict_absorp:    
                 dict_fluxes['individual_absorp'][key]=scale_components*con_model_new.absorp_flux_individual[key]*abundance_dict_absorp[key]
@@ -1452,12 +1476,12 @@ def get_full_model(idx,dummy,debug=False):
         var_dict['sc_mid']=scales[1]
         i=2
         if use_dust_emis:
-            for key in abundance_dict:
+            for key in con_model.surface_flux_individual:
                 abundance_dict[key]=scales[i]
                 i+=1
     
         if use_dust_absorp:
-            for key in abundance_dict_absorp:
+            for key in con_model.absorp_flux_individual:
                 abundance_dict_absorp[key]=scales[i]
                 i+=1
     
@@ -1494,9 +1518,17 @@ def get_full_model(idx,dummy,debug=False):
             scale_components=con_model_new.trans_flux
     
             if use_dust_emis:
-                con_model_new.set_surface(one_output=False)
+                if con_model.two_dust_comp:
+                    con_model_new.set_surface(one_output=False,absorption=False,comp='hot')
+                    con_model_new.set_surface(one_output=False,absorption=False,comp='cold')
+                else:
+                    con_model_new.set_surface(one_output=False,absorption=False)
             if use_dust_absorp:
-                con_model_new.set_surface(absorption=True,one_output=False)
+                if con_model.two_dust_comp_abs:
+                    con_model_new.set_surface(one_output=False,absorption=True,comp='hot')
+                    con_model_new.set_surface(one_output=False,absorption=True,comp='cold')
+                else:
+                    con_model_new.set_surface(one_output=False,absorption=True)   
     
             if use_dust_emis:     
                 dict_fluxes['individual_surface']={}
@@ -1538,7 +1570,7 @@ print('The next step takes a while')
 parallel=True
 if parallel:
 
-    pool =  mp.get_context('fork').Pool(min(int(16),mp.cpu_count()))
+    pool =  mp.get_context('fork').Pool(max(int(16),mp.cpu_count()))
     if sample_all or fit_gas_only:
         results = [pool.apply_async(get_full_model, args=(i,1)) for i in range(len(samples))]
         pool.close() 
@@ -1734,12 +1766,18 @@ if not ignore_spectrum_plot:
     
 def nicer_labels_single(lab,with_size=True):
     new_lab=''
+    if '_hot' in lab:
+        new_lab+='Hot '
+    elif '_cold' in lab:
+        new_lab+='Cold '
+    
+
     if 'Silica' in lab:
         new_lab+='Silica '
     elif 'Fo_Sogawa' in lab or 'Forsterite' in lab or 'Fo_Zeidler' in lab:
         new_lab+='Forsterite '
     elif 'En_Jaeger' in lab or 'Enstatite' in lab:
-        new_lab+='Enstatite  '
+        new_lab+='Enstatite '
     elif 'Mgolivine' in lab or 'MgOlivine' in lab :
         new_lab+='Am Mgolivine '
     elif 'Olivine' in lab:
@@ -1768,7 +1806,7 @@ if not ignore_spectrum_plot:
                                        rim_components=rim_components,midplane_components=midplane_components,
                                        surface_components=surface_components,absorp_components=absorp_components,emission_components=emission_components,
                                        individual_surface=dict_individual_flux, individual_absorp=dict_individual_flux_absorp,dict_dust_info={},
-                                       plot_individual_surface=False,number_plotted_dust=0,debug=True):
+                                       plot_individual_surface=False,number_plotted_dust=0,debug=True,savetxt=False,savetxt_prefix=''):
         comp_dict={}
         indi_dust_dict={}
         fig = plt.figure(figsize=(9,6))
@@ -1804,6 +1842,8 @@ if not ignore_spectrum_plot:
             ax.plot(x_model,y_median,label='Model',alpha=1,color='black',zorder=100)
             min_val=np.min(y_median)
             max_val=np.max(y_median)
+            if savetxt:
+                np.savetxt(savetxt_prefix+'_complete.txt',np.stack((x_model,y_median,y_std_min,y_std),axis=-1),header='wave[micron] median_flux[Jy] minus_std_flux[Jy] std_flux[Jy]')
         if plot_components:
             comp_names=['Stellar flux','Stellar + rim flux','Midplane flux']
             if use_dust_emis:
@@ -1841,6 +1881,9 @@ if not ignore_spectrum_plot:
                     y_std_min_comp=np.percentile(comp,50-68/2,axis=0)
                     y_2std_min_comp=np.percentile(comp,50-95/2,axis=0)
                     y_3std_min_comp=np.percentile(comp,50-99.9/2,axis=0)
+                    if savetxt:
+                        np.savetxt(savetxt_prefix+'_'+comp_names[idx_comp].replace(" ", "_")+'.txt',np.stack((x_model,y_median_comp,y_std_min_comp,y_std_comp),axis=-1),header='wave[micron] median_flux[Jy] minus_std_flux[Jy] std_flux[Jy]')
+
                     comp_dict[comp_names[idx_comp]]={}
                     comp_dict[comp_names[idx_comp]]['median']=y_median_comp
                     comp_dict[comp_names[idx_comp]]['std']=y_std_comp
@@ -1882,6 +1925,9 @@ if not ignore_spectrum_plot:
                     y_std_min_comp=np.percentile(comp,50-68/2,axis=0)
                     #y_2std_min_comp=np.percentile(comp,50-95/2,axis=0)
                     #y_3std_min_comp=np.percentile(comp,50-99.9/2,axis=0)
+                    if savetxt:
+                        np.savetxt(savetxt_prefix+'_'+comp_names_dust[idx_comp].replace(" ", "_")+'.txt',np.stack((x_model,y_median_comp,y_std_min_comp,y_std_comp),axis=-1),header='wave[micron] median_flux[Jy] minus_std_flux[Jy] std_flux[Jy]')
+
                     indi_dust_dict[comp_names_dust[idx_comp]]={}
                     indi_dust_dict[comp_names_dust[idx_comp]]['median']=y_median_comp
                     indi_dust_dict[comp_names_dust[idx_comp]]['std']=y_std_comp
@@ -2159,14 +2205,19 @@ if not ignore_spectrum_plot:
 
     print('Plotting component plot...')
     print('Zoom list',zoom_list)
-
+    savetxt_prefix=save_folder+'model_fluxes/'+str(run_number)+'_model'
+    if savetxt:
+        if not os.path.isdir(save_folder+'model_fluxes/'):
+            os.mkdir(save_folder+'model_fluxes/')
     if fit_gas_only:
         plot_model_uncertainties_names(flux_obs_full,sig_obs_full,lam_obs_full,array_flux,con_model_new.xnew,wave_obs_fitted=lam_obs,
-                                   folder='folder', zoom_in_list=zoom_list, save=True, save_name=save_folder+str(run_number)+'_Component_plot', min_wave=min_wave,ylim='',max_wave=max_wave,plot_components=False)
+                                   folder='folder', zoom_in_list=zoom_list, save=True, save_name=save_folder+str(run_number)+'_Component_plot', min_wave=min_wave,ylim='',max_wave=max_wave,plot_components=False,
+                                   savetxt=savetxt,savetxt_prefix=savetxt_prefix)
 
     else:
         plot_model_uncertainties_names(flux_obs_full,sig_obs_full,lam_obs_full,array_flux,con_model_new.xnew,wave_obs_fitted=lam_obs,
-                                   folder='folder', zoom_in_list=zoom_list, save=True, save_name=save_folder+str(run_number)+'_Component_plot', min_wave=min_wave,ylim='',max_wave=max_wave)
+                                   folder='folder', zoom_in_list=zoom_list, save=True, save_name=save_folder+str(run_number)+'_Component_plot', min_wave=min_wave,ylim='',max_wave=max_wave,
+                                   savetxt=savetxt,savetxt_prefix=savetxt_prefix)
 
 
     if plot_dust_individual:
@@ -2174,7 +2225,7 @@ if not ignore_spectrum_plot:
 
         list_style_dust=['dotted','dashdot','dashed',(0, (3, 5, 1, 5, 1, 5)),(0, (3, 1, 1, 1)),'solid']
 
-        list_color_dust=['tab:blue','tab:orange','tab:green','tab:red','tab:purple','tab:brown','tab:pink','tab:cyan']
+        list_color_dust=['tab:blue','tab:orange','tab:green','tab:red','tab:purple','tab:brown','tab:pink','tab:gray','tab:cyan','tan','limegreen']
                 
         dust_emission_plot=True
         if len(list(dict_individual_flux.keys()))==0:
@@ -2212,11 +2263,12 @@ if not ignore_spectrum_plot:
  
         print('Plotting dust version of the component plot')
         plot_model_uncertainties_names(flux_obs_full,sig_obs_full,lam_obs_full,array_flux,con_model_new.xnew,wave_obs_fitted=lam_obs,
-                                   folder='folder',zoom_in_list=zoom_list,save=True,
+                                       folder='folder',zoom_in_list=zoom_list,save=True,
                                        save_name=save_folder+str(run_number)+'_Component_plot',
                                        min_wave=min_wave,ylim='',max_wave=max_wave,
                                        individual_surface=dict_individual_flux,dict_dust_info=dict_dust_info,
-                                       plot_individual_surface=True,number_plotted_dust=number_plotted_dust)
+                                       plot_individual_surface=True,number_plotted_dust=number_plotted_dust,
+                                       savetxt=savetxt,savetxt_prefix=savetxt_prefix)
 
  
 
@@ -2372,12 +2424,17 @@ def nicer_labels(init_abundance=init_abundance,with_size=True):
     new_labels=[]
     for lab in labels:
         new_lab=''
+        if '_hot' in lab:
+            new_lab+='Hot '
+        elif '_cold' in lab:
+            new_lab+='Cold '
+
         if 'Silica' in lab:
             new_lab+='Silica '
         elif 'Fo_Sogawa' in lab or 'Forsterite' in lab or 'Fo_Zeidler' in lab:
             new_lab+='Forsterite '
         elif 'En_Jaeger' in lab or 'Enstatite' in lab:
-            new_lab+='Enstatite  '
+            new_lab+='Enstatite '
         elif 'Mgolivine' in lab or 'MgOlivine' in lab :
             new_lab+='Am Mg-olivine '
         elif 'Olivine' in lab:
@@ -2464,8 +2521,17 @@ if use_dust_emis:
     if q_curves:
         factor_dict={}
         for key in init_abundance:
-    
-            with open(dust_path+key,'r') as f:
+            if '_hot' in key:
+                idx_part=key.find('_hot')
+                key_load=key[:idx_part]
+            elif '_cold' in key:
+                idx_part=key.find('_cold')
+                key_load=key[:idx_part]
+            else:
+                key_load=key
+
+
+            with open(dust_path+key_load,'r') as f:
                 lines=f.readlines()
             old_data=True
             for line in lines:
@@ -2477,7 +2543,7 @@ if use_dust_emis:
             idx_rv=key.find('rv')
             rad=key[idx_rv+2:-4]
             if old_data:
-                with open(dust_path+key,'r') as f:
+                with open(dust_path+key_load,'r') as f:
                     rad,dens=f.readline().split()[1:3]
             #print(key,rad,dens)
             rad=float(rad)
@@ -2512,8 +2578,15 @@ if use_dust_absorp:
     if q_curves:
         factor_dict={}
         for key in init_abundance_absorp:
-    
-            with open(dust_path+key,'r') as f:
+            if '_hot' in key:
+                idx_part=key.find('_hot')
+                key_load=key[:idx_part]
+            elif '_cold' in key:
+                idx_part=key.find('_cold')
+                key_load=key[:idx_part]
+            else:
+                key_load=key
+            with open(dust_path+key_load,'r') as f:
                 lines=f.readlines()
             old_data=True
             for line in lines:
@@ -2525,7 +2598,7 @@ if use_dust_absorp:
             idx_rv=key.find('rv')
             rad=key[idx_rv+2:-4]
             if old_data:
-                with open(dust_path+key,'r') as f:
+                with open(dust_path+key_load,'r') as f:
                     rad,dens=f.readline().split()[1:3]
             #print(key,rad,dens)
             rad=float(rad)
@@ -2610,7 +2683,7 @@ if use_dust_absorp:
 
 def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True,plot_legend=False,debug=False):
     colour_list=['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
-                'tab:brown','tab:pink','tab:gray','tab:olive','tab:cyan']
+                'tab:brown','tab:pink','tab:gray','tab:cyan','tan','limegreen']
     colour_count=0
     medians=[]
     plus_stds=[]

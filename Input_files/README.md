@@ -26,7 +26,12 @@
 | q_mid             | exponent of the temperature power law of the midplane                                   | Midplane  | (-1,-0.1)     |
 | tmax_s            | Maximum temperature of the surface layer (K)                                            | Surface   | (500,1500)    |
 | tmin_s            | Minimum temperature of the surface layer(K)                                             | Surface   | (10,1000)     |
+| t_change_s        | Change between two dust compositions (0=tmin_s, 1=tmax_s)                               | Surface   | (0.01,0.99)   |
 | q_thin            | exponent of the temperature power law of the surface layer                              | Surface   | (-1,-0.1)     |
+| tmax_abs          | Maximum temperature of the surface absorption layer (K)                                 | Surface   | (500,1500)    |
+| tmin_abs          | Minimum temperature of the surface absorption layer(K)                                  | Surface   | (10,1000)     |
+| t_change_abs      | Change between two dust compositions (0=tmin_abs, 1=tmax_abs)                           | Surface   | (0.01,0.99)   |
+| q_abs             | exponent of the temperature power law of the surface absorption layer                   | Surface   | (-1,-0.1)     |
 | **Gas**           |                                                                                         |           |               |
 | q_emis            | exponent of the molecular temperature power law                                         | Gas       | (-1,-0.1)     |
 

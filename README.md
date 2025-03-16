@@ -158,6 +158,7 @@ Here we define the setup of the model we want to use.
 - dust_species_list: This is a list with all the dust opacity files that you want to use. The files have to be located in dust_path. If you don't want to use this option just delete the list and delete all the surface layer parameters from the dictionaries as well.
 - absorp_species_list: If you want to recreated dust absorption features instead of emission you can use this list to provide the dust opacity files that you want to use. The files have to be located in dust_path. Make sure that you use the absorption parameters then as well (e.g. tmax_abs, tmin_abs, and q_abs or 'temp_abs'). If you leave this list empty dust absorption will be ignored. 
 - if you are using extinction you can add a line that loads the extinction model you are using. An example is provided in the example input files. If you want to use extinction you have to define Rv and E(B-V) in either the fixed_dict or the prior_dict.
+- if you want a change of dust composition between the hot and cold region of the dust emission/absorption layer you can follow all species you want in the hot part with '_hot' and the ones for the cold part by '_cold'. Additionally, you need to include the t_change_s/t_change_abs parameter that determines the transition temperature between hot and cold (as a value between 0 and 1).
 
 #### fixed parameters
 Setting the fixed parameters.  
@@ -250,7 +251,8 @@ Additionally, it accepts a large range of options to specify your plotting needs
 - no_spectrum: For only plotting the parameter posterior and ignoring the (memory-intensive and time-consuming) step of plotting the spectra add this option.
 - close: this will avoid that all the plots are displayed when they are done. They will simply be saved.
 - all: this option will automatically run the other two plotting routines as well
-- all_plus: this option also runs the two other plotting routines and overplots the posterior in plot_mol_contributions-input.py as well.
+- all_plus: this option also runs the two other plotting routines and overplots the posterior in plot_mol_contributions-input.py as well.  
+- savetxt: this option will save all the model components (median fluxes with standard deviations) in txt files. If plot_dust=True it will also save all the individual dust components.  
 
 Hopefully, this will plot/save you all the data you are interested in.  
 
