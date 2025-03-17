@@ -271,6 +271,7 @@ The options for this routine are as follows:
 - simple: this selects the median probable model on the multinest posterior and not the full posterior. The advantage is that you can run it without running any plotting routine before and before the fit is finished. The difference to preliminary is that this can be used when the posterior file has multiple entries already.
 - close: Closing the plots instead of showing them to the user.
 - width: this phrase should be followed by a float. It specifies how large the wavelengths windows are that are plotted. Default is 2.0.
+- no_comp: the latest version of the code will plot different components of the same molecules in different colours (alpha=1/component_number). If you want the old behaviour that all components of the same molecule are plotted in the same colour add this argument.
 
 If you want to plot the molecular column densities, temperatures and radii this is possible with the following function:
 
