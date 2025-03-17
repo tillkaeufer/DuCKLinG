@@ -732,7 +732,21 @@ def loglike_gas(cube,debug=False,timeit=False):
 
     interp_flux=con_model.run_model(variables=var_dict,dust_species=abundance_dict,slab_dict=slab_dict,output_all=False,timeit=False)
 
-    
+    if limit_integrated_flux:
+        for key in slab_dict:
+            if key in limit_flux_dict:
+                if debug:
+                    print('lim')
+                    print(key)
+                int_flux=con_model.calc_integrated_flux(key)
+                if debug:
+                    print('int_flux')
+                    print(int_flux)
+                if int_flux>limit_flux_dict[key]:
+                    trigger_penalty=True
+                    sum_penalty+=penalty*(0.01+abs(int_flux-limit_flux_dict[key]))
+        if trigger_penalty:
+            return sum_penalty  
     if timeit:
         time_3=time()
 
