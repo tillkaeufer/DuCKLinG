@@ -3055,7 +3055,14 @@ class complete_model:
                     M= -1/2.0 /degree_to_cos(self.variables['incl']) * self.abundance_dict[key] *(self.parsec*self.variables['distance'])**2 * self.variables['q_thin'] * self.variables['tmax_s']**(2/self.variables['q_thin'])*4/3
                     if q_curve:
                         M*=fact_dict[key]
-                    M*=((self.variables['tmin_s']/self.variables['tmax_s'])**(2/self.variables['q_thin'])-1)/unit_val
+                    if '_hot' in key:
+                        tmin,tmax=self.variables['tmin_hot_s'],self.variables['tmax_s']
+                    elif '_cold' in key:
+                        tmin,tmax=self.variables['tmin_s'],self.variables['tmax_cold_s']
+                    else:
+                        tmin,tmax=self.variables['tmin_s'],self.variables['tmax_s']
+                            
+                    M*=((tmin/tmax)**(2/self.variables['q_thin'])-1)/unit_val
                 else:
                     M=self.abundance_dict[key]*(self.parsec*self.variables['distance'])**2 *4/3 /degree_to_cos(self.variables['incl'])/unit_val
                     if q_curve:
@@ -3071,7 +3078,14 @@ class complete_model:
                     M= -1/2.0 /degree_to_cos(self.variables['incl']) * self.abundance_dict_absorp[key] *(self.parsec*self.variables['distance'])**2 * self.variables['q_abs'] * self.variables['tmax_abs']**(2/self.variables['q_abs'])*4/3
                     if q_curve:
                         M*=fact_dict[key]
-                    M*=((self.variables['tmin_abs']/self.variables['tmax_abs'])**(2/self.variables['q_abs'])-1)/unit_val
+
+                    if '_hot' in key:
+                        tmin,tmax=self.variables['tmin_hot_abs'],self.variables['tmax_abs']
+                    elif '_cold' in key:
+                        tmin,tmax=self.variables['tmin_abs'],self.variables['tmax_cold_abs']
+                    else:
+                        tmin,tmax=self.variables['tmin_abs'],self.variables['tmax_abs']
+                    M*=((tmin/tmax)**(2/self.variables['q_abs'])-1)/unit_val
                 else:
                     M=self.abundance_dict_absorp[key]*(self.parsec*self.variables['distance'])**2 *4/3 /degree_to_cos(self.variables['incl'])/unit_val
                     if q_curve:

@@ -1567,10 +1567,10 @@ print('The next step takes a while')
 
 
 
-parallel=True
+parallel=False
 if parallel:
 
-    pool =  mp.get_context('fork').Pool(max(int(16),mp.cpu_count()))
+    pool =  mp.get_context('fork').Pool(min(int(16),mp.cpu_count()//2))
     if sample_all or fit_gas_only:
         results = [pool.apply_async(get_full_model, args=(i,1)) for i in range(len(samples))]
         pool.close() 
@@ -2074,7 +2074,7 @@ if not ignore_spectrum_plot:
                 ax.set_xlim(left=np.min(x_model),right=np.max(x_model))
         if plot_individual_surface:
 
-            legend=ax.legend(custom_lines,custom_labels,loc=(-0.0,1.05),ncol=max(1,len(custom_lines)//3))
+            legend=ax.legend(custom_lines,custom_labels,loc=(-0.0,1.05),ncol=min(max(1,len(custom_lines)//3),4))
         else:
             legend = ax.legend(frameon=True,ncol=1,markerscale=0.7,scatterpoints=1,labelspacing=0.0,fancybox=True)
         for label in legend.get_texts():
@@ -2564,7 +2564,7 @@ if use_dust_emis:
     
     tot_samples_rel=tot_samples.copy()
     for i in range(len(tot_samples)):
-        abund=tot_samples[i,idxs].copy()
+        abund=dust_mass_master_ar[i].copy()
         tot=np.sum(abund)
         if tot==0.0:
             rel_abund=0.0
@@ -2620,6 +2620,7 @@ if use_dust_absorp:
     tot_samples_rel=tot_samples.copy()
     for i in range(len(tot_samples)):
         abund=tot_samples[i,idxs_absorp].copy()
+        abund=dust_mass_absorp_master_ar[i].copy()
         tot=np.sum(abund)
         if tot==0.0:
             rel_abund=0.0
@@ -2678,10 +2679,10 @@ if use_dust_absorp:
         
         idx_used=np.where(dust_mass_absorp_master_ar[:,i]!=0.0)[0]
         dust_fraction_used_absorp[ugly_header[idxs_absorp[i]]]=len(idx_used)/tot_model_number
-        
-    
+      
+ 
 
-def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True,plot_legend=False,debug=False):
+def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True,plot_legend=False,debug=True):
     colour_list=['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
                 'tab:brown','tab:pink','tab:gray','tab:cyan','tan','limegreen']
     colour_count=0
@@ -2690,10 +2691,11 @@ def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True
     minus_stds=[]
     first=True
     i=0
-    
+    even=0
+    max_val=1.0
+    min_val=0.0
     plt.figure(figsize=(12,6))
-    for key_run in dust_analysis:
-        key=key_run[:-7]
+    for key in dust_analysis:
         if debug:
             print(key)
         new_dust=False
@@ -2725,7 +2727,12 @@ def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True
                 plt.fill_between([x_range[0]-0.5,x_range[-1]+0.5],
                                  y1=[1,1],y2=[0.95,0.95],alpha=0.7,color=colour_list[colour_count])
                 if not plot_legend:
-                    plt.text(x_range[0]-0.4,0.96,label)
+                    if even%2==0:
+                        plt.text(x_range[0]-0.4,max_val-(max_val-min_val)*0.04,label)
+                    else:
+                        plt.text(x_range[0]-0.4,max_val-(max_val-min_val)*0.08,label)
+                    if 'Cold' in label or 'Hot' in label:
+                        even+=1
 
             plt.bar(x_range, medians,label=label,color=colour_list[colour_count])
             
@@ -2738,9 +2745,9 @@ def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True
             minus_stds=[]
         key_old=key
         if first:  first=False
-        medians.append(dust_analysis[key_run][0])
-        plus_stds.append(dust_analysis[key_run][1]-dust_analysis[key_run][0])
-        minus_stds.append(dust_analysis[key_run][0]-dust_analysis[key_run][2])
+        medians.append(dust_analysis[key][0])
+        plus_stds.append(dust_analysis[key][1]-dust_analysis[key][0])
+        minus_stds.append(dust_analysis[key][0]-dust_analysis[key][2])
         i+=1
 
     x_range=np.arange(len(medians))+i-len(medians)+1
@@ -2758,7 +2765,10 @@ def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True
         plt.fill_between([x_range[0]-0.5,x_range[-1]+0.5],
                          y1=[1,1],y2=[0.95,0.95],alpha=0.7,color=colour_list[colour_count])
         if not plot_legend:
-            plt.text(x_range[0]-0.4,0.96,label)
+            if even%2==0:
+                plt.text(x_range[0]-0.4,max_val-(max_val-min_val)*0.04,label)
+            else:
+                plt.text(x_range[0]-0.4,max_val-(max_val-min_val)*0.08,label)
             
     plt.bar(x_range, medians,label=label,color=colour_list[colour_count])
     plt.errorbar(x_range, medians,yerr=[minus_stds,plus_stds],color='black',linestyle='',capsize=2)
@@ -2804,7 +2814,7 @@ def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True
 
 
 
-def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regions=True,plot_legend=False,debug=False):
+def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regions=True,plot_legend=False,debug=True):
     colour_list=['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
                 'tab:brown','tab:pink','tab:gray','tab:olive','tab:cyan']
     colour_count=0
@@ -2818,6 +2828,7 @@ def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regi
     min_val=np.min(list(dust_analysis_abs.values()))*0.9
     
     plt.figure(figsize=(12,6))
+    even=0
     for key in dust_analysis_abs:
         if debug:
             print(key)
@@ -2850,7 +2861,14 @@ def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regi
                 plt.fill_between([x_range[0]-0.5,x_range[-1]+0.5],
                                  y1=[max_val,max_val],y2=[max_val-(max_val-min_val)*0.05,max_val-(max_val-min_val)*0.05],alpha=0.7,color=colour_list[colour_count])
                 if not plot_legend:
-                    plt.text(x_range[0]-0.4,max_val-(max_val-min_val)*0.04,label)
+                    if even%2==0:
+                        plt.text(x_range[0]-0.4,max_val-(max_val-min_val)*0.04,label)
+                    else:
+                        plt.text(x_range[0]-0.4,max_val-(max_val-min_val)*0.08,label)
+                            
+                    if 'Cold' in label or 'Hot' in label:
+                        even+=1
+
             plt.bar(x_range, medians,label=label,color=colour_list[colour_count])
             
 
@@ -2882,7 +2900,12 @@ def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regi
         plt.fill_between([x_range[0]-0.5,x_range[-1]+0.5],
                          y1=[max_val,max_val],y2=[max_val-(max_val-min_val)*0.05,max_val-(max_val-min_val)*0.05],alpha=0.7,color=colour_list[colour_count])
         if not plot_legend:
-            plt.text(x_range[0]-0.4,max_val-(max_val-min_val)*0.04,label)
+            if even%2==0:
+                plt.text(x_range[0]-0.4,max_val-(max_val-min_val)*0.04,label)
+            else:
+                plt.text(x_range[0]-0.4,max_val-(max_val-min_val)*0.08,label)
+                    
+            even+=1
     plt.bar(x_range, medians,label=label,color=colour_list[colour_count])
     plt.errorbar(x_range, medians,yerr=[minus_stds,plus_stds],color='black',linestyle='',capsize=2)
     rvs=[]
@@ -2950,8 +2973,7 @@ def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,suff
     i=0
     
     fig,ax = plt.subplots(figsize=(12,6))
-    for key_run in dust_analysis:
-        key=key_run[:-7]
+    for key in dust_analysis:
         if debug:
             print(key)
         new_dust=False
@@ -2998,10 +3020,10 @@ def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,suff
             used_fract=[]
         key_old=key
         if first:  first=False
-        medians.append(dust_analysis[key_run][0])
-        plus_stds.append(dust_analysis[key_run][1]-dust_analysis[key_run][0])
-        minus_stds.append(dust_analysis[key_run][0]-dust_analysis[key_run][2])
-        used_fract.append(dust_fraction_used[key_run])
+        medians.append(dust_analysis[key][0])
+        plus_stds.append(dust_analysis[key][1]-dust_analysis[key][0])
+        minus_stds.append(dust_analysis[key][0]-dust_analysis[key][2])
+        used_fract.append(dust_fraction_used[key])
         i+=1
 
     x_range=np.arange(len(medians))+i-len(medians)+1
