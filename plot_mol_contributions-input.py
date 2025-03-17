@@ -64,6 +64,7 @@ close_plots=True
 preliminary=False
 
 complete_header=True
+comp_diff_color=True
 
 # %%
 if __name__ == "__main__":
@@ -79,6 +80,9 @@ if __name__ == "__main__":
                 complete_header=False
             elif argument=='simple':
                 complete_header=False
+
+            if argument=='no_comp':
+                comp_diff_color=False
             if argument=='close':
                 close_plots=True
             if argument=='open':
@@ -856,11 +860,16 @@ def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_o
     added_mol_flux=np.zeros_like(mol_fluxes[key])
     idx_color=0
     for key in mol_fluxes:
+        mol_alpha=1.0
         new_mol=mol_fluxes[key]*1000
         mol_color=key
         if '_comp' in mol_color:
             idx_mol=mol_color.find('_comp')
             
+            if comp_diff_color:
+                n_comp=float(mol_color[idx_mol+5])
+                mol_alpha=float(1/n_comp)
+
             mol_color=mol_color[:idx_mol]
             print(f'Changing {key} to {mol_color}')
         if '_absorp' in mol_color:
@@ -870,7 +879,7 @@ def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_o
             print(f'Changing {key} to {mol_color}')
         if debug:
             print(key,'Maximum',np.max(new_mol))
-        plt.fill_between(lam_obs,(interp_flux-tot_mol_flux)*1000+new_mol+added_mol_flux,(interp_flux-tot_mol_flux)*1000+added_mol_flux,linewidth=0,label=molecular_names[mol_color],color=mol_colors_dict[mol_color],step='pre',zorder=100-idx_color)
+        plt.fill_between(lam_obs,(interp_flux-tot_mol_flux)*1000+new_mol+added_mol_flux,(interp_flux-tot_mol_flux)*1000+added_mol_flux,linewidth=0,label=molecular_names[mol_color],color=mol_colors_dict[mol_color],step='pre',zorder=100-idx_color,alpha=mol_alpha)
         idx_color+=1
         added_mol_flux+=new_mol
 
@@ -896,11 +905,13 @@ def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_o
     idx_color=0
     for key in mol_fluxes:
         new_mol=mol_fluxes[key]*1000
-        
+        mol_alpha=1.0
         mol_color=key
         if '_comp' in mol_color:
             idx_mol=mol_color.find('_comp')
-            
+            if comp_diff_color:
+                n_comp=float(mol_color[idx_mol+5])
+                mol_alpha=float(1/n_comp)
             mol_color=mol_color[:idx_mol]
             print(f'Changing {key} to {mol_color}')
         if '_absorp' in mol_color:
@@ -908,7 +919,7 @@ def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_o
             
             mol_color=mol_color[:idx_mol]
             print(f'Changing {key} to {mol_color}')
-        plt.fill_between(lam_obs,(interp_flux-tot_mol_flux)*1000+new_mol+added_mol_flux,(interp_flux-tot_mol_flux)*1000+added_mol_flux,linewidth=0,label=molecular_names[mol_color],color=mol_colors_dict[mol_color],step='pre',zorder=100-idx_color)
+        plt.fill_between(lam_obs,(interp_flux-tot_mol_flux)*1000+new_mol+added_mol_flux,(interp_flux-tot_mol_flux)*1000+added_mol_flux,linewidth=0,label=molecular_names[mol_color],color=mol_colors_dict[mol_color],step='pre',zorder=100-idx_color,alpha=mol_alpha)
         added_mol_flux+=new_mol
         idx_color+=1
     plt.step(lam_obs,flux_obs*1000,linewidth=0.5,color='black',zorder=101)
@@ -946,13 +957,16 @@ def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_o
     added_mol_flux=np.zeros_like(mol_fluxes[key])
     idx_color=0
     for key in mol_fluxes:
+        mol_alpha=1.0
         new_mol=mol_fluxes[key]*1000
 
             
         mol_color=key
         if '_comp' in mol_color:
             idx_mol=mol_color.find('_comp')
-            
+            if comp_diff_color:
+                n_comp=float(mol_color[idx_mol+5])
+                mol_alpha=float(1/n_comp)
             mol_color=mol_color[:idx_mol]
             print(f'Changing {key} to {mol_color}')
         if '_absorp' in mol_color:
@@ -960,7 +974,7 @@ def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_o
             
             mol_color=mol_color[:idx_mol]
             print(f'Changing {key} to {mol_color}')
-        plt.fill_between(lam_obs,new_mol+added_mol_flux,added_mol_flux,label=molecular_names[mol_color],color=mol_colors_dict[mol_color],step='pre',linewidth=0,zorder=100-idx_color)
+        plt.fill_between(lam_obs,new_mol+added_mol_flux,added_mol_flux,label=molecular_names[mol_color],color=mol_colors_dict[mol_color],step='pre',linewidth=0,zorder=100-idx_color,alpha=mol_alpha)
         added_mol_flux+=new_mol
         idx_color+=1
     #plt.ylim([-5,None])
@@ -1102,13 +1116,16 @@ def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_obs
         added_mol_flux=np.zeros_like(lam_obs_select)
         idx_color=0
         for key in mol_fluxes:
+            mol_alpha=1.0
             new_mol=mol_fluxes[key][idx[idx2]]*1000
 
 
             mol_color=key
             if '_comp' in mol_color:
                 idx_mol=mol_color.find('_comp')
-                
+                if comp_diff_color:
+                    n_comp=float(mol_color[idx_mol+5])
+                    mol_alpha=float(1/n_comp)
                 mol_color=mol_color[:idx_mol]
                 print(f'Changing {key} to {mol_color}')
             if '_absorp' in mol_color:
@@ -1116,7 +1133,7 @@ def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_obs
                 
                 mol_color=mol_color[:idx_mol]
                 print(f'Changing {key} to {mol_color}')
-            axs[i].fill_between(lam_obs_select,(interp_flux_select-tot_mol_flux_select)*1000+new_mol+added_mol_flux,(interp_flux_select-tot_mol_flux_select)*1000+added_mol_flux,linewidth=0,label=molecular_names[mol_color],color=mol_colors_dict[mol_color],step='pre',zorder=100-idx_color)
+            axs[i].fill_between(lam_obs_select,(interp_flux_select-tot_mol_flux_select)*1000+new_mol+added_mol_flux,(interp_flux_select-tot_mol_flux_select)*1000+added_mol_flux,linewidth=0,label=molecular_names[mol_color],color=mol_colors_dict[mol_color],step='pre',zorder=100-idx_color,alpha=mol_alpha)
             added_mol_flux+=new_mol
             idx_color+=1
         axs[i].step(lam_obs_select,flux_obs_select*1000,linewidth=0.5,color='black',zorder=101)

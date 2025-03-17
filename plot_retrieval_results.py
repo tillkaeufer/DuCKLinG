@@ -1898,6 +1898,11 @@ if not ignore_spectrum_plot:
                     ax.fill_between(x_model,comp_dict[comp_names[idx_comp]]['std_min'],comp_dict[comp_names[idx_comp]]['std'],color=comp_colors[idx_comp],alpha=0.5)
                     ax.plot(x_model,comp_dict[comp_names[idx_comp]]['median'],label=comp_names[idx_comp],alpha=1,color=comp_colors[idx_comp])
             if plot_individual_surface:
+                idx_lam_obs=[]
+                for idx_mod in range(len(x_model)):
+                    if x_model[idx_mod] in wave_obs_fitted:
+                        idx_lam_obs.append(idx_mod)
+                idx_lam_obs=np.array(idx_lam_obs)
                 dust_emission_plot=True
                 if len(list(individual_surface.keys()))==0:
                     comp_keys=list(individual_absorp.keys())
@@ -1966,7 +1971,7 @@ if not ignore_spectrum_plot:
                     #ax.fill_between(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['std2_min'],indi_dust_dict[comp_names_dust[idx_comp]]['std2'],color=dict_dust_info[comp_names_dust[idx_comp]]['color'],alpha=0.3)
                     ax.fill_between(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['std_min'],indi_dust_dict[comp_names_dust[idx_comp]]['std'],color=dict_dust_info[comp_names_dust[idx_comp]]['color'],alpha=0.5)
                     ax.plot(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['median'],label=comp_names_dust[idx_comp],alpha=1,color=dict_dust_info[comp_names_dust[idx_comp]]['color'],linestyle=dict_dust_info[comp_names_dust[idx_comp]]['style'])
-                    max_dust_new=np.max(indi_dust_dict[comp_names_dust[idx_comp]]['median'])
+                    max_dust_new=np.max(indi_dust_dict[comp_names_dust[idx_comp]]['median'][idx_lam_obs])
 
                     if dict_dust_info[comp_names_dust[idx_comp]]['color'] not in colors_used:
                         colors_used.append(dict_dust_info[comp_names_dust[idx_comp]]['color'])
@@ -2032,11 +2037,6 @@ if not ignore_spectrum_plot:
                     custom_lines.insert(0, custom_lines.pop(idx_check))
                 offset=max_dust-np.min(flux_obs)
                 tot_model=rim_components+midplane_components
-                idx_lam_obs=[]
-                for idx_mod in range(len(x_model)):
-                    if x_model[idx_mod] in wave_obs_fitted:
-                        idx_lam_obs.append(idx_mod)
-                idx_lam_obs=np.array(idx_lam_obs)
                 tot_model=tot_model[:,idx_lam_obs]
                 y_median_comp=np.median(tot_model,axis=0)                
                 y_std_comp=np.percentile(tot_model,50+68/2,axis=0)
