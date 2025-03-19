@@ -818,19 +818,18 @@ else:
                 i+=1
 
 # %%
-
 mol_data=con_model.extract_emission_quantities(low_contribution=0.15,high_contribution=0.85,debug=True,close_plots=close_plots)
 
 
 # %%
 
 
-con_model.read_data(variables=var_dict,dust_species=abundance_dict,
+con_model.read_data(variables=var_dict,dust_species=abundance_dict,absorp_species=abundance_dict_absorp,
                     slab_dict=slab_dict,slab_prefix=slab_prefix,
                     stellar_file=stellar_file,wavelength_points=lam_obs_full,slab_only_mode=fit_gas_only,
                     dust_path=dust_path,slab_folder=slab_folder,ext_model=ext_model)
 
-interp_flux=con_model.run_model(variables=var_dict,dust_species=abundance_dict,slab_dict=slab_dict,output_all=False,timeit=False)
+interp_flux=con_model.run_model(variables=var_dict,dust_species=abundance_dict,absorp_species=abundance_dict_absorp,slab_dict=slab_dict,output_all=False,timeit=False)
 # %%
 con_model.plot_radial_structure(ylog=False,close_plots=close_plots)
 
@@ -1233,10 +1232,15 @@ if temp_contribution_plot:
         if 'temis' not in slab_dict[key]:
             temp_of=key
             print('Sum of flux contributions and total flux')
+            print(temp_of)
             ratio=np.sum(con_model.emission_flux_individual[temp_of]*slab_dict[temp_of]['radius']**2)/np.sum(flux_dict[temp_of])
+            print('Ratio of total flux over flux contributions:',ratio)
             if ratio<0.99 or ratio >1.01:
                 print('The temperature components dont add up the the total flux!')
                 print('Therefore, the code stops here.')
+                print(slab_dict[temp_of])
+                print(ratio)
+                print((slab_dict[temp_of]['radius']**2))
                 print('Investigate!')
                 exit()
             temp_file_name=prefix_fig+f'_mol_contribution_temp_{temp_of}.pdf'

@@ -1928,7 +1928,7 @@ class complete_model:
                         key_out_list=['inner_part','upper_in','upper_out','lower_in','lower_out']
                         for key_out in key_out_list: 
                             if key_out in output_dict[specie][idx_col_list[0]]:
-                                output_dict[specie][key_out]=output_dict[specie][idx_col_list[0]][key_out]+fact*(output_dict[specie][idx_col_list[1]][key_out]-output_dict[specie][idx_col_list[0]][key_out])*scale
+                                output_dict[specie][key_out]=(output_dict[specie][idx_col_list[0]][key_out]+fact*(output_dict[specie][idx_col_list[1]][key_out]-output_dict[specie][idx_col_list[0]][key_out]))*scale
                         output_dict[specie].pop(idx_col_list[0])
                         output_dict[specie].pop(idx_col_list[1])
                     if debug:
@@ -1979,7 +1979,7 @@ class complete_model:
                 print(f'{specie} has been used as a single slab model')
             else:
                 for key in contributions_order:
-                    if key in contributions_order:
+                    if key in output_dict[specie]:
                         if key!='inner_part':
                             if debug:
                                 print('shape of normal part',np.shape(output_dict[specie][key]))
