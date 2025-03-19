@@ -1622,14 +1622,14 @@ else:
                 for key in dict_flux['individual_surface']:
                     if key not in dict_individual_flux:
                         dict_individual_flux[key]=[]
-                    dict_individual_flux[key].append(dict_flux['individual_surface'][key])            
+                    dict_individual_flux[key].append(np.array(dict_flux['individual_surface'][key]))            
             if use_dust_absorp:
                 for key in dict_flux['individual_absorp']:
-                    key_abs=key[:-7]
+                    key_abs=key
                     if key_abs not in dict_individual_flux_absorp:
                         dict_individual_flux_absorp[key_abs]=[]
-                    dict_individual_flux_absorp[key_abs].append(dict_flux['individual_absorp'][key])
-        
+                    dict_individual_flux_absorp[key_abs].append(np.array(dict_flux['individual_absorp'][key]))
+
         if not ignore_spectrum_plot:
             array_flux.append(dict_flux['tot_flux'])
             if not fit_gas_only:
@@ -1672,9 +1672,6 @@ if not ignore_spectrum_plot:
 tot_samples=np.array(tot_samples)
 dust_mass_master_ar=np.array(dust_mass_master_ar)
 dust_mass_absorp_master_ar=np.array(dust_mass_absorp_master_ar)
-
-
-
 
 
 
@@ -1919,7 +1916,8 @@ if not ignore_spectrum_plot:
                     if dust_emission_plot:
                         comp_list_dust.append(individual_surface[comp])
                     else:
-                        comp_list_dust.append(individual_absorp[comp]*-1.0)
+                        comp_list_dust.append(np.array(individual_absorp[comp])*(-1.0))
+
                 for idx_comp in range(len(comp_list_dust)):
                     print('Calculating:',comp_names_dust[idx_comp])
                     comp=comp_list_dust[idx_comp]
@@ -1943,6 +1941,7 @@ if not ignore_spectrum_plot:
                     #indi_dust_dict[comp_names_dust[idx_comp]]['std3_min']=y_3std_min_comp
                     max_vals_dust.append(np.max(y_median_comp))
 
+
                 max_vals_dust=np.array(max_vals_dust)
                 if number_plotted_dust!=0:
                     sorted_values=np.flip(np.sort(max_vals_dust))
@@ -1959,6 +1958,7 @@ if not ignore_spectrum_plot:
                     comp_list_select=np.arange(0,len(comp_list_dust),1)
 
                 max_dust=0.0
+                min_dust=1e30
                 custom_lines=[]
                 custom_labels=[]
                 colors_used=[]
@@ -1972,7 +1972,7 @@ if not ignore_spectrum_plot:
                     ax.fill_between(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['std_min'],indi_dust_dict[comp_names_dust[idx_comp]]['std'],color=dict_dust_info[comp_names_dust[idx_comp]]['color'],alpha=0.5)
                     ax.plot(x_model,indi_dust_dict[comp_names_dust[idx_comp]]['median'],label=comp_names_dust[idx_comp],alpha=1,color=dict_dust_info[comp_names_dust[idx_comp]]['color'],linestyle=dict_dust_info[comp_names_dust[idx_comp]]['style'])
                     max_dust_new=np.max(indi_dust_dict[comp_names_dust[idx_comp]]['median'][idx_lam_obs])
-
+               
                     if dict_dust_info[comp_names_dust[idx_comp]]['color'] not in colors_used:
                         colors_used.append(dict_dust_info[comp_names_dust[idx_comp]]['color'])
                         custom_lines.append(Line2D([0], [0], color=dict_dust_info[comp_names_dust[idx_comp]]['color'], lw=4))
@@ -1985,7 +1985,8 @@ if not ignore_spectrum_plot:
                         idx_style.append(idx_run)
                         idx_run+=1
                     if max_dust_new>max_dust:
-                        max_dust=max_dust_new
+                            max_dust=max_dust_new
+
         sig_obs=np.array(sig_obs)
 
         if obs_as_line:
@@ -1995,7 +1996,6 @@ if not ignore_spectrum_plot:
                 for idx_check in idx_style:
                     custom_labels.insert(0, custom_labels.pop(idx_check))
                     custom_lines.insert(0, custom_lines.pop(idx_check))
-
                 offset=max_dust-np.min(flux_obs)
                 print('Max dust',max_dust)
                 print('offset',offset)
@@ -2004,7 +2004,7 @@ if not ignore_spectrum_plot:
                 if use_dust_emis:
                     tot_model+=surface_components
                 if use_dust_absorp:
-                    tot_model+=absorp_components*(-1.0)
+                    tot_model+=absorp_components
                 idx_lam_obs=[]
                 for idx_mod in range(len(x_model)):
                     if x_model[idx_mod] in wave_obs_fitted:
@@ -2239,6 +2239,7 @@ if not ignore_spectrum_plot:
         idx_color=-1
         compo_test=''
         for lab in comp_keys:
+            print(lab)
             nicer_lab_out=nicer_labels_single(lab,with_size=True)
             dict_dust_info[nicer_lab_out]={}
             dict_dust_info[nicer_lab_out]['Compo']=nicer_labels_single(lab,with_size=False)
@@ -2260,13 +2261,13 @@ if not ignore_spectrum_plot:
                 idx_color+=1
                 compo_test=dict_dust_info[nicer_lab_out]['Compo']
             dict_dust_info[nicer_lab_out]['color']=list_color_dust[idx_color]
- 
+
         print('Plotting dust version of the component plot')
         plot_model_uncertainties_names(flux_obs_full,sig_obs_full,lam_obs_full,array_flux,con_model_new.xnew,wave_obs_fitted=lam_obs,
                                        folder='folder',zoom_in_list=zoom_list,save=True,
                                        save_name=save_folder+str(run_number)+'_Component_plot',
                                        min_wave=min_wave,ylim='',max_wave=max_wave,
-                                       individual_surface=dict_individual_flux,dict_dust_info=dict_dust_info,
+                                       individual_surface=dict_individual_flux,individual_absorp=dict_individual_flux_absorp,dict_dust_info=dict_dust_info,
                                        plot_individual_surface=True,number_plotted_dust=number_plotted_dust,
                                        savetxt=savetxt,savetxt_prefix=savetxt_prefix)
 
