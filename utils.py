@@ -1187,7 +1187,7 @@ class complete_model:
 
 
     def set_emission_lines(self,LTE=True,one_output=False,scaled=True,output_quantities=False,debug=False,
-                           fast_norm=True,debug_interp=False):
+                           fast_norm=True,debug_interp=False,save_total_fluxes=False):
         if output_quantities:
             output_dict={}
         if 'exp_emission' in self.variables:
@@ -1221,6 +1221,8 @@ class complete_model:
                 temis=self.slab_dict[specie]['temis']
                 dens=self.slab_dict[specie]['ColDens']
                 if scaled:
+                    if debug:
+                        print('Scaling applied')
                     numerator= 1e23*np.pi*((self.slab_dict[specie]['radius']*self.au)**2)/((self.variables['distance']*self.parsec)**2)
                     if self.cosi:
                         scale = numerator*degree_to_cos(self.variables['incl'])
@@ -1718,9 +1720,15 @@ class complete_model:
                     if range_version==0:
                         if output_quantities:
                             if len(idx_col_list)==1:
-                                output_dict[specie]['inner_part']=np.sum(slab_data_select,axis=1)*self.slab_temp_steps 
+                                if save_total_fluxes:
+                                    output_dict[specie]['inner_part']=slab_data_select*self.slab_temp_steps*scale
+                                else:
+                                    output_dict[specie]['inner_part']=np.sum(slab_data_select,axis=1)*self.slab_temp_steps 
                             else:
-                                output_dict[specie][idx_col]['inner_part']=np.sum(slab_data_select,axis=1)*self.slab_temp_steps 
+                                if save_total_fluxes:
+                                    output_dict[specie][idx_col]['inner_part']=slab_data_select*self.slab_temp_steps
+                                else:
+                                    output_dict[specie][idx_col]['inner_part']=np.sum(slab_data_select,axis=1)*self.slab_temp_steps 
 
                         inner_part=np.sum(slab_data_select,axis=0)*self.slab_temp_steps
                     else:
@@ -1737,11 +1745,19 @@ class complete_model:
                         output_dict[specie]['lower_in_temp']=self.slab_parameters[f'{specie}:temp'][idx_tmin]
 
                         if len(idx_col_list)==1:
-                            output_dict[specie]['upper_in']=np.sum(upper_in)
-                            output_dict[specie]['lower_in']=np.sum(lower_in)
+                            if save_total_fluxes:
+                                output_dict[specie]['upper_in']=upper_in*scale
+                                output_dict[specie]['lower_in']=lower_in*scale
+                            else:
+                                output_dict[specie]['upper_in']=np.sum(upper_in)
+                                output_dict[specie]['lower_in']=np.sum(lower_in)
                         else:
-                            output_dict[specie][idx_col]['upper_in']=np.sum(upper_in)
-                            output_dict[specie][idx_col]['lower_in']=np.sum(lower_in)
+                            if save_total_fluxes:
+                                output_dict[specie][idx_col]['upper_in']=upper_in
+                                output_dict[specie][idx_col]['lower_in']=lower_in
+                            else:
+                                output_dict[specie][idx_col]['upper_in']=np.sum(upper_in)
+                                output_dict[specie][idx_col]['lower_in']=np.sum(lower_in)
 
                     if debug:
                         if range_version==0:
@@ -1772,11 +1788,19 @@ class complete_model:
                         output_dict[specie]['upper_out_temp']=t_max
 
                         if len(idx_col_list)==1:
-                            output_dict[specie]['lower_out']=np.sum(lower_out)
-                            output_dict[specie]['upper_out']=np.sum(upper_out)
+                            if save_total_fluxes:
+                                output_dict[specie]['lower_out']=lower_out*scale
+                                output_dict[specie]['upper_out']=upper_out*scale
+                            else:
+                                output_dict[specie]['lower_out']=np.sum(lower_out)
+                                output_dict[specie]['upper_out']=np.sum(upper_out)
                         else:
-                            output_dict[specie][idx_col]['lower_out']=np.sum(lower_out)
-                            output_dict[specie][idx_col]['upper_out']=np.sum(upper_out)
+                            if save_total_fluxes:
+                                output_dict[specie][idx_col]['lower_out']=lower_out
+                                output_dict[specie][idx_col]['upper_out']=upper_out
+                            else:
+                                output_dict[specie][idx_col]['lower_out']=np.sum(lower_out)
+                                output_dict[specie][idx_col]['upper_out']=np.sum(upper_out)
 
                     if debug:
                         print('-------------')
@@ -1904,7 +1928,7 @@ class complete_model:
                         key_out_list=['inner_part','upper_in','upper_out','lower_in','lower_out']
                         for key_out in key_out_list: 
                             if key_out in output_dict[specie][idx_col_list[0]]:
-                                output_dict[specie][key_out]=output_dict[specie][idx_col_list[0]][key_out]+fact*(output_dict[specie][idx_col_list[1]][key_out]-output_dict[specie][idx_col_list[0]][key_out])
+                                output_dict[specie][key_out]=output_dict[specie][idx_col_list[0]][key_out]+fact*(output_dict[specie][idx_col_list[1]][key_out]-output_dict[specie][idx_col_list[0]][key_out])*scale
                         output_dict[specie].pop(idx_col_list[0])
                         output_dict[specie].pop(idx_col_list[1])
                     if debug:
@@ -1929,7 +1953,62 @@ class complete_model:
             return output_dict
         if one_output:
             return emission_flux
-    def extract_emission_quantities(self,low_contribution=0.15,high_contribution=0.85,debug=False,close_plots=False):
+        
+    def extract_emission_by_temperature(self,debug=False):
+        '''
+        This routine calls the emission line function and saves the fluxes by temperatures
+        It will order the contributions so that two arrays are output
+        the first one is a list of the temperatures
+        the second one is an array that has the spectrum for every individual temperature bracket
+        '''
+
+        output_dict=self.set_emission_lines(one_output=False,scaled=False,output_quantities=True,save_total_fluxes=True)
+        if debug:
+            for key in output_dict:
+                for key1 in output_dict[key]:
+                    print(key,key1,np.shape(output_dict[key][key1]))
+        contributions_order=['lower_out','lower_in','inner_part','upper_in','upper_out']
+
+        temp_dict={}
+        fluxes_dict={}
+        for specie in output_dict:
+            if debug: print('Species:',specie)
+            temperatures = []
+            fluxes_by_temp = []
+            if 'temis' in self.slab_dict[specie]:
+                print(f'{specie} has been used as a single slab model')
+            else:
+                for key in contributions_order:
+                    if key in contributions_order:
+                        if key!='inner_part':
+                            if debug:
+                                print('shape of normal part',np.shape(output_dict[specie][key]))
+                            
+                            fluxes_by_temp.append(output_dict[specie][key])
+                            temperatures.append(output_dict[specie][key+'_temp'])
+
+                            if debug:
+                                print('shape of normal part',np.shape(output_dict[specie][key]))
+                        else:
+                            for i in range(len(output_dict[specie][key])):
+                                fluxes_by_temp.append(output_dict[specie][key][i])
+                                temperatures.append(output_dict[specie][key+'_temp'][i])
+                                if debug:
+                                    print('shape of inner part',np.shape(output_dict[specie][key][i]))
+            temperatures=np.array(temperatures)
+            fluxes_by_temp=np.array(fluxes_by_temp)
+            temp_dict[specie]=temperatures
+            # I have to check why the radius is not applied earlier as it should been
+            fluxes_dict[specie]=fluxes_by_temp*self.slab_dict[specie]['radius']*self.slab_dict[specie]['radius']  
+            
+            if debug:
+            
+                print('Shape of the temperature points:,',np.shape(temperatures))
+                print('Shape of the fluxes by temperature:',np.shape(fluxes_by_temp))                
+
+        return temp_dict, fluxes_dict
+
+    def extract_emission_quantities(self,low_contribution=0.15,high_contribution=0.85,debug=False,close_plots=False,integrated_flux=True):
         '''
         This module extracts the important quantities from the emitting regio of the model.
         Output: the radius, temperature and (optionally) columndensity range in which 1-low_contribution-high_contribution
@@ -1950,7 +2029,37 @@ class complete_model:
         
         '''
         #caling the emission_lines function to get all information necessary
-        output_dict=self.set_emission_lines(one_output=False,scaled=False,output_quantities=True)
+        # the integrated flux option is the new standard because it calculates the integrated flux for every temperature component
+        # the previous way just summed up the flux density values
+        # based on quick tests the different is marginal but visible
+        # please note that for fitting windows instead of a continous spectral range, the cummulative flux cutoffs are based on the full spectrum
+        if integrated_flux:
+            
+            output_dict=self.set_emission_lines(one_output=False,scaled=False,output_quantities=True,save_total_fluxes=True)
+            if debug:
+                print('Using integrated flux module')
+                print(output_dict)
+            all_comps=['lower_out','lower_in','inner_part','upper_in','upper_out']
+            for mol in output_dict:
+                for key in all_comps:
+                    if key in output_dict[mol]:
+                        if key!='inner_part':
+                            flux=output_dict[mol][key].copy()
+                            if debug:
+                                print(mol,key,np.shape(flux))
+                            output_dict[mol][key]=self.calc_integrated_flux(flux_input=flux,mol_name=mol)
+                        else:
+                            flux_ar=[]
+                            for idx_dict in range(len(output_dict[mol][key])):
+                                flux=output_dict[mol][key][idx_dict]
+                                if debug:
+                                    print(mol,key,np.shape(flux))
+                                flux_ar.append(self.calc_integrated_flux(flux_input=flux,mol_name=mol))
+                            flux_ar=np.array(flux_ar)
+                            output_dict[mol][key]=flux_ar
+        else:
+            output_dict=self.set_emission_lines(one_output=False,scaled=False,output_quantities=True,save_total_fluxes=False)
+
         if debug:
             for key in output_dict: 
                 print('-----------')
@@ -3123,8 +3232,11 @@ class complete_model:
             plt.show()
             
             
-    def calc_integrated_flux(self,mol_name,wave_lims=[]):
-        flux_ar=self.emission_flux_individual_scaled[mol_name]*1e-26 #convert to w/m^2/Hz 
+    def calc_integrated_flux(self,mol_name,wave_lims=[],flux_input=[]):
+        if len(flux_input)!=0:
+            flux_ar=flux_input*1e-26 #convert to w/m^2/Hz
+        else:
+            flux_ar=self.emission_flux_individual_scaled[mol_name]*1e-26 #convert to w/m^2/Hz 
         if len(wave_lims)==0:
             freq_steps=self.freq_steps
         else:

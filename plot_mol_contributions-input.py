@@ -14,7 +14,7 @@ import corner
 
 #from pymultinest.solve import solve, run
 import matplotlib.pyplot as plt
-
+import matplotlib as mpl
 
 import sys
 import importlib
@@ -65,6 +65,9 @@ preliminary=False
 
 complete_header=True
 comp_diff_color=True
+temp_contribution_plot=True
+cold_water_investigate=False
+temp_mid=400.0
 
 # %%
 if __name__ == "__main__":
@@ -89,9 +92,13 @@ if __name__ == "__main__":
                 close_plots=False
             if argument=='width':
                 wave_width=float(arg_list[i+1])
-                
-
-
+            if argument=='no_temp':
+                temp_contribution_plot=False     
+            if argument=='cold_water':
+                cold_water_investigate=True
+                if i+1<len(arg_list):
+                    temp_mid=float(arg_list[i+1])          
+            
 # %%
 old_version=False
 continuum_penalty=False
@@ -834,6 +841,12 @@ for key in con_model.slab_dict:
     con_model.emission_flux_individual_scaled[key]=emission_flux_individual_scaled[key]
 # %%
 
+if temp_contribution_plot:
+    #print(con_model.slab_dict)
+    #con_model.set_emission_lines(scaled=True)
+    temp_dict,flux_dict=con_model.extract_emission_by_temperature(debug=True)
+
+
 # finding the indices at which lam_obs_full it lam_obs
 idx_matches=[]
 for idx_fit in range(len(lam_obs)):
@@ -1062,19 +1075,22 @@ while i<=np.max(lam_obs):
 
 # %%
 def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_obs=lam_obs_full,lam_obs_fitted=lam_obs,flux_obs_fitted=flux_obs,
-                           y_median=[None],y_std=[],y_std_min=[],wave_new=[],wave_range=[[13.6,16.3]],save_name='',debug=True):
+                           y_median=[None],y_std=[],y_std_min=[],wave_new=[],wave_range=[[13.6,16.3]],
+                           save_name='',debug=True,temp_plot=False,flux_dict={},temp_dict={},temp_of='',cold_water_investigate=cold_water_investigate):
     first=True
     for key in mol_fluxes:
-        if first:
-            first=False
-            tot_mol_flux=mol_fluxes[key].copy()
-        else:
-            tot_mol_flux+=mol_fluxes[key]
+        if not temp_plot or temp_of==key:
+            if first:
+                first=False
+                tot_mol_flux=mol_fluxes[key].copy()
+            else:
+                tot_mol_flux+=mol_fluxes[key]
     print(np.max(interp_flux),np.max(tot_mol_flux),np.shape(tot_mol_flux))
     print(np.shape(lam_obs),np.shape(np.zeros_like(lam_obs)),np.shape(mol_fluxes[key]))
 
     
     nrows=len(wave_range)
+
     fig,axs=plt.subplots(nrows=nrows,figsize=(14,2.8*nrows))
     
     #plt.step(lam_obs,(interp_flux-tot_mol_flux)*1000,linewidth=0.5,color='black',linestyle='dashed',label='Continuum',zorder=102)
@@ -1116,26 +1132,52 @@ def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_obs
         added_mol_flux=np.zeros_like(lam_obs_select)
         idx_color=0
         for key in mol_fluxes:
-            mol_alpha=1.0
-            new_mol=mol_fluxes[key][idx[idx2]]*1000
-
-
-            mol_color=key
-            if '_comp' in mol_color:
-                idx_mol=mol_color.find('_comp')
-                if comp_diff_color:
-                    n_comp=float(mol_color[idx_mol+5])
-                    mol_alpha=float(1/n_comp)
-                mol_color=mol_color[:idx_mol]
-                print(f'Changing {key} to {mol_color}')
-            if '_absorp' in mol_color:
-                idx_mol=mol_color.find('_absorp')
+            if not temp_plot:
                 
-                mol_color=mol_color[:idx_mol]
-                print(f'Changing {key} to {mol_color}')
-            axs[i].fill_between(lam_obs_select,(interp_flux_select-tot_mol_flux_select)*1000+new_mol+added_mol_flux,(interp_flux_select-tot_mol_flux_select)*1000+added_mol_flux,linewidth=0,label=molecular_names[mol_color],color=mol_colors_dict[mol_color],step='pre',zorder=100-idx_color,alpha=mol_alpha)
-            added_mol_flux+=new_mol
-            idx_color+=1
+                mol_alpha=1.0
+                new_mol=mol_fluxes[key][idx[idx2]]*1000
+
+
+                mol_color=key
+                if '_comp' in mol_color:
+                    idx_mol=mol_color.find('_comp')
+                    if comp_diff_color:
+                        n_comp=float(mol_color[idx_mol+5])
+                        mol_alpha=float(1/n_comp)
+                    mol_color=mol_color[:idx_mol]
+                    print(f'Changing {key} to {mol_color}')
+                if '_absorp' in mol_color:
+                    idx_mol=mol_color.find('_absorp')
+                    
+                    mol_color=mol_color[:idx_mol]
+                    print(f'Changing {key} to {mol_color}')
+                axs[i].fill_between(lam_obs_select,(interp_flux_select-tot_mol_flux_select)*1000+new_mol+added_mol_flux,(interp_flux_select-tot_mol_flux_select)*1000+added_mol_flux,linewidth=0,label=molecular_names[mol_color],color=mol_colors_dict[mol_color],step='pre',zorder=100-idx_color,alpha=mol_alpha)
+                added_mol_flux+=new_mol
+                idx_color+=1
+            if temp_plot and key==temp_of:
+                if cold_water_investigate and key=='H2O':
+
+                    cmap = mpl.colormaps['coolwarm']
+                else:
+                    cmap = mpl.colormaps['plasma']
+
+                if cold_water_investigate and key=='H2O':
+                    max_diff_to_mid=max(abs(temp_mid-np.min(temp_dict[key])),abs(temp_mid-np.max(temp_dict[key])))
+                    min_val_plt=temp_mid-max_diff_to_mid
+                    max_val_plt=temp_mid+max_diff_to_mid
+                else:
+                    min_val_plt=np.min(temp_dict[key])
+                    max_val_plt=np.max(temp_dict[key])
+                
+                for j in range(len(flux_dict[key])-1,-1,-1):
+                    color_t=(temp_dict[key][j]-min_val_plt)/(max_val_plt-min_val_plt)
+                    
+                    new_mol=flux_dict[key][j][idx[idx2]]*1000
+                    axs[i].fill_between(lam_obs_select,(interp_flux_select-tot_mol_flux_select)*1000+new_mol+added_mol_flux,(interp_flux_select-tot_mol_flux_select)*1000+added_mol_flux,linewidth=0,color=cmap(color_t),step='pre',zorder=100-idx_color)
+                    added_mol_flux+=new_mol
+                
+
+
         axs[i].step(lam_obs_select,flux_obs_select*1000,linewidth=0.5,color='black',zorder=101)
 
         if len(lam_obs)!=len(lam_obs_fitted):
@@ -1163,7 +1205,15 @@ def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_obs
         axs[i].set_xlim(wave_range[i])
         axs[i].set_ylabel('$F \, [\mathrm{mJy}]$')
 
-    axs[0].legend(loc=(0,1),ncol=max(1,len(list(mol_fluxes.keys()))//2)).set_zorder(102)
+    if temp_plot:
+        norm = mpl.colors.Normalize(vmin=min_val_plt, vmax=max_val_plt)
+
+        fig.colorbar(mpl.cm.ScalarMappable(norm=norm,cmap=cmap),ax=axs[0],location='top',aspect=50, pad=0.2,orientation='horizontal', label='T [K]')
+
+        t=axs[0].text(0.05,0.8,molecular_names[temp_of],fontsize=BIGGER_SIZE, transform=axs[0].transAxes,zorder=9999)
+        t.set_bbox(dict(facecolor='white', edgecolor='black'))
+    else:
+        axs[0].legend(loc=(0,1),ncol=max(1,len(list(mol_fluxes.keys()))//2)).set_zorder(102)
     
     axs[-1].set_xlabel('$\lambda [\mathrm{\mu m}]$')
 
@@ -1177,6 +1227,22 @@ def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_obs
 zoom_file_name=prefix_fig+'_mol_contribution_zoom_in_plot.pdf'
 plot_molecule_subplots(interp_flux,emission_flux_individual_scaled,wave_range=wave_grid,save_name=zoom_file_name)
 # %%
+
+if temp_contribution_plot:
+    for key in slab_dict:
+        if 'temis' not in slab_dict[key]:
+            temp_of=key
+            print('Sum of flux contributions and total flux')
+            ratio=np.sum(con_model.emission_flux_individual[temp_of]*slab_dict[temp_of]['radius']**2)/np.sum(flux_dict[temp_of])
+            if ratio<0.99 or ratio >1.01:
+                print('The temperature components dont add up the the total flux!')
+                print('Therefore, the code stops here.')
+                print('Investigate!')
+                exit()
+            temp_file_name=prefix_fig+f'_mol_contribution_temp_{temp_of}.pdf'
+            plot_molecule_subplots(interp_flux,emission_flux_individual_scaled,wave_range=wave_grid,save_name=temp_file_name,
+                                temp_plot=True,flux_dict=flux_dict,temp_dict=temp_dict,temp_of=temp_of)
+    
 
 # printing the slab dict of the median probable model
 print('Slab dict:')
