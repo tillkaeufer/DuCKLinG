@@ -1108,24 +1108,25 @@ if use_ultranest:
             print('Adaptive_nsteps is not set')
             adaptive_nsteps=False
 else:
+    # Because there was a spelling mistake in the previous versions
+    # fast_retrival and fast_retrieval both work now as input
     try:
-        n_live_points
-        evidence_tolerance
-        sampling_efficiency
+        fast_retrieval
     except NameError:
-        print('Using fast_retrieval:',fast_retrival)
-    
-        if fast_retrival:
-            n_live_points = 1000#50
-            evidence_tolerance = 5.0
-            sampling_efficiency = 0.8
-        else:
-            n_live_points = 1000
-            evidence_tolerance = 0.5
-            sampling_efficiency = 0.3
+        fast_retrieval=fast_retrival
+    print('Using fast_retrieval:',fast_retrieval)
+
+    if fast_retrieval:
+        n_live_points = 400#50
+        evidence_tolerance = 5.0
+        sampling_efficiency = 0.8
+    else:
+        n_live_points = 1000
+        evidence_tolerance = 0.5
+        sampling_efficiency = 0.3
     print('n_live_points',n_live_points)
     print('evidence_tolerance',evidence_tolerance)   
-    print('sampling_efficiency',sampling_efficiency) 
+    print('sampling_efficiency',sampling_efficiency)   
 
 
 try:

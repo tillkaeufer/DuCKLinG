@@ -1113,9 +1113,15 @@ else:
         evidence_tolerance
         sampling_efficiency
     except NameError:
-        print('Using fast_retrieval:',fast_retrival)
+        # Because there was a spelling mistake in the previous versions
+        # fast_retrival and fast_retrieval both work now as input
+        try:
+            fast_retrieval
+        except NameError:
+            fast_retrieval=fast_retrival
+        print('Using fast_retrieval:',fast_retrieval)
     
-        if fast_retrival:
+        if fast_retrieval:
             n_live_points = 400#50
             evidence_tolerance = 5.0
             sampling_efficiency = 0.8
