@@ -15,7 +15,6 @@ import corner
 #from pymultinest.solve import solve, run
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-
 import sys
 import importlib
 
@@ -1156,9 +1155,9 @@ def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_obs
             if temp_plot and key==temp_of:
                 if cold_water_investigate and key=='H2O':
 
-                    cmap = mpl.colormaps['coolwarm']
+                    cmap = plt.get_cmap('coolwarm')
                 else:
-                    cmap = mpl.colormaps['plasma']
+                    cmap = plt.get_cmap('plasma')
 
                 if cold_water_investigate and key=='H2O':
                     max_diff_to_mid=max(abs(temp_mid-np.min(temp_dict[key])),abs(temp_mid-np.max(temp_dict[key])))
