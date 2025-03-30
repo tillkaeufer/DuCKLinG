@@ -272,6 +272,7 @@ The options for this routine are as follows:
 - close: Closing the plots instead of showing them to the user.
 - width: this phrase should be followed by a float. It specifies how large the wavelengths windows are that are plotted. Default is 2.0.
 - no_comp: the latest version of the code will plot different components of the same molecules in different colours (alpha=1/component_number). If you want the old behaviour that all components of the same molecule are plotted in the same colour add this argument.
+- cold_water: For all molecules the temperature contibutions to every part of the spectrum is plotted (if the argument no_temp is not used). If cold_water is added as an argument this means, that the colorscale for water will be ranging from blue to red with the middle temperature at 400K, which is often considered the splitting temperature between warm and cold water.  
 
 If you want to plot the molecular column densities, temperatures and radii this is possible with the following function:
 
