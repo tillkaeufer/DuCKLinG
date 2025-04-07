@@ -306,4 +306,5 @@ This function has a couple of options that allow you to change the plotting. The
 - Introduction of the model and application to a TTauri star: [Kaeufer et al. 2024a](https://ui.adsabs.harvard.edu/abs/2024A%26A...687A.209K/abstract)
 - Application to a very low-mass star to disentangle the dust and gas contributions: [Kaeufer et al. 2024b](https://ui.adsabs.harvard.edu/abs/2024A%26A...690A.100K/abstract)
 - Using the dust component of the model to determine the dust composition of PDS70 [Jang et al. 2024](https://ui.adsabs.harvard.edu/abs/2024A%26A...691A.148J/abstract)
+- Determine the dust composition of highly irradiated very distant disk around XUE 1 [Portilla-Revelo et al. 2025](https://doi.org/10.48550/arXiv.2504.00841)
 
