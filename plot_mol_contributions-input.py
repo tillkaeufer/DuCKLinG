@@ -1207,8 +1207,15 @@ def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_obs
         norm = mpl.colors.Normalize(vmin=min_val_plt, vmax=max_val_plt)
 
         fig.colorbar(mpl.cm.ScalarMappable(norm=norm,cmap=cmap),ax=axs[0],location='top',aspect=50, pad=0.2,orientation='horizontal', label='T [K]')
+        temp_of_name=temp_of
+        suffix=''
+        if '_absorp' in temp_of_name:
+            idx_mol=temp_of_name.find('_absorp')
+            
+            temp_of_name=temp_of_name[:idx_mol]
+            suffix=' absorption'
 
-        t=axs[0].text(0.05,0.8,molecular_names[temp_of],fontsize=BIGGER_SIZE, transform=axs[0].transAxes,zorder=9999)
+        t=axs[0].text(0.05,0.8,molecular_names[temp_of_name]+suffix,fontsize=BIGGER_SIZE, transform=axs[0].transAxes,zorder=9999)
         t.set_bbox(dict(facecolor='white', edgecolor='black'))
     else:
         axs[0].legend(loc=(0,1),ncol=max(1,len(list(mol_fluxes.keys()))//2)).set_zorder(102)
