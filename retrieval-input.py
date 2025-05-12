@@ -196,6 +196,24 @@ try:
     limit_integrated_flux
     print('limit_integrated_flux')
     print(limit_integrated_flux)
+    lim_wave_select=False
+    for key in limit_flux_dict:
+        if isinstance(limit_flux_dict[key], dict):
+            lim_wave_select=True
+        if lim_wave_select and not isinstance(limit_flux_dict[key], dict):
+            print('--------------------')
+            print('ERROR:')
+            print('Some limiting flux entries are dictionaries while otheres are single values')
+            print('--------------------')
+            exit()
+        if not lim_wave_select and isinstance(limit_flux_dict[key], dict):
+            print('--------------------')
+            print('ERROR:')
+            print('Some limiting flux entries are dictionaries while otheres are single values')
+            print('--------------------')
+            exit()
+    print(lim_wave_select)
+
 except NameError:
     limit_integrated_flux=False
     print('limit_integrated_flux False by default')    
@@ -603,7 +621,10 @@ def loglike_ratios(cube,debug=False,timeit=False):
     else:
         sigma=sig_obs
     # constant of loglike
-    const=np.sum(np.log(2*np.pi*(sigma)**2))
+    if weighted:
+        const=np.sum(np.log(2*np.pi*(weights_obs*sigma)*(weights_obs*sigma)))
+    else:
+        const=np.sum(np.log(2*np.pi*(sigma)*sigma))
 
     #difference between observation and model
 
@@ -611,9 +632,9 @@ def loglike_ratios(cube,debug=False,timeit=False):
 
     #definition of chi
     if weighted:
-        chi=np.sum(weights_obs*(diff)**2/ sigma**2)
+        chi=np.sum(diff*diff / ((weights_obs*sigma)*(weights_obs*sigma)))
     else:
-        chi=np.sum((diff)**2/ sigma**2)
+        chi=np.sum(diff*diff/ (sigma*sigma))
         
     #loglike
     loglikelihood =  -0.5 * (chi +const) 
@@ -735,16 +756,23 @@ def loglike_gas(cube,debug=False,timeit=False):
     if limit_integrated_flux:
         for key in slab_dict:
             if key in limit_flux_dict:
+
                 if debug:
                     print('lim')
                     print(key)
-                int_flux=con_model.calc_integrated_flux(key)
+                if lim_wave_select:
+                    wave_limits=limit_flux_dict[key]['wave']
+                    int_flux_lim=limit_flux_dict[key]['flux']
+                else:
+                    wave_limits=[]
+                    int_flux_lim=limit_flux_dict[key]
+                int_flux=con_model.calc_integrated_flux(key,wave_lims=wave_limits)
                 if debug:
                     print('int_flux')
                     print(int_flux)
-                if int_flux>limit_flux_dict[key]:
+                if abs(int_flux)>int_flux_lim:
                     trigger_penalty=True
-                    sum_penalty+=penalty*(0.01+abs(int_flux-limit_flux_dict[key]))
+                    sum_penalty+=penalty*(0.01+abs(abs(int_flux)-int_flux_lim))
         if trigger_penalty:
             return sum_penalty  
     if timeit:
@@ -921,13 +949,19 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
                 if debug:
                     print('lim')
                     print(key)
-                int_flux=con_model.calc_integrated_flux(key)
+                if lim_wave_select:
+                    wave_limits=limit_flux_dict[key]['wave']
+                    int_flux_lim=limit_flux_dict[key]['flux']
+                else:
+                    wave_limits=[]
+                    int_flux_lim=limit_flux_dict[key]
+                int_flux=con_model.calc_integrated_flux(key,wave_lims=wave_limits)
                 if debug:
                     print('int_flux')
                     print(int_flux)
-                if int_flux>limit_flux_dict[key]:
+                if abs(int_flux)>abs(int_flux_lim):
                     trigger_penalty=True
-                    sum_penalty+=penalty*(0.01+abs(int_flux-limit_flux_dict[key]))
+                    sum_penalty+=penalty*(0.01+abs(abs(int_flux)-abs(int_flux_lim)))
         if trigger_penalty:
             return sum_penalty                   
     if timeit:

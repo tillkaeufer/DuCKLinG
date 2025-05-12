@@ -1268,6 +1268,16 @@ for mol in slab_dict:
     print(f'{mol}: {con_model.calc_integrated_flux(mol,wave_lims=[np.min(lam_obs),np.max(lam_obs)])} W/m^2')
 print('Done!')
 print('---------------------------')
+if limit_integrated_flux:
+
+    print('---------------------------')
+    for key in limit_flux_dict:
+        if isinstance(limit_flux_dict[key], dict):
+            print('Integrated fluxes for molecules in the limited wavelength region:')
+
+            print(f'{key} between {str(limit_flux_dict[key]["wave"][0])} and {str(limit_flux_dict[key]["wave"][1])} micron: {con_model.calc_integrated_flux(mol,wave_lims=limit_flux_dict[key]["wave"])} W/m^2')
+    
+    print('---------------------------')
 
 
 if os.path.isfile(f'{prefix}array_flux.npy'):

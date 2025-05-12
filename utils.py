@@ -3919,23 +3919,9 @@ def calc_weights(lam_obs,target_res=2500):
     weights[-1]=target_res/(lam_obs[-1]/(lam_obs[-1]-lam_obs[-2]))
     print('Max and min weight:',np.max(weights),np.min(weights))
     #print(weights)
+
     return weights
 
-def calc_weights(lam_obs,target_res=2500):
-    print('Calculating the weights of the spectral points')
-    print('To give all spectral regions the same weight')
-    weights=np.zeros(len(lam_obs))
-
-    for i in range(len(lam_obs)-1):
-        if (lam_obs[i+1]-lam_obs[i]) == 0:
-            print(i,lam_obs[i])
-        spec_res=lam_obs[i]/(lam_obs[i+1]-lam_obs[i])
-        weights[i]=target_res/spec_res
-
-    weights[-1]=target_res/(lam_obs[-1]/(lam_obs[-1]-lam_obs[-2]))
-    print('Max and min weight:',np.max(weights),np.min(weights))
-    #print(weights)
-    return weights
 
 
 def check_if_priors_in_linedata(slab_prior_dict,fixed_dict,slab_folder='./LineData/', slab_prefix='1_',log_coldens=True):

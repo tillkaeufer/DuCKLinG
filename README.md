@@ -141,7 +141,9 @@ This is where the settings for background data are provided:
 Optional settings to investigate specific behaviours:  
 You can limit the integrated flux of a molecule to a value in $W/m^-2$.  
 This might be useful to eliminate quasi-continua of certain molecules.
-For doing so you have to set *limit_integrated_flux=True* and then for example *limit_flux_dict={'C4H2':4.5e-19}*
+For doing so you have to set *limit_integrated_flux=True* and then for example *limit_flux_dict={'C4H2':4.5e-19}*  
+It is also possible to limit the flux only over a certain wavelength window. The idea is that if you choose this window where flux is only popping up in case of strong quasi-continua you can limit the flux without penalising fits of the main features. If is done by creating a two layer dictionary (e.g. *limit_flux_dict={'C4H2':{'wave':$\left[10.0,15.0\right]$,'flux':4.5e-19}}*). The wavelengths should be provided in micron.  
+To get to know the integrated fluxes you can run a first fit and use the plot_mol_contributions-input.py rountine which will print the integrated fluxes over the whole spectrum for all modelled species. To get the flux in a certain wavelength window you can now insert a fake limit_flux_dict in the input file with your wished wavelengths limit and plot_mol_contributions-input.py will now also print the integrated flux in that window.
 
 Similarly, you can limit the maximum emitting area of a molecule.  
 This is done with *limit_radial_extent=True* and for example *limit_radius=2* (limiting radius in au)

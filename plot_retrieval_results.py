@@ -2353,35 +2353,37 @@ if not ignore_spectrum_plot:
 
 
 print('Plotting cornerplot multinest...')
-lims=[]
-for i in range(len(header_para)):
-    lims.append([lower_lim[i],upper_lim[i]])  
+if len(header_para)>=1:
+    lims=[]
+    for i in range(len(header_para)):
+        lims.append([lower_lim[i],upper_lim[i]])  
 
 
-CORNER_KWARGS = dict(
-    smooth=.9,
-    label_kwargs=dict(fontsize=20,rotation=45),
-    title_kwargs=dict(fontsize=24,loc='left'),
-    levels=[0.68, 0.95],
-    quantiles=[0.5],
-    plot_density=False,
-    plot_datapoints=True,
-    fill_contours=True,
-    plot_contours=True,
-    show_titles=True,
-    title_quantiles=[0.16,0.5,0.84],
-    title_fmt='10.4e',
-#        truths=val_obj_conv,
-    range=lims)
-fig = corner.corner(samples[:,:len(header_para)], labels=header_para, color='tomato', **CORNER_KWARGS)
+    CORNER_KWARGS = dict(
+        smooth=.9,
+        label_kwargs=dict(fontsize=20,rotation=45),
+        title_kwargs=dict(fontsize=24,loc='left'),
+        levels=[0.68, 0.95],
+        quantiles=[0.5],
+        plot_density=False,
+        plot_datapoints=True,
+        fill_contours=True,
+        plot_contours=True,
+        show_titles=True,
+        title_quantiles=[0.16,0.5,0.84],
+        title_fmt='10.4e',
+    #        truths=val_obj_conv,
+        range=lims)
+    fig = corner.corner(samples[:,:len(header_para)], labels=header_para, color='tomato', **CORNER_KWARGS)
 
-plt.savefig(f'{save_folder}{str(run_number)}_Cornerplot_multinest_parameters{reduce_str}.{filetype_fig}',bbox_inches='tight')
-if close_plots:
-    plt.close()
+    plt.savefig(f'{save_folder}{str(run_number)}_Cornerplot_multinest_parameters{reduce_str}.{filetype_fig}',bbox_inches='tight')
+    if close_plots:
+        plt.close()
+    else:
+
+        plt.show()
 else:
-
-    plt.show()
-
+    print('No non-slab multinest parameter')
 
 header_para_slab=list(header_para)+list(header_slab)
 if fit_conti_err or fit_obs_err:
