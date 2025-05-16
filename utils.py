@@ -3912,14 +3912,16 @@ def calc_weights(lam_obs,target_res=2500):
 
     for i in range(len(lam_obs)-1):
         if (lam_obs[i+1]-lam_obs[i]) == 0:
-            print(i,wave[i])
+            print(i,lam_obs[i])
         spec_res=lam_obs[i]/(lam_obs[i+1]-lam_obs[i])
+        if i%100==0:
+            print(lam_obs[i],spec_res)
         weights[i]=target_res/spec_res
 
     weights[-1]=target_res/(lam_obs[-1]/(lam_obs[-1]-lam_obs[-2]))
+    weights=weights*len(weights)/np.sum(weights)
     print('Max and min weight:',np.max(weights),np.min(weights))
-    #print(weights)
-
+    
     return weights
 
 

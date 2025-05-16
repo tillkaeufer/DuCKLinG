@@ -622,7 +622,7 @@ def loglike_ratios(cube,debug=False,timeit=False):
         sigma=sig_obs
     # constant of loglike
     if weighted:
-        const=np.sum(np.log(2*np.pi*(weights_obs*sigma)*(weights_obs*sigma)))
+        const=np.sum(np.log(2*np.pi*(sigma/weights_obs)*(sigma/weights_obs)))
     else:
         const=np.sum(np.log(2*np.pi*(sigma)*sigma))
 
@@ -632,7 +632,7 @@ def loglike_ratios(cube,debug=False,timeit=False):
 
     #definition of chi
     if weighted:
-        chi=np.sum(diff*diff / ((weights_obs*sigma)*(weights_obs*sigma)))
+        chi=np.sum(diff*diff / ((sigma/weights_obs)*(sigma/weights_obs)))
     else:
         chi=np.sum(diff*diff/ (sigma*sigma))
         
@@ -785,7 +785,10 @@ def loglike_gas(cube,debug=False,timeit=False):
     else:
         sigma=sig_obs
     # constant of loglike
-    const=np.sum(np.log(2*np.pi*(sigma)**2))
+    if weighted:
+        const=np.sum(np.log(2*np.pi*(sigma/weights_obs)*(sigma/weights_obs)))
+    else:
+        const=np.sum(np.log(2*np.pi*(sigma)**2))
 
 
    #difference between observation and model
@@ -794,9 +797,9 @@ def loglike_gas(cube,debug=False,timeit=False):
 
     #definition of chi
     if weighted:
-        chi=np.sum(weights_obs*(diff)**2/ sigma**2)
+        chi=np.sum(diff*diff / ((sigma/weights_obs)*(sigma/weights_obs)))
     else:
-        chi=np.sum((diff)**2/ sigma**2)
+        chi=np.sum(diff*diff/ (sigma*sigma))
 
     #loglike
     loglikelihood =  -0.5 * (chi +const) 
@@ -974,7 +977,10 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
     else:
         sigma=sig_obs
     # constant of loglike
-    const=np.sum(np.log(2*np.pi*(sigma)**2))
+    if weighted:
+        const=np.sum(np.log(2*np.pi*(sigma/weights_obs)*(sigma/weights_obs)))
+    else:
+        const=np.sum(np.log(2*np.pi*(sigma)**2))
 
     #difference between observation and model
 
@@ -982,9 +988,9 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
 
     #definition of chi
     if weighted:
-        chi=np.sum(weights_obs*(diff)**2/ sigma**2)
+        chi=np.sum(diff*diff / ((sigma/weights_obs)*(sigma/weights_obs)))
     else:
-        chi=np.sum((diff)**2/ sigma**2)
+        chi=np.sum(diff*diff/ (sigma*sigma))
     #loglike
     loglikelihood =  -0.5 * (chi +const) 
     

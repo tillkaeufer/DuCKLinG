@@ -203,7 +203,7 @@ Due to the change of spectral resolving power of MIRI over wavelengths, it means
 weights_obs=calc_weights(lam_obs)
 
 This will activate this likelihood functions:  
-$L=\sum_{i} -\frac{1}{2}\times \left[\log({2\pi\times \sigma_i^2})+\frac{w_i\times (f_{\rm model,i}-f_{\rm obs,i})^2}{\sigma_i^2}\right]$
+$L=\sum_{i} -\frac{1}{2}\times \left[\log({2\pi\times (\sigma_i/w_i)^2})+\frac{ (f_{\rm model,i}-f_{\rm obs,i})^2}{(\sigma_i/w_i)^2}\right]$
 
 with $w_i$ being the weights.  
 Alternatively, you can also define your own custom weights.  As long as their have the same lengths as lam_obs, everything should work.  
