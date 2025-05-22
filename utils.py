@@ -2541,7 +2541,7 @@ class complete_model:
                     from_array=False
                 else:
                     from_array=True
-                self.starspec=self.bbody(self.variables['tstar'],from_array=from_array)
+                self.starspec=self.bbody(self.variables['tstar'],self.freq,from_array=from_array)
 
                 scale = 1e23*np.pi*((self.rsun*self.variables['rstar'])**2)/((self.variables['distance']*self.parsec)**2)
             else:
@@ -2763,7 +2763,7 @@ class complete_model:
                 from_array=False
             else:
                 from_array=True
-            self.starspec=self.bbody(self.variables['tstar'],from_array=from_array)
+            self.starspec=self.bbody(self.variables['tstar'],self.freq,from_array=from_array)
            
             scale = 1e23*np.pi*((self.rsun*self.variables['rstar'])**2)/((self.variables['distance']*self.parsec)**2)
         else:
