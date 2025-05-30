@@ -1290,10 +1290,10 @@ if os.path.isfile(f'{prefix}array_flux.npy'):
         
     # stiching part
     
-    above=np.unique(np.clip(standard_wave,a_min=np.max(con_model.xnew),a_max=None))
-    below=np.unique(np.clip(standard_wave,a_max=np.min(con_model.xnew),a_min=None))
+    above=np.unique(np.clip(standard_wave,a_min=np.max(lam_obs),a_max=None))
+    below=np.unique(np.clip(standard_wave,a_max=np.min(lam_obs),a_min=None))
     out=np.append(above,below)
-    wave_new=np.sort(np.unique(np.append(out,con_model.xnew)))
+    wave_new=np.sort(np.unique(np.append(out,lam_obs)))
     y_model=array_flux
     print('Calculating the percentiles of the spectrum (takes a while)')
     y_median=np.median(y_model,axis=0)

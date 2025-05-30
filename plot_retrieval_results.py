@@ -1568,7 +1568,7 @@ print('The next step takes a while')
 
 
 
-parallel=False
+parallel=True
 if parallel:
 
     pool =  mp.get_context('fork').Pool(min(int(16),mp.cpu_count()//2))
