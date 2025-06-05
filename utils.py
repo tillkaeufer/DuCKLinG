@@ -117,6 +117,7 @@ class complete_model:
         self.run_tzones=False
         self.two_dust_comp=False
         self.two_dust_comp_abs=False
+        self.two_distinct_dust=False
           
         self.bb_array=[]
         self.interp_bbody=False
@@ -137,6 +138,7 @@ class complete_model:
         self.use_dust_emis=True
         self.use_dust_absorp=False
         self.use_extinction=False
+        self.two_dust_qs=False
         
     def __str__(self):
         #defining the output that will be printed
@@ -584,6 +586,14 @@ class complete_model:
                 else:
                     key_load=key
                     self.two_dust_comp=False
+
+                if self.two_dust_comp:
+                    if 't_change_s' in self.variables:
+                        self.two_distinct_dust=False
+                    else:
+                        self.two_distinct_dust=True
+                    if 'q_thin_cold' in self.variables or 'q_abs_cold' in self.variables:
+                        self.two_dust_qs=True
                 if debug: print('Load '+key_load+'...')
                 if '/' in key:
                     print('Make sure not to mix up dust species from different opacity mechanisms!!')
@@ -956,6 +966,8 @@ class complete_model:
         
         if self.sur_powerlaw: # using a power law for the temperature distribution in the surface layer
             if not absorption:
+                
+                used_exp=self.variables['exp_surface']
                 if comp=='one':
                 
                     tmin,tmax=self.variables['tmin_s'],self.variables['tmax_s']
@@ -963,17 +975,20 @@ class complete_model:
                     tmin,tmax=self.variables['tmin_hot_s'],self.variables['tmax_s']
                 elif comp=='cold':
                     tmin,tmax=self.variables['tmin_s'],self.variables['tmax_cold_s']
+                    if self.two_dust_qs:
+                        used_exp=self.variables['exp_surface_cold']
                     
-                used_exp=self.variables['exp_surface']
             else:
+                used_exp=self.variables['exp_abs'] 
                 if comp=='one':
                     tmin,tmax=self.variables['tmin_abs'],self.variables['tmax_abs']
                 elif comp=='hot':
                     tmin,tmax=self.variables['tmin_hot_abs'],self.variables['tmax_abs']
                 elif comp=='cold':
                     tmin,tmax=self.variables['tmin_abs'],self.variables['tmax_cold_abs']
-    
-                used_exp=self.variables['exp_abs']
+                    if self.two_dust_qs:
+                        used_exp=self.variables['exp_abs_cold']
+
                 
             if timeit: time1=time()
             if new_surface:
@@ -2498,17 +2513,28 @@ class complete_model:
                 self.abundance_dict=dust_species
                 q_thin=self.variables['q_thin']
                 self.variables['exp_surface'] = (2.0 - q_thin)/q_thin
+                
+                    
                 if self.two_dust_comp:
-                    self.variables['tmax_cold_s']=self.variables['tmin_s']+(self.variables['tmax_s']-self.variables['tmin_s'])*self.variables['t_change_s']
-                    self.variables['tmin_hot_s']=self.variables['tmax_cold_s']
+                    if not self.two_distinct_dust:
+                        self.variables['tmax_cold_s']=self.variables['tmin_s']+(self.variables['tmax_s']-self.variables['tmin_s'])*self.variables['t_change_s']
+                        self.variables['tmin_hot_s']=self.variables['tmax_cold_s']
+                    
+                    if self.two_dust_qs:
+                        q_thin=self.variables['q_thin_cold']
+                        self.variables['exp_surface_cold'] = (2.0 - q_thin)/q_thin
 
             if self.use_dust_absorp:
                 self.abundance_dict_absorp=absorp_species
                 q_abs=self.variables['q_abs']
                 self.variables['exp_abs'] = (2.0 - q_abs)/q_abs
                 if self.two_dust_comp_abs:
-                    self.variables['tmax_cold_abs']=self.variables['tmin_abs']+(self.variables['tmax_abs']-self.variables['tmin_abs'])*self.variables['t_change_abs']
-                    self.variables['tmin_hot_abs']=self.variables['tmax_cold_abs']
+                    if not self.two_distinct_dust:
+                        self.variables['tmax_cold_abs']=self.variables['tmin_abs']+(self.variables['tmax_abs']-self.variables['tmin_abs'])*self.variables['t_change_abs']
+                        self.variables['tmin_hot_abs']=self.variables['tmax_cold_abs']
+                    if self.two_dust_qs:
+                        q_abs=self.variables['q_abs_cold']
+                        self.variables['exp_abs_cold'] = (2.0 - q_abs)/q_abs
                     
                 
             q=self.variables['q_mid']
@@ -2732,14 +2758,25 @@ class complete_model:
             q_thin=self.variables['q_thin']
             self.variables['exp_surface'] = (2.0 - q_thin)/q_thin
             if self.two_dust_comp:
-                self.variables['tmax_cold_s']=self.variables['tmin_s']+(self.variables['tmax_s']-self.variables['tmin_s'])*self.variables['t_change_s']
-                self.variables['tmin_hot_s']=self.variables['tmax_cold_s']
+                
+                if not self.two_distinct_dust:
+                    self.variables['tmax_cold_s']=self.variables['tmin_s']+(self.variables['tmax_s']-self.variables['tmin_s'])*self.variables['t_change_s']
+                    self.variables['tmin_hot_s']=self.variables['tmax_cold_s']
+                if self.two_dust_qs:
+                    q_thin=self.variables['q_thin_cold']
+                    self.variables['exp_surface_cold'] = (2.0 - q_thin)/q_thin
+
         if self.use_dust_absorp and  self.abs_powerlaw:
             q_abs=self.variables['q_abs']
             self.variables['exp_abs'] = (2.0 - q_abs)/q_abs
             if self.two_dust_comp_abs:
-                self.variables['tmax_cold_abs']=self.variables['tmin_abs']+(self.variables['tmax_abs']-self.variables['tmin_abs'])*self.variables['t_change_abs']
-                self.variables['tmin_hot_abs']=self.variables['tmax_cold_abs']
+
+                if not self.two_distinct_dust:
+                    self.variables['tmax_cold_abs']=self.variables['tmin_abs']+(self.variables['tmax_abs']-self.variables['tmin_abs'])*self.variables['t_change_abs']
+                    self.variables['tmin_hot_abs']=self.variables['tmax_cold_abs']
+                if self.two_dust_qs:
+                    q_abs=self.variables['q_abs_cold']
+                    self.variables['exp_abs_cold'] = (2.0 - q_abs)/q_abs
            
         
         if 'q_emis' in self.variables:
@@ -3812,7 +3849,7 @@ def cube_to_dicts(data,header_para,header_abund,header_all,scale_prior,header_ab
 
 
 
-def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_gas_only=False,use_dust_emis=True,use_dust_absorp=False,use_extinction=False,sur_powerlaw=True,abs_powerlaw=True,mol_powerlaw=True,two_dust_comp=False,two_dust_comp_abs=False):
+def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_gas_only=False,use_dust_emis=True,use_dust_absorp=False,use_extinction=False,sur_powerlaw=True,abs_powerlaw=True,mol_powerlaw=True,two_dust_comp=False,two_dust_comp_abs=False,two_dust_qs=False,two_distinc_dust=False):
     if fit_gas_only:
         var_dict={'distance':None}
         if mol_powerlaw:
@@ -3825,7 +3862,13 @@ def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_gas_only
                 var_dict['tmin_s']=None
                 var_dict['tmax_s']=None
                 if two_dust_comp:
-                    var_dict['t_change_s']=None
+                    if two_distinc_dust:
+                        var_dict['tmax_cold_s']=None
+                        var_dict['tmin_hot_s']=None
+                    else:
+                        var_dict['t_change_s']=None
+                    if two_dust_qs:
+                        var_dict['q_thin_cold']=None
             else:
                 var_dict['temp_s']=None
 
@@ -3841,7 +3884,14 @@ def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_gas_only
                 var_dict['tmin_abs']=None
                 var_dict['q_abs']=None
                 if two_dust_comp_abs:
-                    var_dict['t_change_abs']=None
+                    if two_distinc_dust:
+
+                        var_dict['tmax_cold_abs']=None
+                        var_dict['tmin_hot_abs']=None
+                    else:
+                        var_dict['t_change_abs']=None
+                    if two_dust_qs:
+                        var_dict['q_abs_cold']=None
             else:
                 var_dict['temp_abs']=None
 

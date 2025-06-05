@@ -55,6 +55,7 @@ use_ultranest=True
 ext_model=None
 sur_powerlaw=False
 abs_powerlaw=False
+no_overlap_t=False
 
 #slice_sampler=True
 
@@ -387,12 +388,22 @@ if sample_all:
 
 two_dust_comp=False
 two_dust_comp_abs=False
+two_dust_qs=False
+two_distinct_dust=False
 if 'tmax_s' in prior_dict or 'temp_s' in prior_dict:
     use_dust_emis=True
     if 'tmax_s' in prior_dict or 'tmax_s' in fixed_dict:
         sur_powerlaw=True
-        if 't_change_s' in prior_dict:
+        if 't_change_s' in prior_dict or 't_change_s' in fixed_dict:
             two_dust_comp=True
+        elif 'tmax_cold_s' in prior_dict or 'tmax_cold_s' in fixed_dict:
+            two_dust_comp=True
+            two_distinct_dust=True
+            if 'tmin_hot_s' not in prior_dict and 'tmin_hot_s' not in fixed_dict:
+                print('ONLY tmax_cold_s is defined but not tmin_hot_s')
+                exit()
+        if 'q_thin_cold' in prior_dict or 'q_thin_cold' in fixed_dict:
+            two_dust_qs=True
 
     else:
         sur_powerlaw=False
@@ -402,8 +413,18 @@ if 'tmax_abs' in prior_dict or 'temp_abs' in prior_dict:
     use_dust_absorp=True
     if 'tmax_abs' in prior_dict or 'tmax_abs' in fixed_dict:
         abs_powerlaw=True
-        if 't_change_abs' in prior_dict:
+        if 't_change_abs' in prior_dict or 't_change_abs' in fixed_dict:
             two_dust_comp_abs=True
+            two_distinct_dust=False
+        elif 'tmax_cold_abs' in prior_dict or 'tmax_cold_abs' in fixed_dict:
+            two_dust_comp=True
+            two_distinct_dust=True
+            if 'tmin_hot_abs' not in prior_dict and 'tmin_hot_abs' not in fixed_dict:
+                print('ONLY tmax_cold_abs is defined but not tmin_hot_abs')
+                exit()
+
+        if 'q_abs_cold' in prior_dict or 'q_abs_cold' in fixed_dict:
+            two_dust_qs=True
     else:
         abs_powerlaw=False
 else:
@@ -417,8 +438,8 @@ if 'q_emis' in prior_dict or 'q_emis' in fixed_dict:
 # In[19]:
 init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw,fit_gas_only=fit_gas_only,
                            prior_dict=prior_dict,fixed_dict=fixed_dict,use_extinction=use_extinction,use_dust_emis=use_dust_emis,use_dust_absorp=use_dust_absorp,
-                           sur_powerlaw=sur_powerlaw,abs_powerlaw=abs_powerlaw,mol_powerlaw=use_mol_powerlaw,two_dust_comp=two_dust_comp,two_dust_comp_abs=two_dust_comp_abs)
-
+                           sur_powerlaw=sur_powerlaw,abs_powerlaw=abs_powerlaw,mol_powerlaw=use_mol_powerlaw,two_dust_comp=two_dust_comp,two_dust_comp_abs=two_dust_comp_abs,
+                           two_dust_qs=two_dust_qs,two_distinc_dust=two_distinct_dust)
 
 
 if 'log_sigma_obs' in prior_dict:
@@ -896,6 +917,20 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
                 trigger_penalty=True
                 sum_penalty+=penalty*(var_dict['tmin_s']-var_dict['tmax_s'])
                 if debug: print('Penalty t surface')
+            if two_distinct_dust:
+                if var_dict['tmin_s']>=var_dict['tmax_cold_s']:
+                    trigger_penalty=True
+                    sum_penalty+=penalty*(var_dict['tmin_s']-var_dict['tmax_cold_s'])
+                    if debug: print('Penalty t surface')
+                if var_dict['tmax_s']<=var_dict['tmin_hot_s']:
+                    trigger_penalty=True
+                    sum_penalty+=penalty*(var_dict['tmin_hot_s']-var_dict['tmax_s'])
+                    if debug: print('Penalty t surface')
+                if no_overlap_t:
+                    if var_dict['tmax_cold_s']>=var_dict['tmin_hot_s']:
+                        trigger_penalty=True
+                        sum_penalty+=penalty*(var_dict['tmax_cold_s']-var_dict['tmin_hot_s'])
+                        if debug: print('Penalty t surface')
     if use_dust_absorp:
         if abs_powerlaw:
             if var_dict['tmin_abs']>=var_dict['tmax_abs']:

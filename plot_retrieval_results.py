@@ -924,25 +924,45 @@ if sample_all:
         prior_dict_dust_abs[key]=prior_scaling_abs
 
 
-
-two_dust_comp_abs=False
 two_dust_comp=False
-if 'tmax_s' in prior_dict or 'temp_s' in prior_dict or 'tmax_s' in fixed_dict or 'temp_s' in fixed_dict:
+two_dust_comp_abs=False
+two_dust_qs=False
+two_distinct_dust=False
+if 'tmax_s' in prior_dict or 'temp_s' in prior_dict:
     use_dust_emis=True
     if 'tmax_s' in prior_dict or 'tmax_s' in fixed_dict:
         sur_powerlaw=True
-        if 't_change_s' in prior_dict:
+        if 't_change_s' in prior_dict or 't_change_s' in fixed_dict:
             two_dust_comp=True
+        elif 'tmax_cold_s' in prior_dict or 'tmax_cold_s' in fixed_dict:
+            two_dust_comp=True
+            two_distinct_dust=True
+            if 'tmin_hot_s' not in prior_dict and 'tmin_hot_s' not in fixed_dict:
+                print('ONLY tmax_cold_s is defined but not tmin_hot_s')
+                exit()
+        if 'q_thin_cold' in prior_dict or 'q_thin_cold' in fixed_dict:
+            two_dust_qs=True
+
     else:
         sur_powerlaw=False
 else:
     use_dust_emis=False
-if 'tmax_abs' in prior_dict or 'temp_abs' in prior_dict or 'tmax_abs' in fixed_dict or 'temp_abs' in fixed_dict:
+if 'tmax_abs' in prior_dict or 'temp_abs' in prior_dict:
     use_dust_absorp=True
     if 'tmax_abs' in prior_dict or 'tmax_abs' in fixed_dict:
         abs_powerlaw=True
-        if 't_change_abs' in prior_dict:
+        if 't_change_abs' in prior_dict or 't_change_abs' in fixed_dict:
             two_dust_comp_abs=True
+            two_distinct_dust=False
+        elif 'tmax_cold_abs' in prior_dict or 'tmax_cold_abs' in fixed_dict:
+            two_dust_comp=True
+            two_distinct_dust=True
+            if 'tmin_hot_abs' not in prior_dict and 'tmin_hot_abs' not in fixed_dict:
+                print('ONLY tmax_cold_abs is defined but not tmin_hot_abs')
+                exit()
+
+        if 'q_abs_cold' in prior_dict or 'q_abs_cold' in fixed_dict:
+            two_dust_qs=True
     else:
         abs_powerlaw=False
 else:
@@ -950,14 +970,14 @@ else:
 use_mol_powerlaw=False
 if 'q_emis' in prior_dict or 'q_emis' in fixed_dict:
     use_mol_powerlaw=True
-  
 
 
 # setting up the dictonaries and headers that will be used
 
 init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw,fit_gas_only=fit_gas_only,
                            prior_dict=prior_dict,fixed_dict=fixed_dict,use_extinction=use_extinction,use_dust_emis=use_dust_emis,use_dust_absorp=use_dust_absorp,sur_powerlaw=sur_powerlaw,
-                           abs_powerlaw=abs_powerlaw,mol_powerlaw=use_mol_powerlaw,two_dust_comp=two_dust_comp,two_dust_comp_abs=two_dust_comp_abs)
+                           abs_powerlaw=abs_powerlaw,mol_powerlaw=use_mol_powerlaw,two_dust_comp=two_dust_comp,two_dust_comp_abs=two_dust_comp_abs,
+                           two_dust_qs=two_dust_qs,two_distinc_dust=two_distinct_dust)
 
 if 'log_sigma_obs' in prior_dict:
     fit_obs_err=True
