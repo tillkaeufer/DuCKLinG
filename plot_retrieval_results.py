@@ -3269,7 +3269,7 @@ if not fit_dust_only:
             
 
     for i in range(len(header_derived)):
-        if i not in idxs_pop:
+        if i not in idxs_pop and np.min(tot_samples_rel[:,-len(header_derived)+i])!=np.max(tot_samples_rel[:,-len(header_derived)+i]):
             header_derived_new.append(header_derived[i])
             appendix=np.expand_dims(tot_samples_rel[:,-len(header_derived)+i],axis=1)
             print('shape appendix',np.shape(appendix))
