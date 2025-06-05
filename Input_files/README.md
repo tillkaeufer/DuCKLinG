@@ -28,14 +28,22 @@
 | tmin_s            | Minimum temperature of the surface layer(K)                                             | Surface   | (10,1000)     |
 | t_change_s        | Change between two dust compositions (0=tmin_s, 1=tmax_s)                               | Surface   | (0.01,0.99)   |
 | q_thin            | exponent of the temperature power law of the surface layer                              | Surface   | (-1,-0.1)     |
+| q_thin_cold       | exponent of the cold half of the temperature power law of the surface layer             | Surface   | (-1,-0.1)     |
+| tmax_cold_s       | Maximum temperature of the cold part of the surface layer (K)                           | Surface   | (500,1500)    |
+| tmin_hot_s        | Minimum temperature of the hot part of the surface layer(K)                             | Surface   | (10,1000)     |
 | tmax_abs          | Maximum temperature of the surface absorption layer (K)                                 | Surface   | (500,1500)    |
 | tmin_abs          | Minimum temperature of the surface absorption layer(K)                                  | Surface   | (10,1000)     |
 | t_change_abs      | Change between two dust compositions (0=tmin_abs, 1=tmax_abs)                           | Surface   | (0.01,0.99)   |
 | q_abs             | exponent of the temperature power law of the surface absorption layer                   | Surface   | (-1,-0.1)     |
+| q_abs_cold        | exponent of the cold half of the temperature power law of the surface absorption layer  | Surface   | (-1,-0.1)     |
+| tmax_cold_abs     | Maximum temperature of the cold part of the surface absorption layer (K)                | Surface   | (500,1500)    |
+| tmin_hot_abs      | Minimum temperature of the hot part of the surface absorption layer(K)                  | Surface   | (10,1000)     |
 | **Gas**           |                                                                                         |           |               |
 | q_emis            | exponent of the molecular temperature power law                                         | Gas       | (-1,-0.1)     |
 
-Instead of providing the observational uncertainty as a fitting parameter, you can also provide an array called sig_obs with absolute values in Jy.
+Instead of providing the observational uncertainty as a fitting parameter, you can also provide an array called sig_obs with absolute values in Jy.  
+If you are using two temperature power laws for the surface/absorption layer you can force them to no overlap by adding 'no_overlap_t=True' to the input file.
+
 # Abundance dictionary
 
 This dictionary should contain the dust file names and their scaling factors
