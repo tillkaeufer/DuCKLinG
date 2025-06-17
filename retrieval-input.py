@@ -653,6 +653,8 @@ def loglike_ratios(cube,debug=False,timeit=False):
 
     #definition of chi
     if weighted:
+        if debug:
+            print('Weighted versino is used!')
         chi=np.sum(diff*diff / ((sigma/weights_obs)*(sigma/weights_obs)))
     else:
         chi=np.sum(diff*diff/ (sigma*sigma))
@@ -807,6 +809,8 @@ def loglike_gas(cube,debug=False,timeit=False):
         sigma=sig_obs
     # constant of loglike
     if weighted:
+        if debug:
+            print('Weighted versino is used!')
         const=np.sum(np.log(2*np.pi*(sigma/weights_obs)*(sigma/weights_obs)))
     else:
         const=np.sum(np.log(2*np.pi*(sigma)**2))
@@ -1013,6 +1017,8 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
         sigma=sig_obs
     # constant of loglike
     if weighted:
+        if debug:
+            print('Weighted versino is used!')
         const=np.sum(np.log(2*np.pi*(sigma/weights_obs)*(sigma/weights_obs)))
     else:
         const=np.sum(np.log(2*np.pi*(sigma)**2))

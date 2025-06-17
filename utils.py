@@ -3955,21 +3955,36 @@ mol_colors_dict={'CO2_II':'tab:red','CO2':'tab:red',
                 'SiO':'peru',
                 'OH':'orchid'}
 
-def calc_weights(lam_obs,target_res=2500):
+def calc_weights(lam_obs,target_res=2500,to_wave=True):
     print('Calculating the weights of the spectral points')
     print('To give all spectral regions the same weight')
+
     weights=np.zeros(len(lam_obs))
+    if not to_wave:
+        print('By spectral resolution')
 
-    for i in range(len(lam_obs)-1):
-        if (lam_obs[i+1]-lam_obs[i]) == 0:
-            print(i,lam_obs[i])
-        spec_res=lam_obs[i]/(lam_obs[i+1]-lam_obs[i])
-        if i%100==0:
-            print(lam_obs[i],spec_res)
-        weights[i]=target_res/spec_res
+        for i in range(len(lam_obs)-1):
+            if (lam_obs[i+1]-lam_obs[i]) == 0:
+                print(i,lam_obs[i])
+            spec_res=lam_obs[i]/(lam_obs[i+1]-lam_obs[i])
+            if i%100==0:
+                print(lam_obs[i],spec_res)
+            weights[i]=target_res/spec_res
 
-    weights[-1]=target_res/(lam_obs[-1]/(lam_obs[-1]-lam_obs[-2]))
-    weights=weights*len(weights)/np.sum(weights)
+        weights[-1]=target_res/(lam_obs[-1]/(lam_obs[-1]-lam_obs[-2]))
+        weights=weights*len(weights)/np.sum(weights)
+    else:
+        print('By wavelength windows')
+        for i in range(len(lam_obs)-1):
+            if (lam_obs[i+1]-lam_obs[i]) == 0:
+                print(i,lam_obs[i])
+            wave_ra=(lam_obs[i+1]-lam_obs[i])
+            if i%100==0:
+                print(lam_obs[i],wave_ra)
+            weights[i]=wave_ra
+
+        weights[-1]=(lam_obs[-1]-lam_obs[-2])
+        weights=weights*len(weights)/np.sum(weights)
     print('Max and min weight:',np.max(weights),np.min(weights))
     
     return weights

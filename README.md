@@ -209,7 +209,7 @@ This will activate this likelihood functions:
 $L=\sum_{i} -\frac{1}{2}\times \left[\log({2\pi\times (\sigma_i/w_i)^2})+\frac{ (f_{\rm model,i}-f_{\rm obs,i})^2}{(\sigma_i/w_i)^2}\right]$
 
 with $w_i$ being the weights.  
-Alternatively, you can also define your own custom weights.  As long as their have the same lengths as lam_obs, everything should work.  
+Alternatively, you can also define your own custom weights.  As long as their have the same lengths as lam_obs, everything should work. You can also set to_wave=False in the calc_weights function to get a equal weighting by spectral resolution and not wavelength intervall.  
 
 It is also possible to mask some wavelength regions. You can for example fit only the unblended water lines by creating a lam_obs file that only contains points close to the lines. However, this will technically effect the binning of the data (e.g. very large bins between the lines).  
 Therefore, it is possible to provide a lam_obs_full (and flux_obs_full) array that contains all the wavelengths points before masking.  
