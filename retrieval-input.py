@@ -56,6 +56,7 @@ ext_model=None
 sur_powerlaw=False
 abs_powerlaw=False
 no_overlap_t=False
+weight_scale_sigma=False
 
 #slice_sampler=True
 
@@ -283,6 +284,8 @@ except NameError:
     print('There is no masking used')
     lam_obs_full=lam_obs
 
+print('Weight scaling sigma:',weight_scale_sigma)
+
 
 debug=False
 
@@ -290,6 +293,9 @@ debug=False
 
 # Checking if all the slab priors are within the allowed ranges of the line data
 check_if_priors_in_linedata(slab_prior_dict=slab_prior_dict,fixed_dict=fixed_dict,slab_folder=slab_folder, slab_prefix=slab_prefix,log_coldens=log_coldens)
+
+if fit_gas_only:
+    model_fit_obs=check_if_all_radii(slab_prior_dict=slab_prior_dict,fixed_dict=fixed_dict)
 
 
 
@@ -534,7 +540,7 @@ def prior_run_fast(cube,ndim,nparams):
     cube=(cube)*(upper_lim-lower_lim)+lower_lim
     #return new_cube
 
-
+ones_like=np.ones_like(flux_obs)
 
 def loglike_ratios(cube,debug=False,timeit=False):
     if timeit:
@@ -638,12 +644,16 @@ def loglike_ratios(cube,debug=False,timeit=False):
     if 'sigma_obs' in sigma_dict:
         sigma=sigma_dict['sigma_obs']*flux_obs   
     elif 'sigma_obs_abs' in sigma_dict:
-        sigma=sigma_dict['sigma_obs_abs']   
+        sigma=sigma_dict['sigma_obs_abs']*ones_like  
     else:
         sigma=sig_obs
     # constant of loglike
     if weighted:
-        const=np.sum(np.log(2*np.pi*(sigma/weights_obs)*(sigma/weights_obs)))
+        if weight_scale_sigma:
+            const=np.sum(np.log(2*np.pi*(sigma/weights_obs)*(sigma/weights_obs)))
+        else:
+            const=np.sum(weights_obs*np.log(2*np.pi*(sigma)*(sigma)))
+            
     else:
         const=np.sum(np.log(2*np.pi*(sigma)*sigma))
 
@@ -653,9 +663,16 @@ def loglike_ratios(cube,debug=False,timeit=False):
 
     #definition of chi
     if weighted:
-        if debug:
-            print('Weighted versino is used!')
-        chi=np.sum(diff*diff / ((sigma/weights_obs)*(sigma/weights_obs)))
+        if weight_scale_sigma:
+            if debug:
+                print('Weighted version is used (scaling sigma)!')
+            chi=np.sum(diff*diff / ((sigma/weights_obs)*(sigma/weights_obs)))
+        else:
+
+            if debug:
+                print('Weighted version is used (scaling difference)!')
+            chi=np.sum(weights_obs*diff*diff / ((sigma)*(sigma)))
+            
     else:
         chi=np.sum(diff*diff/ (sigma*sigma))
         
@@ -771,10 +788,12 @@ def loglike_gas(cube,debug=False,timeit=False):
         time_2=time()    
 
     #here we are inserting the run of the model (with radii) and the fluxes
-    '''
-    '''
-
-    interp_flux=con_model.run_model(variables=var_dict,dust_species=abundance_dict,slab_dict=slab_dict,output_all=False,timeit=False)
+    if model_fit_obs:
+        interp_flux=con_model.run_fitted_to_obs_slab(variables=var_dict,
+                                                slab_dict=slab_dict,
+                                                flux_obs=flux_obs,lam_obs=lam_obs)
+    else:
+        interp_flux=con_model.run_model(variables=var_dict,dust_species=abundance_dict,slab_dict=slab_dict,output_all=False,timeit=False)
 
     if limit_integrated_flux:
         for key in slab_dict:
@@ -804,14 +823,20 @@ def loglike_gas(cube,debug=False,timeit=False):
     if 'sigma_obs' in sigma_dict:
         sigma=sigma_dict['sigma_obs']*flux_obs   
     elif 'sigma_obs_abs' in sigma_dict:
-        sigma=sigma_dict['sigma_obs_abs']   
+        sigma=sigma_dict['sigma_obs_abs']*ones_like   
     else:
         sigma=sig_obs
+    if debug:    print(np.min(weights_obs),np.max(weights_obs))
     # constant of loglike
     if weighted:
-        if debug:
-            print('Weighted versino is used!')
-        const=np.sum(np.log(2*np.pi*(sigma/weights_obs)*(sigma/weights_obs)))
+        if weight_scale_sigma:
+            const=np.sum(np.log(2*np.pi*(sigma/weights_obs)*(sigma/weights_obs)))
+        else:
+            const=np.sum(np.log(2*np.pi*(sigma)*(sigma))*weights_obs)
+            if debug:
+                print('const',np.sum(np.log(2*np.pi*(sigma)*(sigma))*weights_obs))
+                print('const wo weight',np.sum(np.log(2*np.pi*(sigma)*(sigma))))
+            
     else:
         const=np.sum(np.log(2*np.pi*(sigma)**2))
 
@@ -822,13 +847,24 @@ def loglike_gas(cube,debug=False,timeit=False):
 
     #definition of chi
     if weighted:
-        chi=np.sum(diff*diff / ((sigma/weights_obs)*(sigma/weights_obs)))
+        if weight_scale_sigma:
+            if debug:
+                print('Weighted version is used (scaling sigma)!')
+            chi=np.sum(diff*diff / ((sigma/weights_obs)*(sigma/weights_obs)))
+        else:
+
+            if debug:
+                print('Weighted version is used (scaling sigma squared)!')
+                print('Chi',np.sum(weights_obs*diff*diff / ((sigma)*(sigma))))
+                print('Chi wo weight',np.sum(diff*diff / ((sigma)*(sigma))))
+            chi=np.sum(weights_obs*diff*diff / ((sigma)*(sigma)))
+            
     else:
         chi=np.sum(diff*diff/ (sigma*sigma))
 
     #loglike
     loglikelihood =  -0.5 * (chi +const) 
- 
+
     
     if timeit:
         time_4=time()
@@ -1012,14 +1048,16 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
     if 'sigma_obs' in sigma_dict:
         sigma=sigma_dict['sigma_obs']*flux_obs   
     elif 'sigma_obs_abs' in sigma_dict:
-        sigma=sigma_dict['sigma_obs_abs']   
+        sigma=sigma_dict['sigma_obs_abs'] *ones_like   
     else:
         sigma=sig_obs
     # constant of loglike
     if weighted:
-        if debug:
-            print('Weighted versino is used!')
-        const=np.sum(np.log(2*np.pi*(sigma/weights_obs)*(sigma/weights_obs)))
+        if weight_scale_sigma:
+            const=np.sum(np.log(2*np.pi*(sigma/weights_obs)*(sigma/weights_obs)))
+        else:
+            const=np.sum(weights_obs*np.log(2*np.pi*(sigma)*(sigma)))
+            
     else:
         const=np.sum(np.log(2*np.pi*(sigma)**2))
 
@@ -1029,7 +1067,15 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
 
     #definition of chi
     if weighted:
-        chi=np.sum(diff*diff / ((sigma/weights_obs)*(sigma/weights_obs)))
+        if weight_scale_sigma:
+            if debug:
+                print('Weighted version is used (scaling sigma)!')
+            chi=np.sum(diff*diff / ((sigma/weights_obs)*(sigma/weights_obs)))
+        else:
+
+            if debug:
+                print('Weighted version is used (scaling difference)!')
+            chi=np.sum(weights_obs*diff*diff / ((sigma)*(sigma)))
     else:
         chi=np.sum(diff*diff/ (sigma*sigma))
     #loglike
@@ -1155,7 +1201,7 @@ if use_ultranest:
     if slice_sampler:
         try:
             length_ultra
-            print('length_ultra')
+            print('length_ultra:', str(length_ultra))
         except:
             print('length_ultra not set default is 2')
             
@@ -1189,6 +1235,16 @@ if use_ultranest:
         print('Default is 0.5')  
 
 else:
+    try:
+        imp_nest_samp
+    except NameError:
+        imp_nest_samp=False
+    print('Importance nested sampling:',str(imp_nest_samp))
+    try:
+        max_iter
+    except NameError:
+        max_iter=-1
+    print('Maximum number of iterations:',str(max_iter))
     try:
         n_live_points
         evidence_tolerance
@@ -1245,8 +1301,8 @@ if __name__ == "__main__":
         else:
             result = solve(LogLikelihood=loglike_ratios, Prior=prior_fast, 
                n_dims=len(upper_lim), outputfiles_basename=prefix, verbose=True,
-               n_live_points = n_live_points,evidence_tolerance = evidence_tolerance, 
-               sampling_efficiency = sampling_efficiency, importance_nested_sampling=False)
+               n_live_points = n_live_points,evidence_tolerance = evidence_tolerance, max_iter=max_iter,
+               sampling_efficiency = sampling_efficiency, importance_nested_sampling=imp_nest_samp)
 
     elif fit_gas_only:
         if use_ultranest:
@@ -1261,9 +1317,9 @@ if __name__ == "__main__":
             result = sampler.run(min_num_live_points=n_live_points,Lepsilon=evidence_tolerance,frac_remain=frac_remain)
         else:
             result = solve(LogLikelihood=loglike_gas, Prior=prior_fast, 
-               n_dims=len(upper_lim), outputfiles_basename=prefix, verbose=True,
+               n_dims=len(upper_lim), outputfiles_basename=prefix, verbose=True,max_iter=max_iter,
                n_live_points = n_live_points,evidence_tolerance = evidence_tolerance, 
-               sampling_efficiency = sampling_efficiency, importance_nested_sampling=False)
+               sampling_efficiency = sampling_efficiency, importance_nested_sampling=imp_nest_samp)
     else:
         if use_ultranest:
     
@@ -1301,8 +1357,8 @@ if __name__ == "__main__":
         else:
             result = solve(LogLikelihood=loglike, Prior=prior_fast, 
                            n_dims=len(upper_lim), outputfiles_basename=prefix, verbose=True,
-                           n_live_points = n_live_points,evidence_tolerance = evidence_tolerance, 
-                           sampling_efficiency = sampling_efficiency, importance_nested_sampling=False)
+                           n_live_points = n_live_points,evidence_tolerance = evidence_tolerance, max_iter=max_iter,
+                           sampling_efficiency = sampling_efficiency, importance_nested_sampling=imp_nest_samp)
     if not os.path.isfile(f'{prefix}end.time'):
         os.system(f'date > {prefix}end.time')
 

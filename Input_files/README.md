@@ -41,7 +41,7 @@
 | **Gas**           |                                                                                         |           |               |
 | q_emis            | exponent of the molecular temperature power law                                         | Gas       | (-1,-0.1)     |
 
-Instead of providing the observational uncertainty as a fitting parameter, you can also provide an array called sig_obs with absolute values in Jy.  
+Instead of providing the observational uncertainty as a fitting parameter, you can also provide an array called sig_obs with absolute values in Jy. Please note that a previous version (before July 2025) had a bug when running the gas_only fit with fitting the uncertainty in absolute values, that resulted in bad convergence. This is fixed now!   
 If you are using two temperature power laws for the surface/absorption layer you can force them to no overlap by adding 'no_overlap_t=True' to the input file.
 
 # Abundance dictionary
