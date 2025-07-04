@@ -221,7 +221,11 @@ header=np.load(folder+f'test_{run_number}header_complete_posterior.npy')
 
 
 paras=np.load(list_complete_post[0])
+
+print('Shape header:',np.shape(header))
+print('Shape parameters:',np.shape(paras))
 print('...Done!')
+
 
 
 print('Plotting all median, std and minus std')
@@ -336,6 +340,8 @@ for full_range in [False,True]:
 
                 idx_t_out=np.where(header==f'{mol}:\nt at 0.15')[0][0]
                 idx_t_in=np.where(header==f'{mol}:\nt at 0.85')[0][0]
+                print(idx_t_in,idx_t_out)
+                print(np.shape(paras),np.shape(header))
         
         print('Used a powerlaw?',powerlaw)
         if powerlaw:
@@ -393,7 +399,113 @@ for full_range in [False,True]:
         plt.close()
     else:
         plt.show()
+
+
+print('Plotting the full range with an emission contour') 
+
+mol_list=list(slab_prior_dict.keys())
+zorder=np.arange(len(mol_list))
+
+plt.figure(figsize=(9,6))
+
+for full_range in [False,True]:
+    i=0
+
+    custom_lines=[]
+    custom_labels=[]
+    for mol in mol_list:
+        print(mol)
+        powerlaw=True 
+        if f'{mol}:temis' in header:
+            powerlaw=False
+            idx_coldens=np.where(header==f'{mol}:ColDens')[0][0]
+            idx_t=np.where(header==f'{mol}:temis')[0][0]
+        else:
+            if full_range:
+                if 'ColDens' in slab_prior_dict[mol]:
+                    idx_coldens_out=np.where(header==f'{mol}:ColDens')[0][0]
+                    idx_coldens_in=np.where(header==f'{mol}:ColDens')[0][0]
+                
+                else:
+                    idx_coldens_out=np.where(header==f'{mol}:ColDens_tmin')[0][0]
+                    idx_coldens_in=np.where(header==f'{mol}:ColDens_tmax')[0][0]
+                idx_t_out=np.where(header==f'{mol}:tmin')[0][0]
+                idx_t_in=np.where(header==f'{mol}:tmax')[0][0]
+            else:
+                idx_coldens_out=np.where(header==f'{mol}:\nlogDensCol at 0.15')[0][0]
+                idx_coldens_in=np.where(header==f'{mol}:\nlogDensCol at 0.85')[0][0]
+
+                idx_t_out=np.where(header==f'{mol}:\nt at 0.15')[0][0]
+                idx_t_in=np.where(header==f'{mol}:\nt at 0.85')[0][0]
         
+        print('Used a powerlaw?',powerlaw)
+        if powerlaw:
+            coldens_out= paras[:,idx_coldens_out]
+            coldens_in= paras[:,idx_coldens_in]
+            t_out= paras[:,idx_t_out]
+            t_in= paras[:,idx_t_in]
+
+            t_points,n_points=emission_points_from_boundries(t_in,t_out,coldens_in,coldens_out)
+        else:
+            n_points= paras[:,idx_coldens]
+
+            t_points= paras[:,idx_t]
+        if log_t_first:
+            t_points=np.log10(t_points)
+        heatmap, xedges, yedges = np.histogram2d(t_points, n_points, bins=[xbins,ybins])
+        extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+        mol_color=mol
+        if '_comp' in mol_color:
+            idx_mol=mol_color.find('_comp')
+            
+            mol_color=mol_color[:idx_mol]
+            print(f'Changing {mol} to {mol_color}')
+        if '_absorp' in mol_color:
+            idx_mol=mol_color.find('_absorp')
+            
+            mol_color=mol_color[:idx_mol]
+            print(f'Changing {mol} to {mol_color}')
+        if full_range:
+            plt.imshow(heatmap.T, extent=extent,origin='lower',aspect='auto',cmap=dict_cmaps[mol_color],zorder=zorder[i])
+        
+            custom_lines.append(Line2D([0], [0], color=mol_colors_dict[mol_color], lw=4))
+            custom_labels.append(molecular_names[mol_color])
+        if not full_range:
+
+            xpoints=(xbins[:-1]+xbins[1:])/2.0
+            ypoints=(ybins[:-1]+ybins[1:])/2.0
+
+            yall,xall=np.meshgrid(ypoints,xpoints)
+            xall=xall.flatten()
+            yall=yall.flatten()
+            zall=heatmap.flatten()
+            plt.tricontour(xall,yall,zall,levels=[np.max(zall)/10.0],colors='grey',zorder=10000)
+
+        i+=1
+
+plt.ylabel('$\log_{10} \Sigma$ [cm$^{-2}$]')
+plt.xlabel('$T$ [K]')  
+custom_lines.append(Line2D([0], [0], color='grey', lw=2))
+custom_labels.append(r'$70\,\mathrm{\%}$ Emission')  
+if log_t_first:
+
+    ticks_labels=[30,100,200,300,400,500,600,700,800,900,1000,1100,1200,1300,1400,1500]
+    ticks_labels_print=[30,100,200,300,'',500,'',700,'','',1000,'','','','',1500]
+
+    plt.xticks(np.log10(ticks_labels),ticks_labels_print)
+    plt.legend(custom_lines,custom_labels,loc=(-0.07,1.05),ncol=max(len(custom_lines)//2-2,1),handler_map={tuple: HandlerTuple(ndivide=None)})
+    
+    plt.xlim([np.log10(temp_range[0]),np.log10(temp_range[1])]) 
+else:
+    plt.legend(custom_lines,custom_labels,loc=(-0.07,1.05),ncol=max(len(custom_lines)//2-2,1),handler_map={tuple: HandlerTuple(ndivide=None)})
+    plt.xlim([temp_range[0],temp_range[1]]) 
+plt.savefig(prefix_fig+'_molecular_conditions_contour_version.pdf',bbox_inches='tight')
+
+if close_plots:
+    plt.close()
+else:
+    plt.show()
+
 print('...Done!')
 
 print('Loading functions for second plot...')
