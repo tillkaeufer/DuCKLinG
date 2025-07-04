@@ -328,7 +328,12 @@ print('-----------------')
 print('-----------------')    
 # here you hav to set the path where you want to save all the runs (bayesian_folder) and the dust_path where your Q-files are
 
-   
+model_fit_obs=False 
+if fit_gas_only:
+    model_fit_obs=check_if_all_radii(slab_prior_dict=slab_prior_dict,fixed_dict=fixed_dict)
+
+
+
 debug=False
 # here you have to set the path where you want to save all the runs (bayesian_folder) and the dust_path where your Q-files are
 
@@ -1420,6 +1425,109 @@ def get_scales_parallel(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=Fa
 
 
 
+def get_scales_parallel_gas(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=False,debug=False):
+    if scatter_obs:
+        print('----------------')
+        print('----------------')
+        print('This option has been removed!')
+        print('----------------')
+        print('----------------')
+    
+    samp=samples[idx]
+    dict_fluxes={}
+    sigma_dict={}
+    var_dict,slab_dict,sigma_dict=cube_to_dict(samp,header=list(header_para)+list(header_slab))
+
+    if fixed_paras:
+        for key in fixed_dict:
+            if debug:
+                print(f'Fixed {key}..')
+            if key in header_abund:
+                abundance_dict[key]=fixed_dict[key]
+                if debug:
+                    print('..added to abundance_dict')
+            elif key in header_absorp:
+                key_abs=key[:-7]
+                abundance_dict_absorp[key_abs]=fixed_dict[key]
+                if debug:
+                    print('..added to abundance_dict_absorp')
+            elif key in init_dict or key=='distance':
+                var_dict[key]=fixed_dict[key]
+                if debug:
+                    print('..added to var_dict')
+            elif key =='sigma_obs':
+                sigma_dict['sigma_obs']=fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='log_sigma_obs':
+                sigma_dict['sigma_obs']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='log_sigma_obs_abs':
+                sigma_dict['sigma_obs_abs']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            else:
+                idx=key.find(':')
+                if key[:idx] not in slab_dict:
+                    slab_dict[key[:idx]]={}
+                if debug:
+                    print('..added to slab_dict')
+
+                slab_dict[key[:idx]][key[idx+1:]]=fixed_dict[key]
+  
+  
+    var_dict['bb_star']=use_bb_star
+    if debug:
+        print(slab_dict)
+
+    interp_flux=con_model.run_fitted_to_obs_slab(variables=var_dict,slab_dict=slab_dict,flux_obs=flux_obs,lam_obs=lam_obs)
+    
+    scale_facs=con_model.scaleparas
+
+    i=0
+
+    for key in slab_dict:
+        
+        if 'radius' not in slab_dict[key]:
+            
+            scale_facs[i]=np.sqrt(scale_facs[i])
+            slab_dict[key]['radius']=scale_facs[i]
+            i+=1
+
+    tot_flux=con_model_new.run_model(variables=var_dict,dust_species={},absorp_species={},
+                                     slab_dict=slab_dict,output_all=False)
+    #section to get retrieved parameters from mol
+
+    mol_results_dict=con_model_new.extract_emission_quantities(low_contribution=low_contribution,high_contribution=high_contribution)
+    list_mol_results=[]
+
+    for species in mol_results_dict:
+        list_mol_results.append(mol_results_dict[species]['radius_eff'])
+        list_mol_results.append(mol_results_dict[species]['tmin,tmax'][0])
+        list_mol_results.append(mol_results_dict[species]['tmin,tmax'][1])
+        list_mol_results.append(np.log10(mol_results_dict[species]['cmin,cmax'][0]))
+        list_mol_results.append(np.log10(mol_results_dict[species]['cmin,cmax'][1]))
+        if radial_version:
+            list_mol_results.append(mol_results_dict[species]['rout,rin'][0])
+            list_mol_results.append(mol_results_dict[species]['rout,rin'][1])
+            
+    #print(list_mol_results)
+    list_mol_results=np.array(list_mol_results).flatten()
+ 
+    if not ignore_spectrum_plot:
+        dict_fluxes['tot_flux']=tot_flux
+        dict_fluxes['emission_flux']=con_model_new.emission_flux
+        dict_fluxes['interp_flux']=interp_flux
+
+    return dict_fluxes, np.append(np.append(samp,scale_facs),list_mol_results),[],[]
+
+
+
   
 
   
@@ -1592,21 +1700,28 @@ parallel=True
 if parallel:
 
     pool =  mp.get_context('fork').Pool(min(int(16),mp.cpu_count()//2))
-    if sample_all or fit_gas_only:
+    if sample_all or (fit_gas_only and not model_fit_obs):
         results = [pool.apply_async(get_full_model, args=(i,1)) for i in range(len(samples))]
         pool.close() 
 
         
+    elif fit_gas_only:
+        obs_per_model=1 # how many scatter observations are calculated per model
+        results = [pool.apply_async(get_scales_parallel_gas, args=(i,obs_per_model)) for i in range(len(samples))]
+        pool.close() 
     else:
         obs_per_model=1 # how many scatter observations are calculated per model
         results = [pool.apply_async(get_scales_parallel, args=(i,obs_per_model)) for i in range(len(samples))]
         pool.close() 
 else:
-    if sample_all or fit_gas_only:
+    if sample_all or (fit_gas_only and not model_fit_obs):
         results = [get_full_model(i,1) for i in range(len(samples))]    
+    elif fit_gas_only:
 
+        obs_per_model=1 # how many scatter observations are calculated per model
+        results = [get_scales_parallel_gas(i,obs_per_model) for i in range(len(samples))]  
     else:
-        obs_per_model=2 # how many scatter observations are calculated per model
+        obs_per_model=1 # how many scatter observations are calculated per model
         results = [get_scales_parallel(i,obs_per_model) for i in range(len(samples))]    
 
 array_flux=[]
@@ -2479,10 +2594,24 @@ def nicer_labels(init_abundance=init_abundance,with_size=True):
 
 def set_slab_labels(slab_prior_dict):
     new_labels=[]
+    radius_words=np.array(['logradius','radius','r_area'])
     for key in slab_prior_dict:
-        if 'radius' not in slab_prior_dict[key] and 'log_radius' not in slab_prior_dict[key]:
+        no_radius=True
+        for word in radius_words:
+            if word in slab_prior_dict[key]:
+                no_radius=False
+                break
+        if not no_radius:
+            for word in radius_words:
+                if key+':'+word in fixed_dict:
+                    no_radius=False
+                    break
+        
+
+        if no_radius:
             label=key+': radius'
             new_labels.append(label)
+            
     return new_labels
 slab_labels=set_slab_labels(slab_prior_dict=slab_prior_dict)
 
@@ -2509,7 +2638,7 @@ if use_dust_absorp:
     
     for key in init_abundance_absorp:
         ugly_header.append(key+'_absorp')        
-if not fit_gas_only:
+if not fit_gas_only or (fit_gas_only and model_fit_obs):
     header_all=header_all+slab_labels
     ugly_header=ugly_header+slab_labels
 
@@ -3250,7 +3379,10 @@ if not fit_dust_only:
         header_derived=header_derived_new
         tot_samples_rel=tot_samples_rel_new
 
-        
+    if save_output:
+        header_all_save=header_all+header_derived
+        np.save(f'{prefix}header_complete_posterior',np.array(header_all_save))
+     
     # check if rin is 0  all the time
     #this will be the case if we have a single slab emission
     print('Checking if single slab was used and so some of the derived quantities make no sense')
@@ -3312,9 +3444,7 @@ if not fit_dust_only:
     header_all=header_all+header_derived
 
 print(header_all)
-if save_output:
-    np.save(f'{prefix}header_complete_posterior',np.array(header_all))
-    
+  
 print('Saved')
 
 

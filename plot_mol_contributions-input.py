@@ -335,6 +335,9 @@ except NameError:
             print('Sig obs not set in input')
 
 
+model_fit_obs=False 
+if fit_gas_only:
+    model_fit_obs=check_if_all_radii(slab_prior_dict=slab_prior_dict,fixed_dict=fixed_dict)
 
 debug=False
 
@@ -777,10 +780,21 @@ if sample_all:
         i+=1
 else:
     if fit_gas_only:
-        
-        interp_flux_org=con_model.run_model(variables=var_dict,dust_species=init_abundance,slab_dict=slab_dict,output_all=False,timeit=False)
-        abundance_dict=init_abundance.copy()
-        abundance_dict_absorp=init_abundance_absorp.copy()
+        if not model_fit_obs:
+            interp_flux_org=con_model.run_model(variables=var_dict,dust_species=init_abundance,slab_dict=slab_dict,output_all=False,timeit=False)
+            abundance_dict=init_abundance.copy()
+            abundance_dict_absorp=init_abundance_absorp.copy()
+        else:
+            interp_flux_org=con_model.run_fitted_to_obs_slab(variables=var_dict,slab_dict=slab_dict,flux_obs=flux_obs,lam_obs=lam_obs)
+            abundance_dict=init_abundance.copy()
+            abundance_dict_absorp=init_abundance_absorp.copy()
+            scale_facs=con_model.scaleparas  
+            i=0
+            for key in slab_dict:
+                if 'radius' not in slab_dict[key]:
+                    scale_facs[i]=np.sqrt(scale_facs[i])
+                    slab_dict[key]['radius']=scale_facs[i]
+                    i+=1
     else:
         debug=True
         if debug:

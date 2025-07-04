@@ -4067,3 +4067,36 @@ def check_if_priors_in_linedata(slab_prior_dict,fixed_dict,slab_folder='./LineDa
     print('------------------------------------')
     print('------------------------------------')
 
+
+
+def check_if_all_radii(slab_prior_dict,fixed_dict):
+    model_fit_obs=False
+    print('Checking if all molecules have the radius as a Bayesian parameter:')
+    radius_words=np.array(['logradius','radius','r_area'])
+    for mol in slab_prior_dict:
+        no_radius=True
+        for word in radius_words:
+            if word in slab_prior_dict[mol]:
+                no_radius=False
+                break
+        if not no_radius:
+            for word in radius_words:
+                if mol+':'+word in fixed_dict:
+                    no_radius=False
+                    break
+
+
+        if no_radius:
+            model_fit_obs=True
+            print('Running the NNLS version for the radius')
+            return model_fit_obs
+    
+    print('All radii are sampled in a Bayesian way!')
+    return model_fit_obs
+        
+        
+        
+
+
+    print('------------------------------------')
+    print('------------------------------------')
