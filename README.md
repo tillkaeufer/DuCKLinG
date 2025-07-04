@@ -56,8 +56,7 @@ Download the folder and add it in DuCKLinG/LineData to have the example work wit
 Be aware that this requires about 15 GB of storage. You can also choose to download only the data for the molecules you are interested in.
 If you want to download the folder using the terminal you can do this by installing gdown (`pip install gdown`) and executing the following command: `gdown --folder https://drive.google.com/drive/folders/1XAEgrss9oupWWGo_nNQyHwQFsfMxEiKq --remaining-ok`
 
-| :exclamation:  On January 22, I uploaded a new water slab file that is using HITRAN. Previously the slab data was based on Lamda. If you are running water fits, I highly recommend downloading the HITRAN data. However, you can still access the LAMDA data, which is now saved as 12_LamH2O. |
-|-----------------------------------------|
+Please note that there are two versions of water slab grid. 12_H2O runs on HITRAN data (recommended) and 12_LamH2O uses LAMDA data.
 
 
 ## Getting started
@@ -206,10 +205,12 @@ Due to the change of spectral resolving power of MIRI over wavelengths, it means
 weights_obs=calc_weights(lam_obs)
 
 This will activate this likelihood functions:  
-$L=\sum_{i} -\frac{1}{2}\times \left[\log({2\pi\times (\sigma_i/w_i)^2})+\frac{ (f_{\rm model,i}-f_{\rm obs,i})^2}{(\sigma_i/w_i)^2}\right]$
+$L=\sum_{i} -\frac{w_i}{2}\times \left[\log({2\pi\times (\sigma_i)^2})+\frac{ (f_{\rm model,i}-f_{\rm obs,i})^2}{(\sigma_i)^2}\right]$   
+or (if weight_scale_sigma=True in the input file):  
+$L=\sum_{i} -\frac{1}{2}\times \left[\log({2\pi\times (\sigma_i/w_i)^2})+\frac{ (f_{\rm model,i}-f_{\rm obs,i})^2}{(\sigma_i/w_i)^2}\right]$.  
 
-with $w_i$ being the weights.  
-Alternatively, you can also define your own custom weights.  As long as their have the same lengths as lam_obs, everything should work. You can also set to_wave=False in the calc_weights function to get a equal weighting by spectral resolution and not wavelength intervall.  
+with $w_i$ being the weights (which are normalized to the number of wavelength points).  
+Alternatively, you can also define your own custom weights.  As long as their have the same lengths as lam_obs, everything should work. You can also set to_wave=False in the calc_weights function to get a equal weighting by spectral resolution and not wavelength intervall. If the uncertainties are treated as a free parameter, weighting should only be applied very carefully; checking the retrieved uncertainties. It can results in very long retrievals.  
 
 It is also possible to mask some wavelength regions. You can for example fit only the unblended water lines by creating a lam_obs file that only contains points close to the lines. However, this will technically effect the binning of the data (e.g. very large bins between the lines).  
 Therefore, it is possible to provide a lam_obs_full (and flux_obs_full) array that contains all the wavelengths points before masking.  
@@ -229,6 +230,8 @@ On top of that, the plotting will plot the full spectrum and highlight the selec
 - frac_remain: Stop criterion if the fraction of the integral is left in the remainder. For values like 0.001 will make sure you cover all peaks, larger numbers like 0.5 are okay if the posterior is simple.
 - dlogz: Evidence uncertainty that should be achieved for convergence. A good value is 0.5.
 - dKL: posterior uncertainty for convergence. A good value is 0.5.
+- max_iter: for Multinest it is possible to provide a maximum number of iterations after which the fitting is stopped. This parameter should be used very carefully. By default it is negative and therefore does not affect the retrieval.  
+- imp_nest_samp: using importance_nested_sampling for Multinest (default is False).  
 
 **For MultiNest:**
 
