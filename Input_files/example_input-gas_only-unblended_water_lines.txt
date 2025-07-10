@@ -7,9 +7,9 @@ dust_path='./Q-curves/fitting-Qcurves/Q_GRF/'    #path to the dust data
 subfold='gas_only/' #subfolder where the retrieval run is saved
 
 
-slab_folder='./LineData/' #'/data/tk502/LineData/' # folder where the slab grids are saved
+slab_folder='/data/tk502/LineData/' #'./LineData/' # folder where the slab grids are saved
 slab_prefix='12_' #prefix of the slab grid that is used
-run_number=1 #Giving your run a unique ID
+run_number=3 #Giving your run a unique ID
 
 
 
@@ -55,16 +55,11 @@ prior_dict={
 
 
 log_coldens=True
-slab_prior_dict={                
-           'CO2':{'ColDens':[14.00,24], #CO2 will be retrieved with a constant column density
+slab_prior_dict={       
+           'H2O':{'ColDens_tmax':[14.00,24], 
+                'ColDens_tmin':[14.00,24], 
                     'tmax':[25,1500], # and a temperature power law
-                    'tmin':[25,1500],
-                    'logradius':[-3.0,0.0]
-                    },    
-           'H2O':{'ColDens':[14.00,24], #H2O will be retrieved with a constant column density 
-                    'tmax':[25,1500], # and a temperature power law
-                    'tmin':[25,1500],
-                    'logradius':[-3.0,0.0]
+                    'tmin':[25,1500]
                     }
 
 }
@@ -84,10 +79,52 @@ scale_prior={'sc_ir':[-5,0],
 # -----------------------------
 
 import numpy as np
-lam_obs=np.load('./Observations/mock_observation_gas_only_wave.npy')
-flux_obs=np.load('./Observations/mock_observation_gas_only_flux.npy')
+from utils import calc_weights
+
+lam_obs=np.load('./Observations/mock_observation_water_only_wave.npy')
+flux_obs=np.load('./Observations/mock_observation_water_only_flux.npy')
 
 
+min_wave=11.7
+max_wave=25
+
+idx=np.where(lam_obs<=max_wave)[0]
+lam_obs=lam_obs[idx]
+flux_obs=flux_obs[idx]
+#sigma_obs=sigma_obs[idx]
+idx=np.where(lam_obs>=min_wave)[0]
+lam_obs_full=lam_obs[idx].copy()
+flux_obs_full=flux_obs[idx].copy()
+
+weights_obs_full=calc_weights(lam_obs_full)
+
+
+
+
+lam_obs=[]
+flux_obs=[]
+weights_obs=[]
+
+masking_ar=np.load('water_mask.npy')
+
+
+for i in range(len(lam_obs_full)):
+    exist=False
+    for idx_mask in range(len(masking_ar)):
+        if lam_obs_full[i]>masking_ar[idx_mask][0] and  lam_obs_full[i]<masking_ar[idx_mask][1]:
+            exist=True
+            break
+    if not exist:
+        lam_obs.append(lam_obs_full[i])
+        flux_obs.append(flux_obs_full[i])
+        weights_obs.append(weights_obs_full[i])
+
+lam_obs=np.array(lam_obs)
+flux_obs=np.array(flux_obs)
+weights_obs=np.array(weights_obs)
+print('len obs')
+print(len(lam_obs))
+print(len(flux_obs))
 
 # -----------------------------
 # Retrieval settings
