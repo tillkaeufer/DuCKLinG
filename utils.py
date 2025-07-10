@@ -3057,9 +3057,25 @@ class complete_model:
         return tot_flux
 
     def run_fitted_to_obs_slab(self,variables,slab_dict,flux_obs,lam_obs,
-                          interp=False,scipy=True,debug=False,save_continuum=continuum_penalty):
+                          interp=False,scipy=True,debug=False,save_continuum=continuum_penalty,save_mol_flux=save_mol_flux):
         emission_flux_dict= self.run_model(variables=variables,dust_species={},slab_dict=slab_dict,output_all=True)
         
+
+        
+        #This first paragraph detects for which molecules
+        #the radii are provided and therefore no NNLS is needed
+        flux_obs_fit=flux_obs.copy()
+        tot_flux=np.zeros_like(flux_obs)
+        for key in slab_dict:
+            if 'radius' in slab_dict[key]:
+                if debug:
+                    print(f'{key} has radius provided and is dropped from NNLS')
+                flux_mol=emission_flux_dict[key]*slab_dict[key]['radius']*slab_dict[key]['radius']        
+                self.emission_flux_individual_scaled[key]=flux_mol
+                flux_obs_fit= flux_obs_fit-flux_mol
+                tot_flux+=flux_mol
+                emission_flux_dict.pop(key,None)
+
 
         #to make the algorithm find the best fit
         # I need to increase the dust component so that
@@ -3096,7 +3112,7 @@ class complete_model:
             scaleparas=nnls(compo_ar,flux_obs)[0]
             
         else:
-            scaleparas=np.linalg.lstsq(compo_ar,flux_obs,rcond=None)[0]
+            scaleparas=np.linalg.lstsq(compo_ar,flux_obs_fit,rcond=None)[0]
         if debug:
             print('before norm',scaleparas)
         scaleparas=scaleparas/max_values #changing the scalefactors by the same factor
@@ -3106,17 +3122,22 @@ class complete_model:
             print(np.max(compo_ar,axis=0))
             
         self.scaleparas=scaleparas
-        tot_flux=np.zeros_like(flux_obs)
 
         i=0
         for key in emission_flux_dict:
-            if debug:
-                print(i,scaleparas[i],key)
-                plt.title('Emission flux contribution')
-                plt.plot(self.xnew,scaleparas[i]*self.emission_flux_individual[key],label=key,alpha=0.7)
-                plt.plot(self.xnew,scaleparas[i]*emission_flux_dict[key],label=key,alpha=0.7)
+            if save_mol_flux:
+                if key in emission_flux_dict:
+                    self.emission_flux_individual_scaled[key]=scaleparas[i]*emission_flux_dict[key]
+                    
+                tot_flux+=self.emission_flux_individual_scaled[key]
+            else:
+                if debug:
+                    print(i,scaleparas[i],key)
+                    plt.title('Emission flux contribution')
+                    plt.plot(self.xnew,scaleparas[i]*self.emission_flux_individual[key],label=key,alpha=0.7)
+                    plt.plot(self.xnew,scaleparas[i]*emission_flux_dict[key],label=key,alpha=0.7)
 
-            tot_flux+=scaleparas[i]*emission_flux_dict[key]
+                tot_flux+=scaleparas[i]*emission_flux_dict[key]
             i+=1
 
         if debug:
@@ -3919,7 +3940,7 @@ def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_gas_only
             var_dict['E(B-V)']=None   
         return var_dict
 
-molecular_names={'CO2_II':r'$\rm CO_2$','CO2':r'$\rm CO_2$',
+molecular_names={'CO2_II':r'$\rm CO_2$','CO2':r'$\rm CO_2$','CO2_I':r'$\rm CO_2$',
                 'H2O':r'$\rm H_2O$','BroadH2O':r'$\rm H_2O$ (broad)',
                 'HCN':r'$\rm HCN$',
                 'C2H2':r'$\rm C_2H_2$',
@@ -3938,7 +3959,7 @@ molecular_names={'CO2_II':r'$\rm CO_2$','CO2':r'$\rm CO_2$',
                 'OH':r'$\rm OH$'
                  
                 }
-mol_colors_dict={'CO2_II':'tab:red','CO2':'tab:red',
+mol_colors_dict={'CO2_II':'tab:red','CO2':'tab:red','CO2_I':'tab:red',
                 'H2O':'tab:blue','BroadH2O':'tab:cyan',
                 'HCN':'tab:olive',
                 'C2H2':'darkred','C2H2_I':'darkred',
@@ -3952,7 +3973,7 @@ mol_colors_dict={'CO2_II':'tab:red','CO2':'tab:red',
                 'CH3':'tab:pink',
                 'NH3':'brown',
                 'CO':'yellowgreen','hotCO':'yellowgreen',
-                'SiO':'peru',
+                'SiO':'gold',
                 'OH':'orchid'}
 
 def calc_weights(lam_obs,target_res=2500,to_wave=True):

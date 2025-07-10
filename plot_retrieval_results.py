@@ -3463,6 +3463,7 @@ clip_value_ir=1e-10
 scale_mid_log=False # should the midplane scaling factor be on a log scale
 clip_value_mid=1e-10
 
+# printing the header with the mean parameter
 for i in range(len(header_all)):
     print(header_all[i],np.mean(tot_samples_rel[:,i]))
 
