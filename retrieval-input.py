@@ -791,7 +791,7 @@ def loglike_gas(cube,debug=False,timeit=False):
     if model_fit_obs:
         interp_flux=con_model.run_fitted_to_obs_slab(variables=var_dict,
                                                 slab_dict=slab_dict,
-                                                flux_obs=flux_obs,lam_obs=lam_obs)
+                                                flux_obs=flux_obs,lam_obs=lam_obs,save_mol_flux=save_mol_flux)
     else:
         interp_flux=con_model.run_model(variables=var_dict,dust_species=abundance_dict,slab_dict=slab_dict,output_all=False,timeit=False)
 
@@ -1274,7 +1274,10 @@ if debug:
     print('N dims',len(upper_lim))
     test_vals=[]
     for i in range(len(upper_lim)):
-        test_vals.append((upper_lim[i]+lower_lim[i])/2)
+        if 'tmin' in complete_header[i]:
+            test_vals.append((upper_lim[i]+lower_lim[i])/4)
+        else:
+            test_vals.append((upper_lim[i]+lower_lim[i])/2)
     print(len(test_vals))
     print(test_vals)
     if fit_water_ratios:
