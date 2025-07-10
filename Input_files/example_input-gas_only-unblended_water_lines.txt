@@ -1,3 +1,13 @@
+# This example can be used to fit the unblended water lines according to Banzatti+25
+# the water_mask.npy file contains the wavelength windows of these files (extracted from iSLAT)
+# the fitting here is limited to the wavelength range between 11.7 and 25 micron because
+# this is where the rotational lines emit. However, the mask covers the entire MIRI range.
+# The weighting ensures that equal wavelengths windows are treated the same, but this can also be left out
+# or replaced by different weights (e.g. Temmink+25)
+
+
+
+
 # -----------------------------
 # setting
 # -----------------------------
