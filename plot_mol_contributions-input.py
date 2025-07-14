@@ -61,7 +61,7 @@ print('------------------------------------------------')
 
 close_plots=True
 preliminary=False
-
+print_arulanantham=False
 complete_header=True
 comp_diff_color=True
 temp_contribution_plot=True
@@ -96,7 +96,9 @@ if __name__ == "__main__":
             if argument=='cold_water':
                 cold_water_investigate=True
                 if i+1<len(arg_list):
-                    temp_mid=float(arg_list[i+1])          
+                    temp_mid=float(arg_list[i+1])        
+            if argument=='print_lum':
+                print_arulanantham=True
             
 # %%
 old_version=False
@@ -1279,9 +1281,23 @@ print('---------------------------')
 print('Integrated fluxes for all molecules over the fitted wavelength region:')
 
 for mol in slab_dict:
-    print(f'{mol}: {con_model.calc_integrated_flux(mol,wave_lims=[np.min(lam_obs),np.max(lam_obs)])} W/m^2')
+    int_data=con_model.calc_integrated_flux(mol,wave_lims=[np.min(lam_obs),np.max(lam_obs)],return_lum=True)
+    
+    print(f'{mol}:  {int_data[0]} W/m^2')
+    print(f'{mol}:  {np.round(int_data[1],4)} log(L/L_sun)')
+    
 print('Done!')
+
 print('---------------------------')
+if print_arulanantham:
+    print('Calculating the line luminosity between 12 and 16 micron like Arulanantham et al. 2025')
+    for mol in slab_dict:
+        int_data=con_model.calc_integrated_flux(mol,wave_lims=[12.0,16.0],return_lum=True)
+        
+        print(f'{mol}:  {np.round(int_data[1],4)} log(L/L_sun)')
+
+    print('Done!')
+    print('---------------------------')
 if limit_integrated_flux:
 
     print('---------------------------')

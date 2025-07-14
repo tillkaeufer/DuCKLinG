@@ -723,7 +723,7 @@ def loglike_gas(cube,debug=False,timeit=False):
     if fixed_paras:
         for key in fixed_dict:
             if debug:
-                print(f'Fixed {key}..')
+                print(f'Fixed {key} of value {fixed_dict[key]}..')
             if key in header_abund:
                 abundance_dict[key]=fixed_dict[key]
                 if debug:
@@ -826,7 +826,6 @@ def loglike_gas(cube,debug=False,timeit=False):
         sigma=sigma_dict['sigma_obs_abs']*ones_like   
     else:
         sigma=sig_obs
-    if debug:    print(np.min(weights_obs),np.max(weights_obs))
     # constant of loglike
     if weighted:
         if weight_scale_sigma:
@@ -1160,7 +1159,6 @@ for key in fixed_dict:
             load_in_slab_dict[key[:idx]]={}
 print(load_in_slab_dict)
 
-        
 
 if not fit_gas_only:
     con_model.read_data(variables=init_dict,dust_species=init_abundance, 

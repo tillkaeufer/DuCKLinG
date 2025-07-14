@@ -100,6 +100,8 @@ class complete_model:
         self.mjup=1.89813e30
         self.mearth=5.9722e27
         self.n_avo=6.02214076*1e23
+        self.cm_to_m=0.01
+        self.lsun=3.828*10**26
 
         self.scaled_stellar_flux=[]
         self.rim_flux=[]
@@ -3289,8 +3291,7 @@ class complete_model:
         else:
             plt.show()
             
-            
-    def calc_integrated_flux(self,mol_name,wave_lims=[],flux_input=[]):
+    def calc_integrated_flux(self,mol_name,wave_lims=[],flux_input=[],return_lum=False):
         if len(flux_input)!=0:
             flux_ar=flux_input*1e-26 #convert to w/m^2/Hz
         else:
@@ -3303,8 +3304,11 @@ class complete_model:
             flux_ar=flux_ar[idx[idx1]]
             freq_steps=self.freq_steps[idx[idx1]]
         int_flux=np.sum(flux_ar*freq_steps)
-
-        return int_flux           
+        if return_lum:
+            lum=int_flux*self.variables['distance']*self.parsec*self.cm_to_m*self.variables['distance']*self.parsec*self.cm_to_m*4.0*np.pi/self.lsun
+            return int_flux,np.log10(lum)
+        else:
+            return int_flux    
 
     def water_line_diagnostics(self,mol_name='H2O',integrated=False, ratios=True,plot=True,printing=True,debug=False):
         '''
@@ -4029,18 +4033,52 @@ def check_if_priors_in_linedata(slab_prior_dict,fixed_dict,slab_folder='./LineDa
         col_grid=np.load(f'{slab_folder}/{slab_prefix}{mol_name}_parameter_col.npy')
         temp_test=[]
         col_test=[]
+        if mol+':temis' in fixed_dict:
+            temp=fixed_dict[mol+':temis']
+            temp_test.append(temp)
+
+        if mol+':tmax' in fixed_dict:
+            temp=fixed_dict[mol+':tmax']
+            temp_test.append(temp)
+
+        if mol+':tmin' in fixed_dict:
+            temp=fixed_dict[mol+':tmin']
+            temp_test.append(temp)
+
+
         if 'temis' in slab_prior_dict[mol]:
             temp_list=slab_prior_dict[mol]['temis']
             for temp in temp_list:
                 temp_test.append(temp)
 
-        else:
+
+        if 'tmax' in slab_prior_dict[mol]:
             temp_list=slab_prior_dict[mol]['tmax']
             for temp in temp_list:
                 temp_test.append(temp)
+        if 'tmin' in slab_prior_dict[mol]:
             temp_list=slab_prior_dict[mol]['tmin']
             for temp in temp_list:
                 temp_test.append(temp)
+        if mol+':ColDens' in fixed_dict:
+            col=fixed_dict[mol+':ColDens']
+            if log_coldens:
+                col_test.append(10**col)
+            else:
+                col_test.append(col)
+        if mol+':ColDens_tmax' in fixed_dict:
+            col=fixed_dict[mol+':ColDens_tmax']
+            if log_coldens:
+                col_test.append(10**col)
+            else:
+                col_test.append(col)
+        if mol+':ColDens_tmin' in fixed_dict:
+            col=fixed_dict[mol+':ColDens_tmin']
+            if log_coldens:
+                col_test.append(10**col)
+            else:
+                col_test.append(col)
+
         if 'ColDens' in slab_prior_dict[mol]:
             col_list=slab_prior_dict[mol]['ColDens']
             for col in col_list:
@@ -4048,13 +4086,15 @@ def check_if_priors_in_linedata(slab_prior_dict,fixed_dict,slab_folder='./LineDa
                     col_test.append(10**col)
                 else:
                     col_test.append(col)
-        else:
+        if 'ColDens_tmax' in slab_prior_dict[mol]:
             col_list=slab_prior_dict[mol]['ColDens_tmax']
             for col in col_list:
                 if log_coldens:
                     col_test.append(10**col)
                 else:
                     col_test.append(col)
+
+        if 'ColDens_tmin' in slab_prior_dict[mol]:
             col_list=slab_prior_dict[mol]['ColDens_tmin']
             for col in col_list:
                 if log_coldens:

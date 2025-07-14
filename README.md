@@ -83,6 +83,8 @@ Run one of the following commands
 > python retrieval-input.py ./Input_files/example_input-absorption.txt  
 > python retrieval-input.py ./Input_files/example_input-dust_only.txt   
 
+and so on.
+
 to start the retrieval.
 
 If you want to run it on multiple (N) cores you can use
@@ -281,6 +283,7 @@ The options for this routine are as follows:
 - width: this phrase should be followed by a float. It specifies how large the wavelengths windows are that are plotted. Default is 2.0.
 - no_comp: the latest version of the code will plot different components of the same molecules in different colours (alpha=1/component_number). If you want the old behaviour that all components of the same molecule are plotted in the same colour add this argument.
 - cold_water: For all molecules the temperature contibutions to every part of the spectrum is plotted (if the argument no_temp is not used). If cold_water is added as an argument this means, that the colorscale for water will be ranging from blue to red with the middle temperature at 400K, which is often considered the splitting temperature between warm and cold water.  
+- print_lum: This will print the line luminosity of all species in the wavelength range between 12 and 16 micron (following Arulanantham et al. 2025).  
 
 If you want to plot the molecular column densities, temperatures and radii this is possible with the following function:
 
