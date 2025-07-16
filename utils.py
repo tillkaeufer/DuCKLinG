@@ -3945,7 +3945,7 @@ def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_gas_only
         return var_dict
 
 molecular_names={'CO2_II':r'$\rm CO_2$','CO2':r'$\rm CO_2$','CO2_I':r'$\rm CO_2$',
-                'H2O':r'$\rm H_2O$','BroadH2O':r'$\rm H_2O$ (broad)',
+                'H2O':r'$\rm H_2O$','BroadH2O':r'$\rm H_2O$ (broad)','hotH2O':r'$\rm H_2O$',
                 'HCN':r'$\rm HCN$',
                 'C2H2':r'$\rm C_2H_2$',
                 'HC3N':r'$\rm HC_3N$',
@@ -3964,7 +3964,7 @@ molecular_names={'CO2_II':r'$\rm CO_2$','CO2':r'$\rm CO_2$','CO2_I':r'$\rm CO_2$
                  
                 }
 mol_colors_dict={'CO2_II':'tab:red','CO2':'tab:red','CO2_I':'tab:red',
-                'H2O':'tab:blue','BroadH2O':'tab:cyan',
+                'H2O':'tab:blue','hotH2O':'tab:blue','BroadH2O':'tab:cyan',
                 'HCN':'tab:olive',
                 'C2H2':'darkred','C2H2_I':'darkred',
                 'HC3N':'gold',
