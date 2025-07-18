@@ -3594,7 +3594,7 @@ class complete_model:
         return calc_fluxes
 
 
-    def calc_mol_masses(self,temp_brackets=[[0,400],[500,1e4]],ratios=True,low_contribution=0.15,high_contribution=0.85,unit_name='mearth',mass_single_mol=1,focus_on_contribution=True,debug=False):
+    def calc_mol_masses(self,temp_brackets=[[0,400],[500,1e4]],ratios=True,low_contribution=0.15,high_contribution=0.85,unit_name='mearth',mass_single_mol=1,focus_on_contribution=False,debug=False):
         '''
         this function calculated the masses in given temperature brackets for all molecules
         M(r_0<r<r_1)=integral_(r_0)^(r_1)▒πrN(r)dr
@@ -3620,8 +3620,13 @@ class complete_model:
         elif unit_name=='mjup':
             unit=self.mjup
             
-        
-        output_dict=self.extract_emission_quantities(low_contribution=low_contribution,high_contribution=high_contribution,debug=debug)
+        if focus_on_contribution:
+
+            output_dict=self.extract_emission_quantities(low_contribution=low_contribution,high_contribution=high_contribution,debug=debug)
+        else:
+            output_dict=self.extract_emission_quantities(low_contribution=0.0,high_contribution=1.0,debug=debug)
+            
+
 
         mass_dict={}
         for mol in output_dict:
