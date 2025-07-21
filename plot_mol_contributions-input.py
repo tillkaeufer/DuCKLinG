@@ -858,7 +858,7 @@ for key in con_model.slab_dict:
 if temp_contribution_plot:
     #print(con_model.slab_dict)
     #con_model.set_emission_lines(scaled=True)
-    temp_dict,flux_dict=con_model.extract_emission_by_temperature(debug=True)
+    temp_dict,flux_dict=con_model.extract_emission_by_temperature(debug=False)
 
 
 # finding the indices at which lam_obs_full it lam_obs
@@ -1090,7 +1090,7 @@ while i<=np.max(lam_obs):
 # %%
 def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_obs=lam_obs_full,lam_obs_fitted=lam_obs,flux_obs_fitted=flux_obs,
                            y_median=[None],y_std=[],y_std_min=[],wave_new=[],wave_range=[[13.6,16.3]],
-                           save_name='',debug=True,temp_plot=False,flux_dict={},temp_dict={},temp_of='',cold_water_investigate=cold_water_investigate):
+                           save_name='',debug=False,temp_plot=False,flux_dict={},temp_dict={},temp_of='',cold_water_investigate=cold_water_investigate):
     first=True
     for key in mol_fluxes:
         if not temp_plot or temp_of==key:
@@ -1099,8 +1099,9 @@ def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_obs
                 tot_mol_flux=mol_fluxes[key].copy()
             else:
                 tot_mol_flux+=mol_fluxes[key]
-    print(np.max(interp_flux),np.max(tot_mol_flux),np.shape(tot_mol_flux))
-    print(np.shape(lam_obs),np.shape(np.zeros_like(lam_obs)),np.shape(mol_fluxes[key]))
+    if debug:
+        print(np.max(interp_flux),np.max(tot_mol_flux),np.shape(tot_mol_flux))
+        print(np.shape(lam_obs),np.shape(np.zeros_like(lam_obs)),np.shape(mol_fluxes[key]))
 
     
     nrows=len(wave_range)

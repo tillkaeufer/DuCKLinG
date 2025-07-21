@@ -1227,11 +1227,10 @@ class complete_model:
                 col_range=False
             else:
                 col_range=True
-            
             if debug:                
                 print('--------------')
                 print(f'Slab of {specie}')
-            
+
             #if we have a single temperature (temis)
             if 'temis' in self.slab_dict[specie]:
                 

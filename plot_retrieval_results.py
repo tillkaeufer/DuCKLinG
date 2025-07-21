@@ -2601,7 +2601,7 @@ def set_slab_labels(slab_prior_dict):
             if word in slab_prior_dict[key]:
                 no_radius=False
                 break
-        if not no_radius:
+        if no_radius:
             for word in radius_words:
                 if key+':'+word in fixed_dict:
                     no_radius=False
