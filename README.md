@@ -51,9 +51,9 @@ Generally, my experience is that ultranest is the only reliable option for very 
 If you are only interested in fitting the dust component you do not need to download the slab files. Instead you can create an empty folder caleld 'LineData' in the DuCKLinG directory and everything should be working.
 
 The molecular emission in DuCKLinG is calculated from a grid of 0D ProDiMo-slab models calculated by [Arabhavi et al. (2024)](https://doi.org/10.1126/science.adi8147).  
-The files are available in this [folder](https://drive.google.com/drive/folders/1XAEgrss9oupWWGo_nNQyHwQFsfMxEiKq?usp=sharing).  
+The files are available in this [folder](https://drive.google.com/drive/folders/1XAEgrss9oupWWGo_nNQyHwQFsfMxEiKq?usp=sharing). **Note: We are currently moving the files to a new folder. Apologies for any inconvenience.**  
 Download the folder and add it in DuCKLinG/LineData to have the example work without changing the paths.  
-Be aware that this requires about 15 GB of storage. You can also choose to download only the data for the molecules you are interested in.
+Be aware that this requires about 150 GB of storage. You can also choose to download only the data for the molecules you are interested in.
 If you want to download the folder using the terminal you can do this by installing gdown (`pip install gdown`) and executing the following command: `gdown --folder https://drive.google.com/drive/folders/1XAEgrss9oupWWGo_nNQyHwQFsfMxEiKq --remaining-ok`
 
 Please note that there are two versions of water slab grid. 12_H2O runs on HITRAN data (recommended) and 12_LamH2O uses LAMDA data.
