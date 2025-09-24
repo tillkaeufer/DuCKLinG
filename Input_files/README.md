@@ -14,6 +14,8 @@
 | **Uncertainty**   |                                                                                         |           |               |
 | sigma_obs         | Observational uncertainty as a factor of flux                                           |           |               |
 | log_sigma_obs     | Observational uncertainty as a factor of flux (log scale)                               |           | (-5,-1)       |
+| sigma_obs_frac    | Observational uncertainty as fraction of the provided sig_obs file                      |           |               |
+| log_sigma_obs_frac| Observational uncertainty as fraction of the provided sig_obs file (log scale)          |           | (-1,2)        |
 | sigma_obs_abs     | Observational uncertainty in absolute terms (Jy)                                        |           |               |
 | log_sigma_obs_abs | Observational uncertainty in absolute terms on a log scale (Jy)                         |           |               |
 | **Dust**          |                                                                                         |           |               |
@@ -43,6 +45,8 @@
 
 Instead of providing the observational uncertainty as a fitting parameter, you can also provide an array called sig_obs with absolute values in Jy. Please note that a previous version (before July 2025) had a bug when running the gas_only fit with fitting the uncertainty in absolute values, that resulted in bad convergence. This is fixed now!   
 If you are using two temperature power laws for the surface/absorption layer you can force them to no overlap by adding 'no_overlap_t=True' to the input file.
+
+If you are having an observational uncertainty that is very wavelength dependent please consider fitting the uncertainty as a fraction of that. This way the wavelength dependents is preserved but you benefit from faster convergence and more realistic parameter uncertainties.
 
 # Abundance dictionary
 

@@ -3793,7 +3793,9 @@ class complete_model:
 
 
 
-def create_header(var_dict,abundance_dict,slab_dict,fit_obs_err,fit_conti_err,fit_abs_err,fixed_dict,prior_dict,abundance_dict_absorption):
+def create_header(var_dict,abundance_dict,slab_dict,fit_obs_err,
+                  fit_conti_err,fit_abs_err,fixed_dict,prior_dict,abundance_dict_absorption,
+                  fit_obs_err_frac):
     header=[]
     header_para=[]
     header_abund=[]
@@ -3820,20 +3822,28 @@ def create_header(var_dict,abundance_dict,slab_dict,fit_obs_err,fit_conti_err,fi
         header.append(key+'_absorp')
         header_absorp.append(key+'_absorp')
     if fit_obs_err:
-        if fit_abs_err:
-            if 'log_sigma_obs_abs' in prior_dict:
-                header.append('log_sigma_obs_abs')
-                header_sigma.append('log_sigma_obs_abs')
+        if fit_obs_err_frac:
+            if 'log_sigma_obs_frac' in prior_dict:
+                header.append('log_sigma_obs_frac')
+                header_sigma.append('log_sigma_obs_frac')
             else:
-                header.append('sigma_obs_abs')
-                header_sigma.append('sigma_obs_abs')            
+                header.append('sigma_obs_frac')
+                header_sigma.append('sigma_obs_frac')              
         else:
-            if 'log_sigma_obs' in prior_dict:
-                header.append('log_sigma_obs')
-                header_sigma.append('log_sigma_obs')
+            if fit_abs_err:
+                if 'log_sigma_obs_abs' in prior_dict:
+                    header.append('log_sigma_obs_abs')
+                    header_sigma.append('log_sigma_obs_abs')
+                else:
+                    header.append('sigma_obs_abs')
+                    header_sigma.append('sigma_obs_abs')            
             else:
-                header.append('sigma_obs')
-                header_sigma.append('sigma_obs')
+                if 'log_sigma_obs' in prior_dict:
+                    header.append('log_sigma_obs')
+                    header_sigma.append('log_sigma_obs')
+                else:
+                    header.append('sigma_obs')
+                    header_sigma.append('sigma_obs')
             
     if fit_conti_err:
         if 'log_sigma_conti' in prior_dict:
@@ -3864,9 +3874,9 @@ def cube_to_dict(data,header,fit_obs_err=False,fit_conti_err=False,log_coldens=T
     for key in header:
         #print('cube to dict',key)
         #print(data[i])
-        if key=='sigma_obs' or key=='sigma_conti' or key=='sigma_obs_abs':
+        if key=='sigma_obs' or key=='sigma_conti' or key=='sigma_obs_abs'or key=='sigma_obs_frac':
             sigma_dict[key]=data[i]
-        elif key=='log_sigma_obs' or key=='log_sigma_conti' or key=='log_sigma_obs_abs':
+        elif key=='log_sigma_obs' or key=='log_sigma_conti' or key=='log_sigma_obs_abs'or key=='log_sigma_obs_frac':
             sigma_dict[key[4:]]=10**data[i]
         elif ':' in key:
             idx=key.find(':')
@@ -3900,9 +3910,9 @@ def cube_to_dicts(data,header_para,header_abund,header_all,scale_prior,header_ab
             print(key)
             print(i)
             print(data[i])
-        if key=='sigma_obs' or key=='sigma_conti':
+        if key=='sigma_obs' or key=='sigma_conti' or key=='sigma_obs_frac':
             sigma_dict[key]=data[i]
-        elif key=='log_sigma_obs' or key=='log_sigma_conti' or key=='log_sigma_obs_abs':
+        elif key=='log_sigma_obs' or key=='log_sigma_conti' or key=='log_sigma_obs_abs'or key=='log_sigma_obs_frac':
             sigma_dict[key[4:]]=10**data[i]
         elif key in header_absorp:
             key_abs=key[:-7]
@@ -3958,6 +3968,8 @@ def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_gas_only
         var_dict={'distance':None}
         if mol_powerlaw:
             var_dict['q_emis']=None
+        if 'incl' in prior_dict or 'incl' in fixed_dict:
+            var_dict['incl']=None
         return var_dict
     else:
         var_dict={}

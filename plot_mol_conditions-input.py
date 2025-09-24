@@ -67,7 +67,7 @@ print('------------------------------------------------')
 
 print('Load inputs...')
 
-
+no_sigma=False
 close_plots=True
 debug=False
 temp_range=[25,1500]
@@ -117,6 +117,8 @@ if __name__ == "__main__":
                 close_plots=True
             elif argument=='reduce_post':
                 reduce_posterior=True
+            elif argument=='no_sigma':
+                no_sigma=True
 
                 
 
@@ -419,6 +421,9 @@ for full_range in [False,True]:
         i+=1
 
     plt.ylabel('$\log_{10} \Sigma$ [cm$^{-2}$]')
+    if no_sigma:
+        plt.ylabel('$\log_{10} N$ [cm$^{-2}$]')
+    
     plt.xlabel('$T$ [K]')    
     if log_t_first:
 
@@ -571,6 +576,9 @@ for full_range in [False,True]:
         i+=1
 
 plt.ylabel('$\log_{10} \Sigma$ [cm$^{-2}$]')
+
+if no_sigma:
+    plt.ylabel('$\log_{10} N$ [cm$^{-2}$]')
 plt.xlabel('$T$ [K]')  
 custom_lines.append(Line2D([0], [0], color='grey', lw=2))
 custom_labels.append(r'$70\,\mathrm{\%}$ Emission')  
@@ -1190,6 +1198,9 @@ else:
             
             plt.xlabel('$\log_{10} R$ [au]')
             plt.ylabel('$\log_{10} \Sigma$ [cm$^{-2}$]') 
+
+            if no_sigma:
+                plt.ylabel('$\log_{10} N$ [cm$^{-2}$]')
             plt.ylim([coldens_range[0],coldens_range[1]]) 
             plt.legend(custom_lines,custom_labels,loc=(-0.1,1.05),ncol=max(len(custom_lines)//2,1))
             if full_range:
@@ -1328,6 +1339,9 @@ else:
     
     plt.xlabel('$\log_{10} R$ [au]')
     plt.ylabel('$\log_{10} \Sigma$ [cm$^{-2}$]')  
+
+    if no_sigma:
+        plt.ylabel('$\log_{10} N$ [cm$^{-2}$]')
     plt.ylim([coldens_range[0],coldens_range[1]]) 
     plt.legend(custom_lines,custom_labels,loc=(-0.1,1.05),ncol=max(len(custom_lines)//2,1))
     plt.savefig(prefix_fig+'_molecular_conditions_coldens_by_radius_contour_version.pdf',bbox_inches='tight')

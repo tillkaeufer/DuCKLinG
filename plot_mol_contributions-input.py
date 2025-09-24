@@ -11,6 +11,7 @@ import multiprocessing as mp
 
 from PyAstronomy import pyasl
 import corner
+import pandas as pd
 
 #from pymultinest.solve import solve, run
 import matplotlib.pyplot as plt
@@ -67,6 +68,8 @@ comp_diff_color=True
 temp_contribution_plot=True
 cold_water_investigate=False
 temp_mid=400.0
+rev_color=True
+label_atom=False
 
 # %%
 if __name__ == "__main__":
@@ -99,7 +102,10 @@ if __name__ == "__main__":
                     temp_mid=float(arg_list[i+1])        
             if argument=='print_lum':
                 print_arulanantham=True
-            
+            if argument=='grey_fit':
+                rev_color=False
+            if argument=='label_atom':
+                label_atom=True
 # %%
 old_version=False
 continuum_penalty=False
@@ -343,8 +349,20 @@ if fit_gas_only:
 
 debug=False
 
-    
+if label_atom:
+    # Dictionary for overplotted atomic lines
+    df=pd.read_csv('./Atomic_lines_islat.csv')
 
+    dict_atom={}
+    for index, row in df.iterrows():
+        lam_atom=row['wave']
+        name_atom=row['species']
+        line_atom=row['line']
+        if line_atom==' ':
+            line_atom=''
+        dict_atom[float(lam_atom)]=name_atom+line_atom   
+else:
+    dict_atom={}
 # %%
 folder=bayesian_folder+subfold
 if use_ultranest:
@@ -588,6 +606,7 @@ init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw,fit
                            abs_powerlaw=abs_powerlaw,mol_powerlaw=use_mol_powerlaw,two_dust_comp=two_dust_comp,two_dust_comp_abs=two_dust_comp_abs)
 
 
+fit_obs_err_frac=False
 if 'log_sigma_obs' in prior_dict:
     fit_obs_err=True
     fit_abs_err=False
@@ -597,6 +616,15 @@ elif 'log_sigma_obs_abs' in prior_dict:
 elif 'sigma_obs_abs' in prior_dict:
     fit_obs_err=True
     fit_abs_err=True
+elif 'sigma_obs_frac' in prior_dict:
+    fit_obs_err=True
+    fit_obs_err_frac=True
+    fit_abs_err=False
+        
+elif 'log_sigma_obs_frac' in prior_dict:
+    fit_obs_err=True
+    fit_obs_err_frac=True
+    fit_abs_err=False
 else:
     fit_obs_err=False
     fit_abs_err=False
@@ -609,7 +637,8 @@ header,header_para,header_abund,header_slab,header_absorp,header_sigma=create_he
                                                               abundance_dict=init_abundance,
                                                               slab_dict=slab_prior_dict,
                                                               fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,fit_abs_err=fit_abs_err,
-                                                              fixed_dict=fixed_dict,prior_dict=prior_dict,abundance_dict_absorption=init_abundance_absorp)
+                                                              fixed_dict=fixed_dict,prior_dict=prior_dict,abundance_dict_absorption=init_abundance_absorp,
+                                                              fit_obs_err_frac=fit_obs_err_frac)
 
 
 upper_lim=[]
@@ -643,6 +672,24 @@ if fit_obs_err:
         upper_lim.append(prior_dict['sigma_obs'][1])
         lower_lim.append(prior_dict['sigma_obs'][0])
         complete_header.append('sigma_obs')
+    elif 'sigma_obs_frac' in prior_dict:
+        upper_lim.append(prior_dict['sigma_obs_frac'][1])
+        lower_lim.append(prior_dict['sigma_obs_frac'][0])
+        complete_header.append('sigma_obs_frac')
+    elif 'log_sigma_obs_frac' in prior_dict:
+        upper_lim.append(prior_dict['log_sigma_obs_frac'][1])
+        lower_lim.append(prior_dict['log_sigma_obs_frac'][0])
+        complete_header.append('log_sigma_obs_frac')
+        
+    elif 'log_sigma_obs_abs' in prior_dict:
+        upper_lim.append(prior_dict['log_sigma_obs_abs'][1])
+        lower_lim.append(prior_dict['log_sigma_obs_abs'][0])
+        complete_header.append('log_sigma_obs_abs')
+        
+    elif 'sigma_obs_abs' in prior_dict:
+        upper_lim.append(prior_dict['sigma_obs_abs'][1])
+        lower_lim.append(prior_dict['sigma_obs_abs'][0])
+        complete_header.append('sigma_obs_abs')
             
 if fit_conti_err:
     if 'log_sigma_conti' in prior_dict:
@@ -735,6 +782,14 @@ def input_to_model(cube,debug=False,timeit=False):
                     print('..added to sigma_dict')
             elif key =='log_sigma_obs_abs':
                 sigma_dict['sigma_obs_abs']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='sigma_obs_frac':
+                sigma_dict['sigma_obs_frac']=fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='log_sigma_obs_frac':
+                sigma_dict['sigma_obs_frac']=10**fixed_dict[key]
                 if debug:
                     print('..added to sigma_dict')
 
@@ -951,19 +1006,49 @@ def plot_molecule_minds_like(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_o
         idx_color+=1
     plt.step(lam_obs,flux_obs*1000,linewidth=0.5,color='black',zorder=101)
     if len(lam_obs)!=len(lam_obs_fitted):
-        min_wave_fit=lam_obs_fitted[0]
-        for idx_fit in range(1,len(lam_obs_fitted)):
-            if idx_matches[idx_fit]!=idx_matches[idx_fit-1]+1:
-                max_wave_fit=lam_obs_fitted[idx_fit-1]
 
-                if min_wave_fit<max_wave and max_wave_fit>min_wave:
+        if rev_color:
+            idx_nofits=[]
+            
+            for idx_nofit in range(0,len(lam_obs)):
+                if lam_obs[idx_nofit] not in lam_obs_fitted:
 
-                    plt.axvspan(min_wave_fit,max_wave_fit,alpha=0.7,color='grey',linewidth=0.0)
-                min_wave_fit=lam_obs_fitted[idx_fit]
-        max_wave_fit=lam_obs_fitted[idx_fit]
-        if min_wave_fit<max_wave and max_wave_fit>min_wave:
+                    idx_nofits.append(idx_nofit)
 
-            plt.axvspan(min_wave_fit,max_wave_fit,alpha=0.7,color='grey',linewidth=0.0)
+            min_grey=lam_obs[idx_nofits[0]]
+            for idx2 in range(1,len(idx_nofits)):
+                idx_nofit=idx_nofits[idx2]
+
+                if idx_nofit-1!=idx_nofits[idx2-1]:
+
+                    max_grey=lam_obs[idx_nofits[idx2-1]]
+                
+                    plt.axvspan(min_grey,max_grey,alpha=0.7,color='grey',linewidth=0.0)
+                    min_grey=lam_obs[idx_nofit]
+            plt.axvspan(min_grey,lam_obs[idx_nofits[-1]],alpha=0.7,color='grey',linewidth=0.0)
+            
+                #elif min_grey<max_wave and lam_obs[idx_nofit]>max_wave:
+                #    plt.axvspan(min_grey,max_wave,alpha=0.7,color='grey',linewidth=0.0)
+                #    min_grey=lam_obs[idx_nofit]
+
+                
+
+
+        else:
+
+            min_wave_fit=lam_obs_fitted[0]
+            for idx_fit in range(1,len(lam_obs_fitted)):
+                if idx_matches[idx_fit]!=idx_matches[idx_fit-1]+1:
+                    max_wave_fit=lam_obs_fitted[idx_fit-1]
+
+                    if min_wave_fit<max_wave and max_wave_fit>min_wave:
+
+                        plt.axvspan(min_wave_fit,max_wave_fit,alpha=0.7,color='grey',linewidth=0.0)
+                    min_wave_fit=lam_obs_fitted[idx_fit]
+            max_wave_fit=lam_obs_fitted[idx_fit]
+            if min_wave_fit<max_wave and max_wave_fit>min_wave:
+
+                plt.axvspan(min_wave_fit,max_wave_fit,alpha=0.7,color='grey',linewidth=0.0)
     #plt.plot(lam_obs,(interp_flux+tot_mol_flux)*1000,linewidth=0.5,color='black')
    
     #plt.ylim([-0.1,1])
@@ -1077,7 +1162,7 @@ wave_range_plot=min(np.ptp(lam_obs),wave_width)
 i=np.min(lam_obs)
 while i<=np.max(lam_obs):
     if i==np.min(lam_obs):
-        wave_grid.append([i-0.1,i+wave_range_plot-0.1])
+        wave_grid.append([i,i+wave_range_plot])
     else:
         wave_grid.append([i,i+wave_range_plot])
         
@@ -1090,7 +1175,7 @@ while i<=np.max(lam_obs):
 # %%
 def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_obs=lam_obs_full,lam_obs_fitted=lam_obs,flux_obs_fitted=flux_obs,
                            y_median=[None],y_std=[],y_std_min=[],wave_new=[],wave_range=[[13.6,16.3]],
-                           save_name='',debug=False,temp_plot=False,flux_dict={},temp_dict={},temp_of='',cold_water_investigate=cold_water_investigate):
+                           save_name='',debug=False,temp_plot=False,flux_dict={},temp_dict={},temp_of='',cold_water_investigate=cold_water_investigate,dict_atom=dict_atom):
     first=True
     for key in mol_fluxes:
         if not temp_plot or temp_of==key:
@@ -1105,7 +1190,9 @@ def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_obs
 
     
     nrows=len(wave_range)
-
+    plot_atom=False
+    if len(list(dict_atom.keys()))!=0:
+        plot_atom=True
     fig,axs=plt.subplots(nrows=nrows,figsize=(14,2.8*nrows))
     
     #plt.step(lam_obs,(interp_flux-tot_mol_flux)*1000,linewidth=0.5,color='black',linestyle='dashed',label='Continuum',zorder=102)
@@ -1194,21 +1281,60 @@ def plot_molecule_subplots(interp_flux,mol_fluxes,flux_obs=flux_obs_full,lam_obs
 
 
         axs[i].step(lam_obs_select,flux_obs_select*1000,linewidth=0.5,color='black',zorder=101)
-
+        
+        if plot_atom:
+            # over plotting the atomic lines according to the islat file
+            for key in dict_atom:
+                if key>=min_wave and key<=max_wave:
+                    idx_line=np.argmin(abs(lam_obs_select-key))
+          
+                    line_peak=np.max(flux_obs_select)*1000*0.9
+                    
+                    pos_anno='left'
+                    if max_wave-lam_obs_select[idx_line]<=0.05*wave_width:
+                        pos_anno='right'
+                    axs[i].annotate(dict_atom[key],(key,line_peak),ha=pos_anno)
+                    axs[i].axvline(key,ls='dotted',color='grey')
         if len(lam_obs)!=len(lam_obs_fitted):
-            min_wave_fit=lam_obs_fitted[0]
-            for idx_fit in range(1,len(lam_obs_fitted)):
-                if idx_matches[idx_fit]!=idx_matches[idx_fit-1]+1:
-                    max_wave_fit=lam_obs_fitted[idx_fit-1]
 
-                    if min_wave_fit<max_wave and max_wave_fit>min_wave:
+            if rev_color:
 
-                        axs[i].axvspan(min_wave_fit,max_wave_fit,alpha=0.7,color='grey',linewidth=0.0)
-                    min_wave_fit=lam_obs_fitted[idx_fit]
-            max_wave_fit=lam_obs_fitted[idx_fit]
-            if min_wave_fit<max_wave and max_wave_fit>min_wave:
+                idx_nofits=[]
+                for idx_nofit in range(0,len(lam_obs_select)):
+                    if lam_obs_select[idx_nofit] not in lam_obs_fitted:
 
-                axs[i].axvspan(min_wave_fit,max_wave_fit,alpha=0.7,color='grey',linewidth=0.0)
+                        idx_nofits.append(idx_nofit)
+                if len(idx_nofits)>=1:
+                    min_grey=lam_obs_select[idx_nofits[0]]
+                    for idx2 in range(1,len(idx_nofits)):
+                        idx_nofit=idx_nofits[idx2]
+
+                        if idx_nofit-1!=idx_nofits[idx2-1]:
+
+                            max_grey=lam_obs_select[idx_nofits[idx2-1]]
+                        
+                            axs[i].axvspan(min_grey,max_grey,alpha=0.7,color='grey',linewidth=0.0)
+                            min_grey=lam_obs_select[idx_nofit]
+                    axs[i].axvspan(min_grey,lam_obs_select[idx_nofits[-1]],alpha=0.7,color='grey',linewidth=0.0)
+                
+                    #elif min_grey<max_wave and lam_obs[idx_nofit]>max_wave:
+                    #    plt.axvspan(min_grey,max_wave,alpha=0.7,color='grey',linewidth=0.0)
+                    #    min_grey=lam_obs[idx_nofit]
+
+            else:
+                min_wave_fit=lam_obs_fitted[0]
+                for idx_fit in range(1,len(lam_obs_fitted)):
+                    if idx_matches[idx_fit]!=idx_matches[idx_fit-1]+1:
+                        max_wave_fit=lam_obs_fitted[idx_fit-1]
+
+                        if min_wave_fit<max_wave and max_wave_fit>min_wave:
+
+                            axs[i].axvspan(min_wave_fit,max_wave_fit,alpha=0.7,color='grey',linewidth=0.0)
+                        min_wave_fit=lam_obs_fitted[idx_fit]
+                max_wave_fit=lam_obs_fitted[idx_fit]
+                if min_wave_fit<max_wave and max_wave_fit>min_wave:
+
+                    axs[i].axvspan(min_wave_fit,max_wave_fit,alpha=0.7,color='grey',linewidth=0.0)
         if plot_post:
             axs[i].fill_between(wave_new_plot,(y_std_min_plot)*1000,(y_std_plot)*1000,color='tab:blue',alpha=0.7,linewidth=0,step='pre', zorder=121)
 
