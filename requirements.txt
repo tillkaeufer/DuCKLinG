@@ -16,4 +16,5 @@ dust_extinction
 ultranest
 pymultinest
 notebook
+pandas
 

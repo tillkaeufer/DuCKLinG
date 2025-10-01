@@ -447,7 +447,7 @@ init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw,fit
                            sur_powerlaw=sur_powerlaw,abs_powerlaw=abs_powerlaw,mol_powerlaw=use_mol_powerlaw,two_dust_comp=two_dust_comp,two_dust_comp_abs=two_dust_comp_abs,
                            two_dust_qs=two_dust_qs,two_distinc_dust=two_distinct_dust)
 
-
+fit_obs_err_frac=False
 if 'log_sigma_obs' in prior_dict:
     fit_obs_err=True
     fit_abs_err=False
@@ -457,6 +457,15 @@ elif 'log_sigma_obs_abs' in prior_dict:
 elif 'sigma_obs_abs' in prior_dict:
     fit_obs_err=True
     fit_abs_err=True
+elif 'sigma_obs_frac' in prior_dict:
+    fit_obs_err=True
+    fit_obs_err_frac=True
+    fit_abs_err=False
+        
+elif 'log_sigma_obs_frac' in prior_dict:
+    fit_obs_err=True
+    fit_obs_err_frac=True
+    fit_abs_err=False
 else:
     fit_obs_err=False
     fit_abs_err=False
@@ -470,7 +479,8 @@ header,header_para,header_abund,header_slab,header_absorp,header_sigma=create_he
                                                               abundance_dict=init_abundance,
                                                               slab_dict=slab_prior_dict,
                                                               fit_conti_err=fit_conti_err,fit_obs_err=fit_obs_err,fit_abs_err=fit_abs_err,
-                                                              fixed_dict=fixed_dict,prior_dict=prior_dict,abundance_dict_absorption=init_abundance_absorp)
+                                                              fixed_dict=fixed_dict,prior_dict=prior_dict,abundance_dict_absorption=init_abundance_absorp,
+                                                              fit_obs_err_frac=fit_obs_err_frac)
                                                             
 upper_lim=[]
 lower_lim=[]
@@ -503,6 +513,15 @@ if fit_obs_err:
         upper_lim.append(prior_dict['sigma_obs'][1])
         lower_lim.append(prior_dict['sigma_obs'][0])
         complete_header.append('sigma_obs')
+    elif 'sigma_obs_frac' in prior_dict:
+        upper_lim.append(prior_dict['sigma_obs_frac'][1])
+        lower_lim.append(prior_dict['sigma_obs_frac'][0])
+        complete_header.append('sigma_obs_frac')
+    elif 'log_sigma_obs_frac' in prior_dict:
+        upper_lim.append(prior_dict['log_sigma_obs_frac'][1])
+        lower_lim.append(prior_dict['log_sigma_obs_frac'][0])
+        complete_header.append('log_sigma_obs_frac')
+        
     elif 'log_sigma_obs_abs' in prior_dict:
         upper_lim.append(prior_dict['log_sigma_obs_abs'][1])
         lower_lim.append(prior_dict['log_sigma_obs_abs'][0])
@@ -589,6 +608,14 @@ def loglike_ratios(cube,debug=False,timeit=False):
                 sigma_dict['sigma_obs_abs']=10**fixed_dict[key]
                 if debug:
                     print('..added to sigma_dict')
+            elif key =='sigma_obs_frac':
+                sigma_dict['sigma_obs_frac']=fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='log_sigma_obs_frac':
+                sigma_dict['sigma_obs_frac']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
 
             elif ':' in key:
                 idx=key.find(':')
@@ -645,6 +672,8 @@ def loglike_ratios(cube,debug=False,timeit=False):
         sigma=sigma_dict['sigma_obs']*flux_obs   
     elif 'sigma_obs_abs' in sigma_dict:
         sigma=sigma_dict['sigma_obs_abs']*ones_like  
+    elif 'sigma_obs_frac' in sigma_dict:
+        sigma=sigma_dict['sigma_obs_frac'] *sig_obs  
     else:
         sigma=sig_obs
     # constant of loglike
@@ -748,7 +777,14 @@ def loglike_gas(cube,debug=False,timeit=False):
                 sigma_dict['sigma_obs_abs']=10**fixed_dict[key]
                 if debug:
                     print('..added to sigma_dict')
-
+            elif key =='sigma_obs_frac':
+                sigma_dict['sigma_obs_frac']=fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='log_sigma_obs_frac':
+                sigma_dict['sigma_obs_frac']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
             elif ':' in key:
                 idx=key.find(':')
                 if key[:idx] not in slab_dict:
@@ -824,6 +860,8 @@ def loglike_gas(cube,debug=False,timeit=False):
         sigma=sigma_dict['sigma_obs']*flux_obs   
     elif 'sigma_obs_abs' in sigma_dict:
         sigma=sigma_dict['sigma_obs_abs']*ones_like   
+    elif 'sigma_obs_frac' in sigma_dict:
+        sigma=sigma_dict['sigma_obs_frac'] *sig_obs  
     else:
         sigma=sig_obs
     # constant of loglike
@@ -931,7 +969,14 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
                 sigma_dict['sigma_obs_abs']=10**fixed_dict[key]
                 if debug:
                     print('..added to sigma_dict')
-
+            elif key =='sigma_obs_frac':
+                sigma_dict['sigma_obs_frac']=fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
+            elif key =='log_sigma_obs_frac':
+                sigma_dict['sigma_obs_frac']=10**fixed_dict[key]
+                if debug:
+                    print('..added to sigma_dict')
             elif ':' in key:
                 idx=key.find(':')
                 if key[:idx] not in slab_dict:
@@ -1048,6 +1093,9 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
         sigma=sigma_dict['sigma_obs']*flux_obs   
     elif 'sigma_obs_abs' in sigma_dict:
         sigma=sigma_dict['sigma_obs_abs'] *ones_like   
+    elif 'sigma_obs_frac' in sigma_dict:
+        sigma=sigma_dict['sigma_obs_frac'] *sig_obs  
+
     else:
         sigma=sig_obs
     # constant of loglike
