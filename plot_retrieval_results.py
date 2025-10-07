@@ -2743,6 +2743,8 @@ else:
 
 print('...Saved')
 
+micron_to_cm=0.0001
+
 def nicer_labels(init_abundance=init_abundance,with_size=True):
     labels=list(init_abundance.keys())
     new_labels=[]
@@ -2886,7 +2888,7 @@ if use_dust_emis:
             #print(key,rad,dens)
             rad=float(rad)
             dens=float(dens)
-            fact=dens*rad
+            fact=dens*rad*micron_to_cm
             factor_dict[key]=fact
             for i in range(len(header_all)):
                 if header_all[i]==nicer_labels({key:None})[0]:
@@ -2941,7 +2943,7 @@ if use_dust_absorp:
             #print(key,rad,dens)
             rad=float(rad)
             dens=float(dens)
-            fact=dens*rad
+            fact=dens*rad*micron_to_cm
             factor_dict[key]=fact
             for i in range(len(header_all)):
                 if header_all[i]==nicer_labels({key:None})[0]+'_absorp':

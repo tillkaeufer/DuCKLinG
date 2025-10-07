@@ -102,6 +102,7 @@ class complete_model:
         self.n_avo=6.02214076*1e23
         self.cm_to_m=0.01
         self.lsun=3.828*10**26
+        self.micron_to_cm=0.0001
 
         self.scaled_stellar_flux=[]
         self.rim_flux=[]
@@ -3184,20 +3185,22 @@ class complete_model:
             #print(key,rad,dens)
             rad=float(rad)
             dens=float(dens)
-            fact=dens*rad
+            fact=dens*rad*self.micron_to_cm*4/3
             factor_dict[key]=fact
         return factor_dict
-    
+ 
+
     def calc_dust_masses(self,dust_path,unit='msun',q_curve=True,absorption=False):
         '''
         This only works with the radial version
-        The idea is that pi*r^2*N=Mass
-        What we have is C * Q_curve.
-        So, C=-2 cosi pi (R_min)^2 * N / (d^2 q Tmax^(2/q))/q_tranlation_fact
-
-        M=pi R^2*N = - 1/2 /cosi * C *d^2 * q * T_max^(2/q) *q_translation_fact * r_in^2((tmin/tmax)^2/q-1)
+        The idea is that pi*R^2*N=Mass
         
         R^2 =r_in^2((tmin/tmax)^2/q-1)
+        What we have is C * Q_curve.
+        So, C=-2 cosi pi (R_min)^2 * N / (d^2 q Tmax^(2/q))/q_translation_fact
+
+        M=pi R^2*N = - 1/2 /cosi * C *d^2 * q * T_max^(2/q)  *q_translation_fact*((tmin/tmax)^2/q-1)
+        
 
         Unit options: msun, mjup,mearth
         '''
@@ -3213,16 +3216,13 @@ class complete_model:
             
         if q_curve:
             
-            fact_dict=self.get_q_translation_factors(dust_path=dust_path,absorption=absorption)
+            q_fact_dict=self.get_q_translation_factors(dust_path=dust_path,absorption=absorption)
+
         mass_dict={}
         if not absorption:
             for key in self.abundance_dict:
                 if self.sur_powerlaw:
     
-                    #print(self.abundance_dict[key])
-                    M= -1/2.0 /degree_to_cos(self.variables['incl']) * self.abundance_dict[key] *(self.parsec*self.variables['distance'])**2 * self.variables['q_thin'] * self.variables['tmax_s']**(2/self.variables['q_thin'])*4/3
-                    if q_curve:
-                        M*=fact_dict[key]
                     if '_hot' in key:
                         tmin,tmax=self.variables['tmin_hot_s'],self.variables['tmax_s']
                     elif '_cold' in key:
@@ -3230,22 +3230,23 @@ class complete_model:
                     else:
                         tmin,tmax=self.variables['tmin_s'],self.variables['tmax_s']
                             
-                    M*=((tmin/tmax)**(2/self.variables['q_thin'])-1)/unit_val
-                else:
-                    M=self.abundance_dict[key]*(self.parsec*self.variables['distance'])**2 *4/3 /degree_to_cos(self.variables['incl'])/unit_val
-                    if q_curve:
-                        M*=fact_dict[key]
+                    M= -1/2.0 /degree_to_cos(self.variables['incl']) * self.abundance_dict[key] *(self.parsec*self.variables['distance'])*(self.parsec*self.variables['distance']) * self.variables['q_thin'] * (tmax**(2/self.variables['q_thin']))
                     
+                    M*=((tmin/tmax)**(2/self.variables['q_thin'])-1)/unit_val
+                    
+
+                    
+                else:
+                    M=self.abundance_dict[key]*(self.parsec*self.variables['distance'])**2 /degree_to_cos(self.variables['incl'])/unit_val
+
+                if q_curve:
+                    M*=q_fact_dict[key]
                 mass_dict[key]=M
 
         else:            
             for key in self.abundance_dict_absorp:
                 if self.absorp_powerlaw:
     
-                    #print(self.abundance_dict[key])
-                    M= -1/2.0 /degree_to_cos(self.variables['incl']) * self.abundance_dict_absorp[key] *(self.parsec*self.variables['distance'])**2 * self.variables['q_abs'] * self.variables['tmax_abs']**(2/self.variables['q_abs'])*4/3
-                    if q_curve:
-                        M*=fact_dict[key]
 
                     if '_hot' in key:
                         tmin,tmax=self.variables['tmin_hot_abs'],self.variables['tmax_abs']
@@ -3253,14 +3254,85 @@ class complete_model:
                         tmin,tmax=self.variables['tmin_abs'],self.variables['tmax_cold_abs']
                     else:
                         tmin,tmax=self.variables['tmin_abs'],self.variables['tmax_abs']
-                    M*=((tmin/tmax)**(2/self.variables['q_abs'])-1)/unit_val
-                else:
-                    M=self.abundance_dict_absorp[key]*(self.parsec*self.variables['distance'])**2 *4/3 /degree_to_cos(self.variables['incl'])/unit_val
-                    if q_curve:
-                        M*=fact_dict[key]
+                    M= -1/2.0 /degree_to_cos(self.variables['incl']) * self.abundance_dict_absorp[key] *(self.parsec*self.variables['distance'])*(self.parsec*self.variables['distance']) * self.variables['q_abs'] * (tmax**(2/self.variables['q_abs']))
                     
+                    M*=((tmin/tmax)**(2/self.variables['q_abs'])-1)/unit_val
+                    
+
+                else:
+                    M=self.abundance_dict_absorp[key]*(self.parsec*self.variables['distance'])**2 /degree_to_cos(self.variables['incl'])/unit_val
+                if q_curve:
+                    M*=q_fact_dict[key]
                 mass_dict[key]=M
         return mass_dict            
+    def calc_scaling_from_dust_masses(self,mass_dict,dust_path,unit='msun',q_curve=True,absorption=False):
+        '''
+        The idea is to translate dust masses into dust scaling factors to check if the mass calculations works
+        Input: mass dict
+        Output: scaling factors
+        From Kaeufer+24:
+        C=-M*2*cosi/(((Tmin/Tmax)**(2/q)-1)*m*d**2*q*t**(2/q))
+        And since the model is not using sigma opacities but q curves:
+        C*=q_translation_fact
+
+        '''
+        if unit=='msun':
+            unit_val=self.msun
+        elif unit=='mjup':
+            unit_val=self.mjup
+        elif unit=='mearth':
+            unit_val=self.mearth
+        
+        if not self.cosi:
+            self.variables['incl']=0.0
+            
+        if q_curve:
+            
+            q_fact_dict=self.get_q_translation_factors(dust_path=dust_path,absorption=absorption)
+
+        scale_dict={}
+        if not absorption:
+            for key in self.abundance_dict:
+                if self.sur_powerlaw:
+
+                    if '_hot' in key:
+                        tmin,tmax=self.variables['tmin_hot_s'],self.variables['tmax_s']
+                    elif '_cold' in key:
+                        tmin,tmax=self.variables['tmin_s'],self.variables['tmax_cold_s']
+                    else:
+                        tmin,tmax=self.variables['tmin_s'],self.variables['tmax_s']
+                            
+                    C=-mass_dict[key]*unit_val*2*degree_to_cos(self.variables['incl'])/(((tmin/tmax)**(2/self.variables['q_thin'])-1)*(self.parsec*self.variables['distance'])**2 *self.variables['q_thin']*tmax**(2/self.variables['q_thin']))
+
+
+
+                else:
+                    print('CALCULATING THE SCALE FACTOR FROM AN ABUNDANCE DOES NOT WORK FOR NON-POWERLAWS YET')
+                if q_curve:
+                    C/=q_fact_dict[key]
+                    
+                scale_dict[key]=C
+
+        else:            
+            for key in self.abundance_dict_absorp:
+                if self.absorp_powerlaw:
+    
+
+                    if '_hot' in key:
+                        tmin,tmax=self.variables['tmin_hot_abs'],self.variables['tmax_abs']
+                    elif '_cold' in key:
+                        tmin,tmax=self.variables['tmin_abs'],self.variables['tmax_cold_abs']
+                    else:
+                        tmin,tmax=self.variables['tmin_abs'],self.variables['tmax_abs']
+                    C=-mass_dict[key]*unit_val*2*degree_to_cos(self.variables['incl'])/(((tmin/tmax)**(2/self.variables['q_abs'])-1)*(self.parsec*self.variables['distance'])**2 *self.variables['q_abs']*tmax**(2/self.variables['q_abs']))
+
+                else:
+                    print('CALCULATING THE SCALE FACTOR FROM AN ABUNDANCE DOES NOT WORK FOR NON-POWERLAWS YET')
+                if q_curve:
+                    C/=q_fact_dict[key]
+                    
+                scale_dict[key]=C
+        return scale_dict 
 
     def plot_radial_structure(self,low_contribution=0.15,high_contribution=0.85,ylog=True,close_plots=False):
         '''
