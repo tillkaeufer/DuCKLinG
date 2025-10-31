@@ -4035,7 +4035,9 @@ def cube_to_dicts(data,header_para,header_abund,header_all,scale_prior,header_ab
 
 
 
-def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_gas_only=False,use_dust_emis=True,use_dust_absorp=False,use_extinction=False,sur_powerlaw=True,abs_powerlaw=True,mol_powerlaw=True,two_dust_comp=False,two_dust_comp_abs=False,two_dust_qs=False,two_distinc_dust=False):
+def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_gas_only=False,use_dust_emis=True,use_dust_absorp=False,
+                     use_extinction=False,sur_powerlaw=True,abs_powerlaw=True,mol_powerlaw=True,two_dust_comp=False,
+                     two_dust_comp_abs=False,two_dust_qs=False,two_distinc_dust=False,tmax_mp_is_trim=False):
     if fit_gas_only:
         var_dict={'distance':None}
         if mol_powerlaw:
@@ -4062,7 +4064,8 @@ def return_init_dict(use_bb_star,rin_powerlaw,prior_dict,fixed_dict,fit_gas_only
 
                 
         var_dict['tmin_mp']=None
-        var_dict['tmax_mp']=None
+        if not tmax_mp_is_trim:
+            var_dict['tmax_mp']=None
         var_dict['q_mid']=None
         if use_dust_emis and sur_powerlaw:
             var_dict['q_thin']=None

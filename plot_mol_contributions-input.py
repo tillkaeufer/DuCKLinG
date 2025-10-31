@@ -70,6 +70,8 @@ cold_water_investigate=False
 temp_mid=400.0
 rev_color=True
 label_atom=False
+tmax_mp_is_trim=False
+
 
 # %%
 if __name__ == "__main__":
@@ -597,13 +599,19 @@ use_mol_powerlaw=False
 if 'q_emis' in prior_dict or 'q_emis' in fixed_dict:
     use_mol_powerlaw=True
   
+# checking if trim=tmax_mp
+# this only works for a single black body inner rim
+if ('tmin_mp' in prior_dict or 'tmin_mp' in fixed_dict) and ('tmax_mp' not in prior_dict or 'tmax_mp' not in fixed_dict):
+    tmax_mp_is_trim=True
+
+
 # setting up the dictonaries and headers that will be used
 
 
 # In[19]:
 init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw,fit_gas_only=fit_gas_only,
                            prior_dict=prior_dict,fixed_dict=fixed_dict,use_extinction=use_extinction,use_dust_emis=use_dust_emis,use_dust_absorp=use_dust_absorp,sur_powerlaw=sur_powerlaw,
-                           abs_powerlaw=abs_powerlaw,mol_powerlaw=use_mol_powerlaw,two_dust_comp=two_dust_comp,two_dust_comp_abs=two_dust_comp_abs)
+                           abs_powerlaw=abs_powerlaw,mol_powerlaw=use_mol_powerlaw,two_dust_comp=two_dust_comp,two_dust_comp_abs=two_dust_comp_abs,tmax_mp_is_trim=tmax_mp_is_trim)
 
 
 fit_obs_err_frac=False
@@ -724,6 +732,7 @@ for key in fixed_dict:
 print(load_in_slab_dict)
 
 
+
 try:
     print(len(lam_obs))
     con_model.read_data(variables=init_dict,dust_species=init_abundance,
@@ -807,7 +816,11 @@ def input_to_model(cube,debug=False,timeit=False):
     if not fit_gas_only:            
         var_dict['bb_star']=use_bb_star
     
-
+  
+    # if the midplane and rim should attach
+    if tmax_mp_is_trim:
+        var_dict['tmax_mp']=var_dict['t_rim']
+        
     if sample_all:
         return var_dict,abundance_dict,abundance_dict_absorp,slab_dict
     else:

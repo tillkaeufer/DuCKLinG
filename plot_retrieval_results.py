@@ -61,6 +61,7 @@ abs_powerlaw=False
 close_plots=False
 run_all=False
 savetxt=False
+tmax_mp_is_trim=False
 
 
 if __name__ == "__main__":
@@ -415,7 +416,9 @@ def loglike_ratios(cube,debug=False,timeit=False):
             else:
                 print(f'{key} is in fixed_dict but not used for the retrieval. Please check that.')
      
-                
+    # if the midplane and rim should attach
+    if tmax_mp_is_trim:
+        var_dict['tmax_mp']=var_dict['t_rim']            
     var_dict['bb_star']=use_bb_star
     
     #checking if the physics works out
@@ -774,7 +777,9 @@ def loglike(cube,debug=False,timeit=False,return_model=False):
                 slab_dict[key[:idx]][key[idx+1:]]=fixed_dict[key]
             else:
                 print(f'{key} is in fixed_dict but not used for the retrieval. Please check that.')
-  
+    # if the midplane and rim should attach
+    if tmax_mp_is_trim:
+        var_dict['tmax_mp']=var_dict['t_rim']
                 
     var_dict['bb_star']=use_bb_star
     
@@ -1108,13 +1113,17 @@ use_mol_powerlaw=False
 if 'q_emis' in prior_dict or 'q_emis' in fixed_dict:
     use_mol_powerlaw=True
 
+# checking if trim=tmax_mp
+# this only works for a single black body inner rim
+if ('tmin_mp' in prior_dict or 'tmin_mp' in fixed_dict) and ('tmax_mp' not in prior_dict or 'tmax_mp' not in fixed_dict):
+    tmax_mp_is_trim=True
 
 # setting up the dictonaries and headers that will be used
 
 init_dict=return_init_dict(use_bb_star=use_bb_star,rin_powerlaw=rin_powerlaw,fit_gas_only=fit_gas_only,
                            prior_dict=prior_dict,fixed_dict=fixed_dict,use_extinction=use_extinction,use_dust_emis=use_dust_emis,use_dust_absorp=use_dust_absorp,sur_powerlaw=sur_powerlaw,
                            abs_powerlaw=abs_powerlaw,mol_powerlaw=use_mol_powerlaw,two_dust_comp=two_dust_comp,two_dust_comp_abs=two_dust_comp_abs,
-                           two_dust_qs=two_dust_qs,two_distinc_dust=two_distinct_dust)
+                           two_dust_qs=two_dust_qs,two_distinc_dust=two_distinct_dust,tmax_mp_is_trim=tmax_mp_is_trim)
 fit_obs_err_frac=False
 if 'log_sigma_obs' in prior_dict:
     fit_obs_err=True
@@ -1472,7 +1481,9 @@ def get_scales_parallel(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=Fa
 
                 slab_dict[key[:idx]][key[idx+1:]]=fixed_dict[key]
   
-  
+      # if the midplane and rim should attach
+    if tmax_mp_is_trim:
+        var_dict['tmax_mp']=var_dict['t_rim']
     var_dict['bb_star']=use_bb_star
     if debug:
         print(var_dict)
@@ -1646,7 +1657,7 @@ def get_scales_parallel_gas(idx,obs_per_model,scatter_obs=scatter_obs, corr_nois
 
                 slab_dict[key[:idx]][key[idx+1:]]=fixed_dict[key]
   
-  
+
     var_dict['bb_star']=use_bb_star
     if debug:
         print(slab_dict)
@@ -1764,7 +1775,9 @@ def get_full_model(idx,dummy,debug=False):
                     print('..added to slab_dict')
 
                 slab_dict[key[:idx]][key[idx+1:]]=fixed_dict[key]
-  
+      # if the midplane and rim should attach
+    if tmax_mp_is_trim:
+        var_dict['tmax_mp']=var_dict['t_rim']
   
     if debug:
         print('Slab dict',slab_dict)

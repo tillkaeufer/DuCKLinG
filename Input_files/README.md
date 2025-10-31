@@ -23,7 +23,7 @@
 | tmax_rim          | Maximum temperature of the inner rim (K)                                                | Rim       | (500,1500)    |
 | tmin_rim          | Minimum temperature of the inner rim (K)                                                | Rim       | (10,1000)     |
 | q_rim             | exponent of the temperature power law of the inner rim                                  | Rim       | (-1,-0.1)     |
-| tmax_mp           | Maximum temperature of the midplane (K)                                                 | Midplane  | (500,1500)    |
+| tmax_mp           | Maximum temperature of the midplane (K) (if left out it is assumed to be t_rim)         | Midplane  | (500,1500)    |
 | tmin_mp           | Minimum temperature of the midpllane (K)                                                | Midplane  | (10,1000)     |
 | q_mid             | exponent of the temperature power law of the midplane                                   | Midplane  | (-1,-0.1)     |
 | tmax_s            | Maximum temperature of the surface layer (K)                                            | Surface   | (500,1500)    |
