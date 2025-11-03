@@ -319,9 +319,9 @@ This function has a couple of options that allow you to change the plotting. The
 - Application to a very low-mass star to disentangle the dust and gas contributions: [Kaeufer et al. 2024b](https://ui.adsabs.harvard.edu/abs/2024A%26A...690A.100K/abstract)
 - Estimating a dust continuum flux to analyse the molecular features in detail: [Kanwar et al. 2024](https://ui.adsabs.harvard.edu/abs/2024A%26A...689A.231K/abstract)
 - Using the dust component of the model to determine the dust composition of PDS70: [Jang et al. 2024](https://ui.adsabs.harvard.edu/abs/2024A%26A...691A.148J/abstract)
-- Determining the dust composition of highly irradiated very distant disk around XUE 1: [Portilla-Revelo et al. 2025](https://ui.adsabs.harvard.edu/abs/2025ApJ...985...72P/abstract)
-- Analysing the dust composition of a disk aroudn a Brown Dwarf: [Morales-Calderón et al. 2025](https://ui.adsabs.harvard.edu/abs/2025arXiv250805155M/abstract)
+- Determining the dust composition of a highly irradiated very distant disk around XUE 1: [Portilla-Revelo et al. 2025](https://ui.adsabs.harvard.edu/abs/2025ApJ...985...72P/abstract)
+- Analysing the dust composition of a disk around a Brown Dwarf: [Morales-Calderón et al. 2025](https://ui.adsabs.harvard.edu/abs/2025arXiv250805155M/abstract)
 - Using the model to estimate water line flux ratios under different conditions: [Krijt et al. 2025](https://ui.adsabs.harvard.edu/abs/2025ApJ...990L..72K/abstract)
 - Analysing the dust composition of a sample of very low-mass star disks: [Jang et al. 2025](https://ui.adsabs.harvard.edu/abs/2025arXiv250916004J/abstract)
-- Examining if a unidentified spectral feature could be explained by dust: [Frediani et al. 2025](https://ui.adsabs.harvard.edu/abs/2025A%26A...701A..14F/abstract)
+- Examining if an unidentified spectral feature could be explained by dust: [Frediani et al. 2025](https://ui.adsabs.harvard.edu/abs/2025A%26A...701A..14F/abstract)
 
