@@ -288,6 +288,19 @@ except NameError:
 print('Weight scaling sigma:',weight_scale_sigma)
 
 
+# Since the name rin_powerlaw might lead to some confusion
+# rim_powerlaw will result in exactly the smae behaviour
+# if both are defined rin_powerlaw will be used
+try:
+    rin_powerlaw
+except:
+    print('Rin_powerlaw is not refined therefore rim_powerlaw is used')
+    try:
+        rin_powerlaw=rim_powerlaw
+    except:
+        print('rim_powerlaw make sure that at least on of the is')
+
+
 debug=False
 
 

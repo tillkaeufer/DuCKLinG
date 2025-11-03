@@ -312,7 +312,18 @@ print('Zoom window')
 print(zoom_list)    
 print('Save:',save_output)
  
-    
+# Since the name rin_powerlaw might lead to some confusion
+# rim_powerlaw will result in exactly the smae behaviour
+# if both are defined rin_powerlaw will be used
+try:
+    rin_powerlaw
+except:
+    print('Rin_powerlaw is not refined therefore rim_powerlaw is used')
+    try:
+        rin_powerlaw=rim_powerlaw
+    except:
+        print('rim_powerlaw make sure that at least on of the is')
+
     
 print('-----------------')                                     
 print('-----------------')
@@ -2119,6 +2130,8 @@ def nicer_labels_single(lab,with_size=True):
         new_lab+='Pyroxene '
     elif 'Fayalite' in lab:
         new_lab+='Fayalite '
+    elif 'corundum' in lab:
+        new_lab+='Corundum '
 
     if with_size:
         idx=lab.find('_rv')
@@ -2784,6 +2797,8 @@ def nicer_labels(init_abundance=init_abundance,with_size=True):
             new_lab+='Pyroxene '
         elif 'Fayalite' in lab:
             new_lab+='Fayalite '
+        elif 'corundum' in lab:
+            new_lab+='Corundum '
             
         if with_size:
             idx=lab.find('_rv')
