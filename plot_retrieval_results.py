@@ -3774,7 +3774,7 @@ with open(f'{save_folder}{str(run_number)}_posterior_values{reduce_str}.txt','w'
         minus=y_std_min[i]
         plus=y_std[i]
         if name not in check_list:
-            f.write('%10s %.5e %.5e %.5e \n'%(name,med,plus,minus))
+            f.write('%s %.5e %.5e %.5e \n'%(name,med,plus,minus))
 
     if use_dust_emis:
         f.write('-------------------------------------------- \n')
