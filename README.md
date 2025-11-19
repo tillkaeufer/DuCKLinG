@@ -324,4 +324,5 @@ This function has a couple of options that allow you to change the plotting. The
 - Using the model to estimate water line flux ratios under different conditions: [Krijt et al. 2025](https://ui.adsabs.harvard.edu/abs/2025ApJ...990L..72K/abstract)
 - Analysing the dust composition of a sample of very low-mass star disks: [Jang et al. 2025](https://ui.adsabs.harvard.edu/abs/2025arXiv250916004J/abstract)
 - Examining if an unidentified spectral feature could be explained by dust: [Frediani et al. 2025](https://ui.adsabs.harvard.edu/abs/2025A%26A...701A..14F/abstract)
+- Analysing the molecule-rich disc aroud the Herbig star Hd35929: [Kaeufer et al. 2025](https://arxiv.org/abs/2511.14418)
 
