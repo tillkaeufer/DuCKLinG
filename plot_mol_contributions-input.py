@@ -1424,6 +1424,8 @@ if temp_contribution_plot:
     
 
 # printing the slab dict of the median probable model
+print('Var_dict:')
+print(var_dict)
 print('Slab dict:')
 print(slab_dict)
 

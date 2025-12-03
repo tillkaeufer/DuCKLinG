@@ -689,9 +689,9 @@ for full_range in [True,False]:
             if f'{mol}:tmax' in fixed_dict:
                 t_in= np.ones(np.shape(paras[:,0]))*fixed_dict[f'{mol}:tmax'] 
 
-            if f'{mol}: logradius' in header:
+            if f'{mol}:logradius' in header:
                 
-                idx_rin=np.where(header==f'{mol}: logradius')[0][0]
+                idx_rin=np.where(header==f'{mol}:logradius')[0][0]
 
 
                 r_in= 10**paras[:,idx_rin]
@@ -699,6 +699,10 @@ for full_range in [True,False]:
 
                 r_in= np.ones(len(paras[:,0]))*fixed_dict[f'{mol}:logradius']
                     
+            if f'{mol}:radius' in header:
+                idx_rin=np.where(header==f'{mol}:radius')[0][0]
+            
+                r_in= paras[:,idx_rin]
             if f'{mol}: radius' in header:
                 idx_rin=np.where(header==f'{mol}: radius')[0][0]
             
@@ -842,13 +846,17 @@ else:
                     if f'{mol}:tmax' in fixed_dict:
                         t_in= np.ones(np.shape(paras[:,0]))*fixed_dict[f'{mol}:tmax'] 
 
-                    if f'{mol}: logradius' in header:
+                    if f'{mol}:logradius' in header:
                         
-                        idx_rin=np.where(header==f'{mol}: logradius')[0][0]
+                        idx_rin=np.where(header==f'{mol}:logradius')[0][0]
 
 
                         r_in= 10**paras[:,idx_rin]
                             
+                    if f'{mol}:radius' in header:
+                        idx_rin=np.where(header==f'{mol}:radius')[0][0]
+                    
+                        r_in= paras[:,idx_rin]
                     if f'{mol}: radius' in header:
                         idx_rin=np.where(header==f'{mol}: radius')[0][0]
                     
@@ -969,13 +977,17 @@ else:
                 if f'{mol}:tmax' in fixed_dict:
                     t_in= np.ones(np.shape(paras[:,0]))*fixed_dict[f'{mol}:tmax'] 
 
-                if f'{mol}: logradius' in header:
+                if f'{mol}:logradius' in header:
                     
-                    idx_rin=np.where(header==f'{mol}: logradius')[0][0]
+                    idx_rin=np.where(header==f'{mol}:logradius')[0][0]
 
 
                     r_in= 10**paras[:,idx_rin]
                         
+                if f'{mol}:radius' in header:
+                    idx_rin=np.where(header==f'{mol}:radius')[0][0]
+                
+                    r_in= paras[:,idx_rin]
                 if f'{mol}: radius' in header:
                     idx_rin=np.where(header==f'{mol}: radius')[0][0]
                 
@@ -1122,13 +1134,17 @@ else:
                     if f'{mol}:ColDens_tmin' in fixed_dict:
                         coldens_out= np.ones(np.shape(paras[:,0]))*fixed_dict[f'{mol}:ColDens_tmin']
 
-                    if f'{mol}: logradius' in header:
+                    if f'{mol}:logradius' in header:
                         
-                        idx_rin=np.where(header==f'{mol}: logradius')[0][0]
+                        idx_rin=np.where(header==f'{mol}:logradius')[0][0]
 
 
                         r_in= 10**paras[:,idx_rin]
                             
+                    if f'{mol}:radius' in header:
+                        idx_rin=np.where(header==f'{mol}:radius')[0][0]
+                    
+                        r_in= paras[:,idx_rin]
                     if f'{mol}: radius' in header:
                         idx_rin=np.where(header==f'{mol}: radius')[0][0]
                     
@@ -1252,15 +1268,18 @@ else:
                     coldens_out= paras[:,idx_coldens_out]
                 if f'{mol}:ColDens_tmin' in fixed_dict:
                     coldens_out= np.ones(np.shape(paras[:,0]))*fixed_dict[f'{mol}:ColDens_tmin']
-                if f'{mol}: logradius' in header:
+                if f'{mol}:logradius' in header:
                     
-                    idx_rin=np.where(header==f'{mol}: logradius')[0][0]
+                    idx_rin=np.where(header==f'{mol}:logradius')[0][0]
 
 
                     r_in= 10**paras[:,idx_rin]
-                        
                 if f'{mol}: radius' in header:
                     idx_rin=np.where(header==f'{mol}: radius')[0][0]
+                
+                    r_in= paras[:,idx_rin]                        
+                if f'{mol}:radius' in header:
+                    idx_rin=np.where(header==f'{mol}:radius')[0][0]
                 
                     r_in= paras[:,idx_rin]
                 if f'{mol}:radius' in fixed_dict:
