@@ -385,7 +385,6 @@ if ex:
 else:
     print('Determining dust names in the fly..')
 
-exit()
 
 debug=False
 # here you have to set the path where you want to save all the runs (bayesian_folder) and the dust_path where your Q-files are
