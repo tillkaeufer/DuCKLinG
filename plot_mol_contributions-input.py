@@ -614,7 +614,7 @@ if 'q_emis' in prior_dict or 'q_emis' in fixed_dict:
   
 # checking if trim=tmax_mp
 # this only works for a single black body inner rim
-if ('tmin_mp' in prior_dict or 'tmin_mp' in fixed_dict) and ('tmax_mp' not in prior_dict or 'tmax_mp' not in fixed_dict):
+if ('tmin_mp' in prior_dict or 'tmin_mp' in fixed_dict) and (('tmax_mp' not in prior_dict) and ('tmax_mp' not in fixed_dict)):
     tmax_mp_is_trim=True
 
 
