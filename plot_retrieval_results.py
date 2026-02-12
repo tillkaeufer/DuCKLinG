@@ -62,6 +62,7 @@ close_plots=False
 run_all=False
 savetxt=False
 tmax_mp_is_trim=False
+custom_dust_names=False
 
 
 if __name__ == "__main__":
@@ -345,6 +346,46 @@ if fit_gas_only:
     model_fit_obs=check_if_all_radii(slab_prior_dict=slab_prior_dict,fixed_dict=fixed_dict)
 
 
+# Checking for custom dust names
+dust_name_file=dust_path+'dust_names.py'
+ex=os.path.isfile(dust_name_file)
+if ex:
+    dict_dust_names={}
+    # Setting custom names to True
+    custom_dust_names=True
+
+    # Loading the dictionary with the names
+    print('Loading custom dust names..')
+
+    unique_filename_dust = str(uuid.uuid4())
+    os.system(f'cp {dust_name_file} temporary_{unique_filename_dust}.py')
+    mdl = importlib.import_module('temporary_'+unique_filename_dust)
+    os.system(f'rm temporary_{unique_filename_dust}.py')
+    # is there an __all__?  if so respect it
+    if "__all__" in mdl.__dict__:
+        names = mdl.__dict__["__all__"]
+    else:
+        # otherwise we import all names that don't begin with _
+        names = [x for x in mdl.__dict__ if not x.startswith("_")]
+
+    # now drag them in
+    globals().update({k: getattr(mdl, k) for k in names})
+
+    # Checking if all used dust species have entries in name dictionary
+    missing_dust=False
+    for d_name in dust_species_list:
+        if d_name not in dict_dust_names:
+            print(d_name, 'not found in custom name file!')
+            missing_dust=True
+    if missing_dust:
+        print('Please add the missing dust species to dust_names.py in ',dust_path)
+        exit()
+
+    print('Successfully loaded dust names!')
+else:
+    print('Determining dust names in the fly..')
+
+exit()
 
 debug=False
 # here you have to set the path where you want to save all the runs (bayesian_folder) and the dust_path where your Q-files are
@@ -2106,37 +2147,45 @@ if not ignore_spectrum_plot:
         np.save(f'{prefix}interp_flux{reduce_str}',interp_fluxes)
 
     
-def nicer_labels_single(lab,with_size=True):
+def nicer_labels_single(lab,with_size=True,custom_dust_names=False):
+    lab_clean=lab
     new_lab=''
     if '_hot' in lab:
         new_lab+='Hot '
+        lab_clean=lab_clean.replace('_hot','')
     elif '_cold' in lab:
         new_lab+='Cold '
-    
+        lab_clean=lab_clean.replace('_hot','')
+    if custom_dust_names:
+        new_lab+=dict_dust_names[lab_clean]['material']+' '
+        if with_size:
+            new_lab+=str(dict_dust_names[lab_clean]['size'])
 
-    if 'Silica' in lab:
-        new_lab+='Silica '
-    elif 'Fo_Sogawa' in lab or 'Forsterite' in lab or 'Fo_Zeidler' in lab:
-        new_lab+='Forsterite '
-    elif 'En_Jaeger' in lab or 'Enstatite' in lab:
-        new_lab+='Enstatite '
-    elif 'Mgolivine' in lab or 'MgOlivine' in lab :
-        new_lab+='Am Mgolivine '
-    elif 'Olivine' in lab:
-        new_lab+='Olivine '
-    elif 'Mgpyroxene' in lab or 'MgPyroxene' in lab:
-        new_lab+='Am Mgpyroxene '
-    elif 'Pyroxene' in lab:
-        new_lab+='Pyroxene '
-    elif 'Fayalite' in lab:
-        new_lab+='Fayalite '
-    elif 'corundum' in lab:
-        new_lab+='Corundum '
+    else:
 
-    if with_size:
-        idx=lab.find('_rv')
-        rv=lab[idx+3:idx+6]
-        new_lab+=rv
+        if 'Silica' in lab:
+            new_lab+='Silica '
+        elif 'Fo_Sogawa' in lab or 'Forsterite' in lab or 'Fo_Zeidler' in lab:
+            new_lab+='Forsterite '
+        elif 'En_Jaeger' in lab or 'Enstatite' in lab:
+            new_lab+='Enstatite '
+        elif 'Mgolivine' in lab or 'MgOlivine' in lab :
+            new_lab+='Am Mg-olivine '
+        elif 'Olivine' in lab:
+            new_lab+='Olivine '
+        elif 'Mgpyroxene' in lab or 'MgPyroxene' in lab:
+            new_lab+='Am Mg-pyroxene '
+        elif 'Pyroxene' in lab:
+            new_lab+='Pyroxene '
+        elif 'Fayalite' in lab:
+            new_lab+='Fayalite '
+        elif 'corundum' in lab:
+            new_lab+='Corundum '
+
+        if with_size:
+            idx=lab.find('_rv')
+            rv=lab[idx+3:idx+6]
+            new_lab+=rv
     return new_lab    
     
 
@@ -2255,7 +2304,7 @@ if not ignore_spectrum_plot:
                     comp_keys=list(individual_surface.keys())
                 comp_names_dust=[]
                 for lab in comp_keys:
-                    comp_names_dust.append(nicer_labels_single(lab))
+                    comp_names_dust.append(nicer_labels_single(lab,custom_dust_names=custom_dust_names))
 
                 comp_list_dust=[]
                 max_vals_dust=[]
@@ -2587,10 +2636,10 @@ if not ignore_spectrum_plot:
         compo_test=''
         for lab in comp_keys:
             print(lab)
-            nicer_lab_out=nicer_labels_single(lab,with_size=True)
+            nicer_lab_out=nicer_labels_single(lab,with_size=True,custom_dust_names=custom_dust_names)
             dict_dust_info[nicer_lab_out]={}
-            dict_dust_info[nicer_lab_out]['Compo']=nicer_labels_single(lab,with_size=False)
-            size=nicer_labels_single(lab,with_size=True)[-3:]
+            dict_dust_info[nicer_lab_out]['Compo']=nicer_labels_single(lab,with_size=False,custom_dust_names=custom_dust_names)
+            size=nicer_labels_single(lab,with_size=True,custom_dust_names=custom_dust_names)[-3:]
             dict_dust_info[nicer_lab_out]['Size']=size
             if float(size)==0.1:
                 dict_dust_info[nicer_lab_out]['style']=list_style_dust[0]
@@ -2771,39 +2820,49 @@ print('...Saved')
 
 micron_to_cm=0.0001
 
-def nicer_labels(init_abundance=init_abundance,with_size=True):
+def nicer_labels(init_abundance=init_abundance,with_size=True,custom_dust_names=False):
     labels=list(init_abundance.keys())
     new_labels=[]
     for lab in labels:
+
+        lab_clean=lab
         new_lab=''
         if '_hot' in lab:
             new_lab+='Hot '
+            lab_clean=lab_clean.replace('_hot','')
         elif '_cold' in lab:
             new_lab+='Cold '
+            lab_clean=lab_clean.replace('_hot','')
+        if custom_dust_names:
+            new_lab+=dict_dust_names[lab_clean]['material']+' '
+            if with_size:
+                new_lab+=str(dict_dust_names[lab_clean]['size'])
 
-        if 'Silica' in lab:
-            new_lab+='Silica '
-        elif 'Fo_Sogawa' in lab or 'Forsterite' in lab or 'Fo_Zeidler' in lab:
-            new_lab+='Forsterite '
-        elif 'En_Jaeger' in lab or 'Enstatite' in lab:
-            new_lab+='Enstatite '
-        elif 'Mgolivine' in lab or 'MgOlivine' in lab :
-            new_lab+='Am Mg-olivine '
-        elif 'Olivine' in lab:
-            new_lab+='Olivine '
-        elif 'Mgpyroxene' in lab or 'MgPyroxene' in lab:
-            new_lab+='Am Mg-pyroxene '
-        elif 'Pyroxene' in lab:
-            new_lab+='Pyroxene '
-        elif 'Fayalite' in lab:
-            new_lab+='Fayalite '
-        elif 'corundum' in lab:
-            new_lab+='Corundum '
-            
-        if with_size:
-            idx=lab.find('_rv')
-            rv=lab[idx+3:idx+6]
-            new_lab+=rv
+
+        else:
+            if 'Silica' in lab:
+                new_lab+='Silica '
+            elif 'Fo_Sogawa' in lab or 'Forsterite' in lab or 'Fo_Zeidler' in lab:
+                new_lab+='Forsterite '
+            elif 'En_Jaeger' in lab or 'Enstatite' in lab:
+                new_lab+='Enstatite '
+            elif 'Mgolivine' in lab or 'MgOlivine' in lab :
+                new_lab+='Am Mg-olivine '
+            elif 'Olivine' in lab:
+                new_lab+='Olivine '
+            elif 'Mgpyroxene' in lab or 'MgPyroxene' in lab:
+                new_lab+='Am Mg-pyroxene '
+            elif 'Pyroxene' in lab:
+                new_lab+='Pyroxene '
+            elif 'Fayalite' in lab:
+                new_lab+='Fayalite '
+            elif 'corundum' in lab:
+                new_lab+='Corundum '
+                
+            if with_size:
+                idx=lab.find('_rv')
+                rv=lab[idx+3:idx+6]
+                new_lab+=rv
         new_labels.append(new_lab)
     return new_labels
 
@@ -2839,14 +2898,14 @@ else:
     ugly_header=list(header_para_slab)
 
 if use_dust_emis:
-    nicer_labels_output=nicer_labels(init_abundance=init_abundance)
+    nicer_labels_output=nicer_labels(init_abundance=init_abundance,custom_dust_names=custom_dust_names)
     for lab in nicer_labels_output:
         header_all.append(lab)
     
     for key in init_abundance:
         ugly_header.append(key)
 if use_dust_absorp:
-    nicer_labels_output_absorp=nicer_labels(init_abundance=init_abundance_absorp)
+    nicer_labels_output_absorp=nicer_labels(init_abundance=init_abundance_absorp,custom_dust_names=custom_dust_names)
 
     for lab in nicer_labels_output_absorp:
         header_all.append(lab+'_absorp')
@@ -2919,7 +2978,7 @@ if use_dust_emis:
             fact=dens*rad*micron_to_cm
             factor_dict[key]=fact
             for i in range(len(header_all)):
-                if header_all[i]==nicer_labels({key:None})[0]:
+                if header_all[i]==nicer_labels({key:None},custom_dust_names=custom_dust_names)[0]:
                     break
             tot_samples[:,i]=tot_samples[:,i]*factor_dict[key]
     
@@ -2974,7 +3033,7 @@ if use_dust_absorp:
             fact=dens*rad*micron_to_cm
             factor_dict[key]=fact
             for i in range(len(header_all)):
-                if header_all[i]==nicer_labels({key:None})[0]+'_absorp':
+                if header_all[i]==nicer_labels({key:None},custom_dust_names=custom_dust_names)[0]+'_absorp':
                     break
             tot_samples[:,i]=tot_samples[:,i]*factor_dict[key]
     
@@ -3076,7 +3135,7 @@ def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True
         if new_dust:
             x_range=np.arange(len(medians))+i-len(medians)+1
             idx_key=key_old.find('rv')
-            label=nicer_labels({key_old:None},with_size=False)[0]
+            label=nicer_labels({key_old:None},with_size=False,custom_dust_names=custom_dust_names)[0]
             if debug:
                 print('Plotting..')
                 print(i)
@@ -3120,7 +3179,7 @@ def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True
 
     x_range=np.arange(len(medians))+i-len(medians)+1
     idx_key=key_old.find('rv')
-    label=nicer_labels({key_old:None},with_size=False)[0]
+    label=nicer_labels({key_old:None},with_size=False,custom_dust_names=custom_dust_names)[0]
     if debug:
         print('Plotting..')
         print(key_old)
@@ -3210,7 +3269,7 @@ def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regi
         if new_dust:
             x_range=np.arange(len(medians))+i-len(medians)+1
             idx_key=key_old.find('rv')
-            label=nicer_labels({key_old:None},with_size=False)[0]
+            label=nicer_labels({key_old:None},with_size=False,custom_dust_names=custom_dust_names)[0]
             if debug:
                 print('Plotting..')
                 print(i)
@@ -3255,7 +3314,7 @@ def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regi
 
     x_range=np.arange(len(medians))+i-len(medians)+1
     idx_key=key_old.find('rv')
-    label=nicer_labels({key_old:None},with_size=False)[0]
+    label=nicer_labels({key_old:None},with_size=False,custom_dust_names=custom_dust_names)[0]
     if debug:
         print('Plotting..')
         print(key_old)
@@ -3354,7 +3413,7 @@ def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,suff
         if new_dust:
             x_range=np.arange(len(medians))+i-len(medians)+1
             idx_key=key_old.find('rv')
-            label=nicer_labels({key_old:None},with_size=False)[0]
+            label=nicer_labels({key_old:None},with_size=False,custom_dust_names=custom_dust_names)[0]
             if debug:
                 print('Plotting..')
                 print(i)
@@ -3396,7 +3455,7 @@ def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,suff
 
     x_range=np.arange(len(medians))+i-len(medians)+1
     idx_key=key_old.find('rv')
-    label=nicer_labels({key_old:None},with_size=False)[0]
+    label=nicer_labels({key_old:None},with_size=False,custom_dust_names=custom_dust_names)[0]
     if debug:
         print('Plotting..')
         print(key_old)
@@ -3439,19 +3498,25 @@ def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,suff
     
     for key_run in dust_analysis_abs:
         key=key_run[:-7]
+    
         if debug:
             print(key)
         new_dust=False
         if first:
             key_old=key
-        if not first and key[:5]!=key_old[:5]:
-            new_dust=True
+            key_run_old=key_run
+        if custom_dust_names:
+            if dict_dust_names[key_run]['material']!=dict_dust_names[key_run_old]['material']:
+                new_dust=True
+        else:
+            if not first and key[:5]!=key_old[:5]:
+                new_dust=True
         if debug:
             print(first,new_dust)
         if new_dust:
             x_range=np.arange(len(medians))+i-len(medians)+1
             idx_key=key_old.find('rv')
-            label=nicer_labels({key_old:None},with_size=False)[0]
+            label=nicer_labels({key_run_old:None},with_size=False,custom_dust_names=custom_dust_names)[0]
             if debug:
                 print('Plotting..')
                 print(i)
@@ -3477,6 +3542,7 @@ def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,suff
             plus_stds=[]
             minus_stds=[]
         key_old=key
+        key_run_old=key_run
         if first:  first=False
         medians.append(dust_analysis_abs[key_run][0])
         plus_stds.append(dust_analysis_abs[key_run][1]-dust_analysis_abs[key_run][0])
@@ -3485,7 +3551,7 @@ def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,suff
 
     x_range=np.arange(len(medians))+i-len(medians)+1
     idx_key=key_old.find('rv')
-    label=nicer_labels({key_old:None},with_size=False)[0]
+    label=nicer_labels({key_run_old:None},with_size=False,custom_dust_names=custom_dust_names)[0]
     if debug:
         print('Plotting..')
         print(key_old)

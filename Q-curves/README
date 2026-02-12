@@ -1,2 +1,4 @@
 These dust opacities are calculated by Michiel Min and Hyerin Jang (Jay).  
 I use the Gaussian random fields particles at the moment, which Jay shows to work well for PDS70.
+
+If you use your own dust opacity files please add a dust_names.py file to the folder containing the opacity data. An example can be seen in the GRF folder. This will help during the plotting to link the right material names and grain sizes to the files.
