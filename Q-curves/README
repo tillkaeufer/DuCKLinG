@@ -1,4 +1,4 @@
 These dust opacities are calculated by Michiel Min and Hyerin Jang (Jay).  
 I use the Gaussian random fields particles at the moment, which Jay shows to work well for PDS70.
 
-If you use your own dust opacity files please add a dust_names.py file to the folder containing the opacity data. An example can be seen in the GRF folder. This will help during the plotting to link the right material names and grain sizes to the files.
+If you use your own dust opacity files please add a dust_names.py file to the folder containing the opacity data. An example can be seen in the GRF folder. This will help during the plotting to link the right material names and grain sizes to the files. If you want to customise the line stlyes and colours in the dust plots you can do this by defining a list of colours for the different materials (in the order that the are listed in your input file) called list_color_dust_custom and a list_style_dust_custom with line styles for the different sizes (again in the order they are listed in your input file). These list can be either added to your dust_names.py file or your input file.

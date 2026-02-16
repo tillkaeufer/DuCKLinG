@@ -2145,7 +2145,17 @@ if not ignore_spectrum_plot:
         np.save(f'{prefix}array_flux{reduce_str}',array_flux)
         np.save(f'{prefix}interp_flux{reduce_str}',interp_fluxes)
 
-    
+def custom_lab_get_size(lab):
+    lab_clean=lab
+    new_lab=''
+    if '_hot' in lab:
+        new_lab+='Hot '
+        lab_clean=lab_clean.replace('_hot','')
+    elif '_cold' in lab:
+        new_lab+='Cold '
+        lab_clean=lab_clean.replace('_hot','')
+    return str(dict_dust_names[lab_clean]['size'])
+
 def nicer_labels_single(lab,with_size=True,custom_dust_names=False):
     lab_clean=lab
     new_lab=''
@@ -2617,10 +2627,18 @@ if not ignore_spectrum_plot:
 
     if plot_dust_individual:
 
-
+        # Setting up list that determine the line styles and colours of the dust plot
         list_style_dust=['dotted','dashdot','dashed',(0, (3, 5, 1, 5, 1, 5)),(0, (3, 1, 1, 1)),'solid']
+        try:
+            list_style_dust_custom
+        except:
+            list_style_dust_custom=['dotted','dashed','solid','dashdot',(0, (3, 5, 1, 5, 1, 5)),(0, (3, 1, 1, 1)),(0,(1,10)),(0,(5,10))]
 
         list_color_dust=['tab:blue','tab:orange','tab:green','tab:red','tab:purple','tab:brown','tab:pink','tab:gray','tab:cyan','tan','limegreen']
+        try:
+            list_color_dust_custom
+        except:
+            list_color_dust_custom=['tab:blue','tab:orange','tab:green','tab:red','tab:purple','tab:brown','tab:pink','tab:gray','tab:cyan','tan','limegreen']
                 
         dust_emission_plot=True
         if len(list(dict_individual_flux.keys()))==0:
@@ -2633,29 +2651,75 @@ if not ignore_spectrum_plot:
         dict_dust_info={}
         idx_color=-1
         compo_test=''
+        idx_style=0                
+        sizes_with_style={}
+        compo_with_colors={}
+        # Iterating over all dust components to determine the line stlye and colour
         for lab in comp_keys:
             print(lab)
             nicer_lab_out=nicer_labels_single(lab,with_size=True,custom_dust_names=custom_dust_names)
             dict_dust_info[nicer_lab_out]={}
             dict_dust_info[nicer_lab_out]['Compo']=nicer_labels_single(lab,with_size=False,custom_dust_names=custom_dust_names)
-            size=nicer_labels_single(lab,with_size=True,custom_dust_names=custom_dust_names)[-3:]
+            if custom_dust_names:
+                size=custom_lab_get_size(lab)
+            else:
+                size=nicer_labels_single(lab,with_size=True,custom_dust_names=custom_dust_names)[-3:]
             dict_dust_info[nicer_lab_out]['Size']=size
-            if float(size)==0.1:
-                dict_dust_info[nicer_lab_out]['style']=list_style_dust[0]
-            elif float(size)==1.0:
-                dict_dust_info[nicer_lab_out]['style']=list_style_dust[1]
-            elif float(size)==2.0:
-                dict_dust_info[nicer_lab_out]['style']=list_style_dust[2]
-            elif float(size)==3.0:
-                dict_dust_info[nicer_lab_out]['style']=list_style_dust[3]
-            elif float(size)==4.0:
-                dict_dust_info[nicer_lab_out]['style']=list_style_dust[4]
-            elif float(size)==5.0:
-                dict_dust_info[nicer_lab_out]['style']=list_style_dust[5]
-            if dict_dust_info[nicer_lab_out]['Compo']!=compo_test:
-                idx_color+=1
-                compo_test=dict_dust_info[nicer_lab_out]['Compo']
-            dict_dust_info[nicer_lab_out]['color']=list_color_dust[idx_color]
+            if custom_dust_names:
+
+                if size not in sizes_with_style:
+                    if (idx_style==len(list_style_dust_custom)):
+                        print('------------------------------------------')
+                        print('------------------------------------------')
+                        print('Warning!')
+                        print('------------------------------------------')
+                        print('You have more dust sizes than predefined line styles')
+                        print('Add a list of styles to your input file or dust_names.py file in the dust folder')
+                        print('This can look like the following but should contain enough entries for every size you have')
+                        print("list_style_dust_custom=['dotted','dashed','solid','dashdot',(0, (3, 5, 1, 5, 1, 5)),(0, (3, 1, 1, 1)),(0,(1,10)),(0,(5,10))]")
+                        print('------------------------------------------')
+                        print('------------------------------------------')
+                        exit()
+                    sizes_with_style[size]=list_style_dust_custom[idx_style]
+                    idx_style+=1
+                if dict_dust_info[nicer_lab_out]['Compo'] not in compo_with_colors:
+                    idx_color+=1
+
+                    if (idx_color==len(list_color_dust_custom)):
+                        print('------------------------------------------')
+                        print('------------------------------------------')
+                        print('Warning!')
+                        print('------------------------------------------')
+                        print('You have more dust materials than predefined line colors')
+                        print('Add a list of colours to your input file or dust_names.py file in the dust folder')
+                        print('This can look like the following but should contain enough entries for every material you have')
+                        print("list_color_dust_custom=['tab:blue','tab:orange','tab:green','tab:red','tab:purple','tab:brown','tab:pink','tab:gray','tab:cyan','tan','limegreen']")
+                        print('------------------------------------------')
+                        exit()
+                    compo_with_colors[dict_dust_info[nicer_lab_out]['Compo']]=list_color_dust_custom[idx_color]
+
+                dict_dust_info[nicer_lab_out]['style']=sizes_with_style[size]
+                dict_dust_info[nicer_lab_out]['color']=compo_with_colors[dict_dust_info[nicer_lab_out]['Compo']]
+                
+
+
+            else:
+                if float(size)==0.1:
+                    dict_dust_info[nicer_lab_out]['style']=list_style_dust[0]
+                elif float(size)==1.0:
+                    dict_dust_info[nicer_lab_out]['style']=list_style_dust[1]
+                elif float(size)==2.0:
+                    dict_dust_info[nicer_lab_out]['style']=list_style_dust[2]
+                elif float(size)==3.0:
+                    dict_dust_info[nicer_lab_out]['style']=list_style_dust[3]
+                elif float(size)==4.0:
+                    dict_dust_info[nicer_lab_out]['style']=list_style_dust[4]
+                elif float(size)==5.0:
+                    dict_dust_info[nicer_lab_out]['style']=list_style_dust[5]
+                if dict_dust_info[nicer_lab_out]['Compo']!=compo_test:
+                    idx_color+=1
+                    compo_test=dict_dust_info[nicer_lab_out]['Compo']
+                dict_dust_info[nicer_lab_out]['color']=list_color_dust[idx_color]
 
         print('Plotting dust version of the component plot')
         plot_model_uncertainties_names(flux_obs_full,sig_obs_full,lam_obs_full,array_flux,con_model_new.xnew,wave_obs_fitted=lam_obs,
