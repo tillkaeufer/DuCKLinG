@@ -3172,7 +3172,7 @@ if use_dust_absorp:
       
  
 
-def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True,plot_legend=False,debug=True):
+def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True,plot_legend=False,debug=True,custom_dust_names=custom_dust_names):
     colour_list=['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
                 'tab:brown','tab:pink','tab:gray','tab:cyan','tan','limegreen']
     colour_count=0
@@ -3272,8 +3272,11 @@ def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True
             idx_end=key.find('_absorp')
         else:
             idx_end=-3
+        if custom_dust_names:
+            rv=custom_lab_get_size(key)
+        else:    
+            rv=key[idx+2:idx+5]
             
-        rv=key[idx+2:idx+5]
         rvs.append(rv)
         count+=1
     if debug:
@@ -3304,7 +3307,7 @@ def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True
 
 
 
-def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regions=True,plot_legend=False,debug=True):
+def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regions=True,plot_legend=False,debug=True,custom_dust_names=custom_dust_names):
     colour_list=['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
                 'tab:brown','tab:pink','tab:gray','tab:olive','tab:cyan']
     colour_count=0
@@ -3408,7 +3411,10 @@ def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regi
             idx_end=key.find('_absorp')
         else:
             idx_end=-3
-        rv=key[idx+2:idx+5]
+        if custom_dust_names:
+            rv=custom_lab_get_size(key)
+        else:    
+            rv=key[idx+2:idx+5]
             
         rvs.append(rv)
         count+=1
@@ -3447,7 +3453,7 @@ if use_dust_absorp:
     plot_histograms(dust_analysis=dust_analysis_absorp,scale='linear',suffix='_absorp',debug=False)
     plot_histograms_abs(dust_analysis_abs=dust_analysis_abs_absorp,scale='linear',suffix='_absorp')
 
-def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,suffix='',scale='linear',scale2='linear',indicate_regions=True,debug=False):
+def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,suffix='',scale='linear',scale2='linear',indicate_regions=True,debug=False,custom_dust_names=custom_dust_names):
     colour_list=['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
                 'tab:brown','tab:pink','tab:gray','tab:olive','tab:cyan']
     colour_count=0
@@ -3651,7 +3657,10 @@ def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,suff
         if debug:
             print(key)
         idx=key.find('rv')
-        rv=key[idx+2:idx+5]
+        if custom_dust_names:
+            rv=custom_lab_get_size(key)
+        else:    
+            rv=key[idx+2:idx+5]
         rvs.append(rv)
         count+=1
     if debug:
