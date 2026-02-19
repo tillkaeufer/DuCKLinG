@@ -3175,6 +3175,8 @@ if use_dust_absorp:
 def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True,plot_legend=False,debug=True,custom_dust_names=custom_dust_names):
     colour_list=['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
                 'tab:brown','tab:pink','tab:gray','tab:cyan','tan','limegreen']
+    if custom_dust_names:
+        colour_list=list_color_dust_custom
     colour_count=0
     medians=[]
     plus_stds=[]
@@ -3191,7 +3193,13 @@ def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True
         new_dust=False
         if first:
             key_old=key
-        if not first and key[:5]!=key_old[:5]:
+            if custom_dust_names:
+                check_key_old=nicer_labels({key_old:None},with_size=False,custom_dust_names=custom_dust_names)[0]
+        if custom_dust_names:
+            check_key=nicer_labels({key:None},with_size=False,custom_dust_names=custom_dust_names)[0]
+            if check_key!=check_key_old:
+                new_dust=True
+        if not first and not custom_dust_names and key[:5]!=key_old[:5]:
             new_dust=True
         if debug:
             print(first,new_dust)
@@ -3234,6 +3242,8 @@ def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True
             plus_stds=[]
             minus_stds=[]
         key_old=key
+        if custom_dust_names:
+            check_key_old=check_key
         if first:  first=False
         medians.append(dust_analysis[key][0])
         plus_stds.append(dust_analysis[key][1]-dust_analysis[key][0])
@@ -3306,10 +3316,11 @@ def plot_histograms(dust_analysis,scale='linear',suffix='',indicate_regions=True
         plt.show()
 
 
-
 def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regions=True,plot_legend=False,debug=True,custom_dust_names=custom_dust_names):
     colour_list=['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
                 'tab:brown','tab:pink','tab:gray','tab:olive','tab:cyan']
+    if custom_dust_names:
+        colour_list=list_color_dust_custom
     colour_count=0
     medians=[]
     plus_stds=[]
@@ -3328,7 +3339,13 @@ def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regi
         new_dust=False
         if first:
             key_old=key
-        if not first and key[:5]!=key_old[:5]:
+            if custom_dust_names:
+                check_key_old=nicer_labels({key_old:None},with_size=False,custom_dust_names=custom_dust_names)[0]
+        if custom_dust_names:
+            check_key=nicer_labels({key:None},with_size=False,custom_dust_names=custom_dust_names)[0]
+            if check_key!=check_key_old:
+                new_dust=True
+        if not first and not custom_dust_names and key[:5]!=key_old[:5]:
             new_dust=True
         if debug:
             print(first,new_dust)
@@ -3372,6 +3389,8 @@ def plot_histograms_abs(dust_analysis_abs,scale='linear',suffix='',indicate_regi
             plus_stds=[]
             minus_stds=[]
         key_old=key
+        if custom_dust_names:
+            check_key_old=check_key
         if first:  first=False
         medians.append(dust_analysis_abs[key][0])
         plus_stds.append(dust_analysis_abs[key][1]-dust_analysis_abs[key][0])
@@ -3456,6 +3475,8 @@ if use_dust_absorp:
 def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,suffix='',scale='linear',scale2='linear',indicate_regions=True,debug=False,custom_dust_names=custom_dust_names):
     colour_list=['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
                 'tab:brown','tab:pink','tab:gray','tab:olive','tab:cyan']
+    if custom_dust_names:
+        colour_list=list_color_dust_custom
     colour_count=0
     medians=[]
     plus_stds=[]
@@ -3475,7 +3496,13 @@ def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,suff
         new_dust=False
         if first:
             key_old=key
-        if not first and key[:5]!=key_old[:5]:
+            if custom_dust_names:
+                check_key_old=nicer_labels({key_old:None},with_size=False,custom_dust_names=custom_dust_names)[0]
+        if custom_dust_names:
+            check_key=nicer_labels({key:None},with_size=False,custom_dust_names=custom_dust_names)[0]
+            if check_key!=check_key_old:
+                new_dust=True
+        if not first and not custom_dust_names and key[:5]!=key_old[:5]:
             new_dust=True
         if debug:
             print(first,new_dust)
@@ -3515,6 +3542,8 @@ def plot_histograms_both(dust_analysis,dust_analysis_abs,dust_fraction_used,suff
             minus_stds=[]
             used_fract=[]
         key_old=key
+        if custom_dust_names:
+            check_key_old=check_key
         if first:  first=False
         medians.append(dust_analysis[key][0])
         plus_stds.append(dust_analysis[key][1]-dust_analysis[key][0])
