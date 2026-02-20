@@ -2624,22 +2624,20 @@ if not ignore_spectrum_plot:
                                    folder='folder', zoom_in_list=zoom_list, save=True, save_name=save_folder+str(run_number)+'_Component_plot', min_wave=min_wave,ylim='',max_wave=max_wave,
                                    savetxt=savetxt,savetxt_prefix=savetxt_prefix)
 
+    # Setting up list that determine the line styles and colours of the dust plot
+    list_style_dust=['dotted','dashdot','dashed',(0, (3, 5, 1, 5, 1, 5)),(0, (3, 1, 1, 1)),'solid']
+    try:
+        list_style_dust_custom
+    except:
+        list_style_dust_custom=['dotted','dashed','solid','dashdot',(0, (3, 5, 1, 5, 1, 5)),(0, (3, 1, 1, 1)),(0,(1,10)),(0,(5,10))]
 
-    if plot_dust_individual:
-
-        # Setting up list that determine the line styles and colours of the dust plot
-        list_style_dust=['dotted','dashdot','dashed',(0, (3, 5, 1, 5, 1, 5)),(0, (3, 1, 1, 1)),'solid']
-        try:
-            list_style_dust_custom
-        except:
-            list_style_dust_custom=['dotted','dashed','solid','dashdot',(0, (3, 5, 1, 5, 1, 5)),(0, (3, 1, 1, 1)),(0,(1,10)),(0,(5,10))]
-
-        list_color_dust=['tab:blue','tab:orange','tab:green','tab:red','tab:purple','tab:brown','tab:pink','tab:gray','tab:cyan','tan','limegreen']
-        try:
-            list_color_dust_custom
-        except:
-            list_color_dust_custom=['tab:blue','tab:orange','tab:green','tab:red','tab:purple','tab:brown','tab:pink','tab:gray','tab:cyan','tan','limegreen']
-                
+    list_color_dust=['tab:blue','tab:orange','tab:green','tab:red','tab:purple','tab:brown','tab:pink','tab:gray','tab:cyan','tan','limegreen']
+    try:
+        list_color_dust_custom
+    except:
+        list_color_dust_custom=['tab:blue','tab:orange','tab:green','tab:red','tab:purple','tab:brown','tab:pink','tab:gray','tab:cyan','tan','limegreen']
+            
+    if plot_dust_individual:  
         dust_emission_plot=True
         if len(list(dict_individual_flux.keys()))==0:
             comp_keys=list(dict_individual_flux_absorp.keys())
