@@ -67,7 +67,7 @@ print('------------------------------------------------')
 
 print('Load inputs...')
 
-no_sigma=False
+no_sigma=True
 close_plots=True
 debug=False
 temp_range=[25,1500]
