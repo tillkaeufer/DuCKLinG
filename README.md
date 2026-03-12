@@ -325,4 +325,4 @@ This function has a couple of options that allow you to change the plotting. The
 - Analysing the dust composition of a sample of very low-mass star disks: [Jang et al. 2025](https://ui.adsabs.harvard.edu/abs/2025arXiv250916004J/abstract)
 - Examining if an unidentified spectral feature could be explained by dust: [Frediani et al. 2025](https://ui.adsabs.harvard.edu/abs/2025A%26A...701A..14F/abstract)
 - Analysing the molecule-rich disc around the Herbig star HD 35929: [Kaeufer et al. 2025](https://arxiv.org/abs/2511.14418)
-
+- Investigation the temporal dust variation of Sz96 and IPTau between Spitzer and JWST: [Sameshima et al. 2026](https://arxiv.org/abs/2602.22615)
