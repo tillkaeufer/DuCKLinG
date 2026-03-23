@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import sys
 import importlib
-
+import pickle 
 from spectres import spectres
 from utils import *
 
@@ -71,7 +71,7 @@ temp_mid=400.0
 rev_color=True
 label_atom=False
 tmax_mp_is_trim=False
-
+write_flux=False
 
 # %%
 if __name__ == "__main__":
@@ -108,6 +108,9 @@ if __name__ == "__main__":
                 rev_color=False
             if argument=='label_atom':
                 label_atom=True
+            if argument=='write_flux':
+                write_flux=True
+
 # %%
 old_version=False
 continuum_penalty=False
@@ -281,13 +284,8 @@ try:
     print('length_ultra')
     print(length_ultra)
 except NameError:
-    if length_ultra:
-        length_ultra=2
-    
-    else:
-        save_mol_flux=False
-    print('save_mol_flux set to:')
-    print(save_mol_flux)
+    length_ultra=2
+
 
 try:
     fit_water_ratios
@@ -935,6 +933,25 @@ for key in con_model.slab_dict:
     emission_flux_individual_scaled[key]=con_model.emission_flux_individual[key]*slab_dict[key]['radius']**2
     con_model.emission_flux_individual_scaled[key]=emission_flux_individual_scaled[key]
 # %%
+# %%
+prefix_fig=folder+f'/figures/{run_number}'
+print(prefix_fig)
+
+if write_flux:
+    save_dict={}
+    keys_mol=list(con_model.emission_flux_individual_scaled.keys())
+    array_save_fluxes=np.zeros((len(con_model.xnew),len(keys_mol)+1))
+    header_save='Lam [micron], '
+    array_save_fluxes[:,0]=con_model.xnew
+    idx_key=1
+    for key in con_model.emission_flux_individual_scaled:
+        array_save_fluxes[:,idx_key]=con_model.emission_flux_individual_scaled[key]
+        idx_key+=1
+        header_save+=key
+        if idx_key!=len(keys_mol)+1:
+            header_save+=', '
+
+    np.savetxt(prefix_fig+'_mol_flux.txt',array_save_fluxes,header=header_save)
 
 if temp_contribution_plot:
     #print(con_model.slab_dict)
@@ -1176,9 +1193,7 @@ if not os.path.exists(save_folder):
 else:
     print(f'Folder {save_folder} exists')
 
-# %%
-prefix_fig=folder+f'/figures/{run_number}'
-print(prefix_fig)
+
 file_name=prefix_fig+'_mol_contribution_plot.pdf'
 plot_molecule_minds_like(interp_flux,emission_flux_individual_scaled,wave_range=[np.min(lam_obs),np.max(lam_obs)],save_name=file_name)
 

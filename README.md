@@ -263,6 +263,7 @@ Additionally, it accepts a large range of options to specify your plotting needs
 - all: this option will automatically run the other two plotting routines as well
 - all_plus: this option also runs the two other plotting routines and overplots the posterior in plot_mol_contributions-input.py as well.  
 - savetxt: this option will save all the model components (median fluxes with standard deviations) in txt files. If plot_dust=True it will also save all the individual dust components.  
+- write_flux: handing down the write flux option to plot_mol_contributions-input
 
 Hopefully, this will plot/save you all the data you are interested in.  
 
@@ -284,6 +285,7 @@ The options for this routine are as follows:
 - no_comp: the latest version of the code will plot different components of the same molecules in different colours (alpha=1/component_number). If you want the old behaviour that all components of the same molecule are plotted in the same colour add this argument.
 - cold_water: For all molecules the temperature contibutions to every part of the spectrum is plotted (if the argument no_temp is not used). If cold_water is added as an argument this means, that the colorscale for water will be ranging from blue to red with the middle temperature at 400K, which is often considered the splitting temperature between warm and cold water.  
 - print_lum: This will print the line luminosity of all species in the wavelength range between 12 and 16 micron (following Arulanantham et al. 2025).  
+- write_flux: Saving the molecular flux per molecule in a mol_flux.txt file in the figure folder.
 
 If you want to plot the molecular column densities, temperatures and radii this is possible with the following function:
 

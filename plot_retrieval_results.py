@@ -63,6 +63,7 @@ run_all=False
 savetxt=False
 tmax_mp_is_trim=False
 custom_dust_names=False
+write_flux=False
 
 
 if __name__ == "__main__":
@@ -115,6 +116,8 @@ if __name__ == "__main__":
                 save_flux=True 
             elif argument=='savetxt':
                 savetxt=True
+            elif argument=='write_flux':
+                write_flux=True
             else:
                 print('--------------')
                 print('--------------')
@@ -132,6 +135,9 @@ print(number_plotted_dust)
 
 print('Plot only the parameters and not the spectra')
 print(ignore_spectrum_plot)
+print('Write_flux')
+print(write_flux)
+
 
 if savetxt:
     print('The model components will be saved in a txt file')
@@ -298,6 +304,9 @@ if len(list(slab_prior_dict.keys()))==0:
 
 print('fit_dust_only set to:')
 print(fit_dust_only)
+
+
+
 
 
 old_version=False
@@ -2136,6 +2145,7 @@ if fit_obs_err:
         sig_obs=np.zeros_like(flux_obs)
         sig_obs_full=np.zeros_like(lam_obs_full)
         print('Plot sig obs as 0')
+
 
 
 if not ignore_spectrum_plot:
@@ -4022,6 +4032,9 @@ if run_all:
     arg_list_pass_on=''
     if close_plots:
         arg_list_pass_on+=' close'
+    if write_flux:
+        arg_list_pass_on+=' write_flux'
+
     if reduce_posterior:
         os.system(f'python plot_mol_conditions-input.py {input_file} reduce_post {arg_list_pass_on}')
     else:
