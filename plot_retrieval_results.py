@@ -64,6 +64,7 @@ savetxt=False
 tmax_mp_is_trim=False
 custom_dust_names=False
 write_flux=False
+return_mol_mass=False
 
 
 if __name__ == "__main__":
@@ -118,6 +119,8 @@ if __name__ == "__main__":
                 savetxt=True
             elif argument=='write_flux':
                 write_flux=True
+            elif argument=='mol_mass':
+                return_mol_mass=True
             else:
                 print('--------------')
                 print('--------------')
@@ -1478,7 +1481,7 @@ print(con_model)
 print('Is extinction applied?')
 print(con_model_new.use_extinction)
   
-def get_scales_parallel(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=False,debug=False):
+def get_scales_parallel(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=False,debug=False,return_mol_mass=return_mol_mass):
     if scatter_obs:
         print('----------------')
         print('----------------')
@@ -1582,7 +1585,10 @@ def get_scales_parallel(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=Fa
     #section to get retrieved parameters from mol
 
     mol_results_dict=con_model_new.extract_emission_quantities(low_contribution=low_contribution,high_contribution=high_contribution)
+    if return_mol_mass:
+        mass_dict_output=con_model_new.calc_mol_masses(temp_brackets=[[0,100000]],focus_on_contribution=False,debug=False)
     list_mol_results=[]
+    list_mol_mass=[]
 
     for species in mol_results_dict:
         list_mol_results.append(mol_results_dict[species]['radius_eff'])
@@ -1593,6 +1599,8 @@ def get_scales_parallel(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=Fa
         if radial_version:
             list_mol_results.append(mol_results_dict[species]['rout,rin'][0])
             list_mol_results.append(mol_results_dict[species]['rout,rin'][1])
+        if return_mol_mass:
+            list_mol_mass.append(mass_dict_output[species]['mass_list'][0])
             
     #print(list_mol_results)
     list_mol_results=np.array(list_mol_results).flatten()
@@ -1649,12 +1657,12 @@ def get_scales_parallel(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=Fa
         dict_fluxes['emission_flux']=con_model_new.emission_flux
         dict_fluxes['interp_flux']=interp_flux
 
-    return dict_fluxes, np.append(np.append(samp,scale_facs),list_mol_results),dust_mass_ar,dust_mass_absorp_ar
+    return dict_fluxes, np.append(np.append(samp,scale_facs),list_mol_results),dust_mass_ar,dust_mass_absorp_ar,list_mol_mass
 
 
 
 
-def get_scales_parallel_gas(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=False,debug=False):
+def get_scales_parallel_gas(idx,obs_per_model,scatter_obs=scatter_obs, corr_noise=False,debug=False,return_mol_mass=return_mol_mass):
     if scatter_obs:
         print('----------------')
         print('----------------')
@@ -1741,7 +1749,10 @@ def get_scales_parallel_gas(idx,obs_per_model,scatter_obs=scatter_obs, corr_nois
     #section to get retrieved parameters from mol
 
     mol_results_dict=con_model_new.extract_emission_quantities(low_contribution=low_contribution,high_contribution=high_contribution)
+    if return_mol_mass:
+        mass_dict_output=con_model_new.calc_mol_masses(temp_brackets=[[0,100000]],focus_on_contribution=False,debug=False)
     list_mol_results=[]
+    list_mol_mass=[]
 
     for species in mol_results_dict:
         list_mol_results.append(mol_results_dict[species]['radius_eff'])
@@ -1752,7 +1763,9 @@ def get_scales_parallel_gas(idx,obs_per_model,scatter_obs=scatter_obs, corr_nois
         if radial_version:
             list_mol_results.append(mol_results_dict[species]['rout,rin'][0])
             list_mol_results.append(mol_results_dict[species]['rout,rin'][1])
-            
+        if return_mol_mass:
+            list_mol_mass.append(mass_dict_output[species]['mass_list'][0])
+
     #print(list_mol_results)
     list_mol_results=np.array(list_mol_results).flatten()
  
@@ -1761,7 +1774,7 @@ def get_scales_parallel_gas(idx,obs_per_model,scatter_obs=scatter_obs, corr_nois
         dict_fluxes['emission_flux']=con_model_new.emission_flux
         dict_fluxes['interp_flux']=interp_flux
 
-    return dict_fluxes, np.append(np.append(samp,scale_facs),list_mol_results),[],[]
+    return dict_fluxes, np.append(np.append(samp,scale_facs),list_mol_results),[],[],list_mol_mass
 
 
 
@@ -1771,7 +1784,7 @@ def get_scales_parallel_gas(idx,obs_per_model,scatter_obs=scatter_obs, corr_nois
 
 
 
-def get_full_model(idx,dummy,debug=False):
+def get_full_model(idx,dummy,debug=False,return_mol_mass=return_mol_mass):
     samp=samples[idx]
 
     dict_fluxes={}
@@ -1867,8 +1880,10 @@ def get_full_model(idx,dummy,debug=False):
         tot_flux=con_model_new.run_model(variables=var_dict,dust_species=abundance_dict,slab_dict=slab_dict,output_all=False,timeit=False)
         #section to get retrieved parameters from mol
     mol_results_dict=con_model.extract_emission_quantities(low_contribution=low_contribution,high_contribution=high_contribution)
+    if return_mol_mass:
+        mass_dict_output=con_model_new.calc_mol_masses(temp_brackets=[[0,100000]],focus_on_contribution=False,debug=False)
     list_mol_results=[]
-
+    list_mol_mass=[]
     for species in mol_results_dict:
 
         list_mol_results.append(mol_results_dict[species]['radius_eff'])
@@ -1879,6 +1894,10 @@ def get_full_model(idx,dummy,debug=False):
         if radial_version:
             list_mol_results.append(mol_results_dict[species]['rout,rin'][0])
             list_mol_results.append(mol_results_dict[species]['rout,rin'][1])
+
+        if return_mol_mass:
+            list_mol_mass.append(mass_dict_output[species]['mass_list'][0])
+
     list_mol_results=np.array(list_mol_results).flatten()
     if sample_all:
         dust_mass_ar=[]
@@ -1935,9 +1954,9 @@ def get_full_model(idx,dummy,debug=False):
         dict_fluxes['interp_flux']=interp_flux
     if sample_all:
         samp_select=samp[:-len(scales)]
-        return dict_fluxes, np.append(np.append(samp_select,scales),list_mol_results),dust_mass_ar,dust_mass_absorp_ar
+        return dict_fluxes, np.append(np.append(samp_select,scales),list_mol_results),dust_mass_ar,dust_mass_absorp_ar,list_mol_mass
     elif fit_gas_only:
-        return dict_fluxes, np.append(samp,list_mol_results), [] , []
+        return dict_fluxes, np.append(samp,list_mol_results), [] , [],list_mol_mass
 print('The next step takes a while')
 
 
@@ -1983,6 +2002,7 @@ interp_fluxes=[]
 array_flux=[]
 tot_samples=[]
 dust_mass_master_ar=[]
+tot_mol_mass=[]
 
 
 
@@ -1997,9 +2017,9 @@ if scatter_obs:
 else:
     for i in range(len(results)):
         if parallel:
-            dict_flux,samp,dust_mass_ar,dust_mass_absorp_ar=results[i].get()
+            dict_flux,samp,dust_mass_ar,dust_mass_absorp_ar,list_mol_mass=results[i].get()
         else:
-            dict_flux,samp,dust_mass_ar,dust_mass_absorp_ar=np.array(results,dtype='object')[i,0],np.array(results,dtype='object')[i,1].flatten(),np.array(results,dtype='object')[i,2],np.array(results,dtype='object')[i,3]
+            dict_flux,samp,dust_mass_ar,dust_mass_absorp_ar,list_mol_mass=np.array(results,dtype='object')[i,0],np.array(results,dtype='object')[i,1].flatten(),np.array(results,dtype='object')[i,2],np.array(results,dtype='object')[i,3]
         if plot_dust_individual:
             if use_dust_emis:
                 for key in dict_flux['individual_surface']:
@@ -2026,6 +2046,7 @@ else:
             emission_components.append(dict_flux['emission_flux'])
             interp_fluxes.append(dict_flux['interp_flux'])
         tot_samples.append(samp)
+        tot_mol_mass.append(list_mol_mass)
         if not fit_gas_only:
             if use_dust_emis:
                 dust_mass_master_ar.append(dust_mass_ar)
@@ -2055,6 +2076,7 @@ if not ignore_spectrum_plot:
 tot_samples=np.array(tot_samples)
 dust_mass_master_ar=np.array(dust_mass_master_ar)
 dust_mass_absorp_master_ar=np.array(dust_mass_absorp_master_ar)
+tot_mol_mass=np.array(tot_mol_mass)
 
 
 
@@ -3941,6 +3963,12 @@ y_std=np.percentile(tot_samples_rel,50+68/2,axis=0)
 
 y_std_min=np.percentile(tot_samples_rel,50-68/2,axis=0)
 
+if return_mol_mass:
+    mass_median=np.median(tot_mol_mass,axis=0)
+    mass_std=np.percentile(tot_mol_mass,50+68/2,axis=0)
+
+    mass_std_min=np.percentile(tot_mol_mass,50-68/2,axis=0)
+
 with open(f'{save_folder}{str(run_number)}_posterior_values{reduce_str}.txt','w') as f:
     f.write('Parameter Median_value 1sigma_up 1sigma_down \n')
     for i in range(len(header_all)):
@@ -3999,6 +4027,19 @@ with open(f'{save_folder}{str(run_number)}_posterior_values{reduce_str}.txt','w'
             plus=dust_analysis_abs_absorp[key][1]
             
             f.write('%s %.5e %.5e %.5e \n'%(name,med,plus,minus))
+    if return_mol_mass:
+        f.write('\n')
+        f.write('Gas mass in Earth masses \n')
+        f.write('Molecule Median_value 1sigma_up 1sigma_down \n')
+        idx_mass=0
+        for key in slab_prior_dict:
+            name=key
+            med=mass_median[idx_mass]
+            plus=mass_std[idx_mass]
+            minus=mass_std_min[idx_mass]
+            f.write('%s %.5e %.5e %.5e \n'%(name,med,plus,minus))
+            idx_mass+=1
+        
 if plot_last_corner_plot:
 
     CORNER_KWARGS = dict(

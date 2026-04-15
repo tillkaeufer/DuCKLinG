@@ -3668,9 +3668,9 @@ class complete_model:
     def calc_mol_masses(self,temp_brackets=[[0,400],[500,1e4]],ratios=True,low_contribution=0.15,high_contribution=0.85,unit_name='mearth',mass_single_mol=1,focus_on_contribution=False,debug=False):
         '''
         this function calculated the masses in given temperature brackets for all molecules
-        M(r_0<r<r_1)=integral_(r_0)^(r_1)▒πrN(r)dr
+        M(r_0<r<r_1)=integral_(r_0)^(r_1)2πrN(r)dr
         this can be expressed as:
-        M=(πrN_0 r_0^(−p) (r_2^(p+1)−r_1^(p+1)))/(p+1) 
+        M=(πrN_0 r_0^(-p) (r_2^(p+1)-r_1^(p+1)))/(p+1) 
         
         Now we only need to determine r_1 (r at t_higher) and r_2 (r at t_lower)
         plus a determination of the slope index is needed.
@@ -3703,32 +3703,33 @@ class complete_model:
         for mol in output_dict:
             
             # extracting the relevant inner and outer temperatures and column densities
-            if focus_on_contribution:
-                cmin,cmax=output_dict[mol]['cmin,cmax']    
-                tmin,tmax=output_dict[mol]['tmin,tmax']    
-                rout,rin=output_dict[mol]['rout,rin']   
-            else:
-                #TODO using the slab dict values 
-                print('Not yet implemented')
-            
-                
+            cmin,cmax=output_dict[mol]['cmin,cmax']    
+            tmin,tmax=output_dict[mol]['tmin,tmax']    
+            rout,rin=output_dict[mol]['rout,rin']   
             #cmax is in [/cm**2] but we want g/cm**2
             # therefore we convert it using the avodadro number and molecular mass of water
-            if mol=='H2O':
-                mass_single_mol=18.0153/self.n_avo
+            if '_comp' in mol:
+                idx_comp=mol.find('_comp')
+                mol_name=mol[:idx_comp]
+            elif '_absorp' in mol:
+                idx_abs=mol.find('_absorp')
+                mol_name=mol[:idx_abs]  
             else:
-                mass_single_mol=mass_single_mol/self.n_avo
-            #calculating the clope of the column density law
-            dens_min_log=np.log10(cmin)
-            dens_max_log=np.log10(cmax)
-            rin_log=np.log10(rin*self.au)
-            rout_log=np.log10(rout*self.au)
-            slope=(dens_min_log-dens_max_log)/(rout_log-rin_log)
-            if debug: 
-                print('Exp',slope)
-                print('dens_min',cmin)
-                print('dens_min calculate',cmax*(rout/rin)**(slope))
-                
+                mol_name=mol
+            mass_single_mol=mol_mass_dict[mol_name]/self.n_avo
+            # if a sinlge slab is used this power law does not need computing
+            if not rin==0.0:
+                #calculating the clope of the column density law
+                dens_min_log=np.log10(cmin)
+                dens_max_log=np.log10(cmax)
+                rin_log=np.log10(rin*self.au)
+                rout_log=np.log10(rout*self.au)
+                slope=(dens_min_log-dens_max_log)/(rout_log-rin_log)
+                if debug: 
+                    print('Exp',slope)
+                    print('dens_min',cmin)
+                    print('dens_min calculate',cmax*(rout/rin)**(slope))
+                    
             if debug: print('Calculate mass')
             #iterating over all temperature brakets to calculate the mass within
             mass_list=[]
@@ -3741,29 +3742,52 @@ class complete_model:
                     mass=0.0
                 else:
                     if debug: print('min_lim',min_lim,'max_lim',max_lim)
-                    '''
-                    clow=cmin*(min_lim/tmin)**slope
-                    chigh=cmin*(max_lim/tmin)**slope
-    
-                    if debug: print('clow',clow,'chigh',chigh)
                     
-                    if debug: print('rlow',rlow,'rhigh',rhigh)
-    
-                    mass=np.pi*(clow*rhigh*rhigh-chigh*rlow*rlow)
-                    '''
-                    #determining the lower and upper boundries
-                    rlow=(min_lim/tmin)**(1/self.variables['q_emis'])*rout*self.au
-                    rhigh=(max_lim/tmin)**(1/self.variables['q_emis'])*rout*self.au
-    
-                    #mass=cmax*2*np.pi/((rin*self.au)**(exp_integral-2))*(((rlow)**(exp_integral))/exp_integral-((rhigh)**(exp_integral))/exp_integral)
-                    mass=np.pi *cmax*(rin*self.au)**(-slope)*(rlow**(slope+2)-rhigh**(slope+2))/(slope+2)*mass_single_mol/unit
-                    if debug:
-                        print('limits',limits)
-                        print('rlow in au',rlow/self.au)
-                        print('rhigh in au',rhigh/self.au)
-                        print('cmax',cmax)
-                        print('dens at rlow calculate',cmax*(rlow/self.au/rin)**(slope))
-                        print('dens at rhigh calculate',cmax*(rhigh/self.au/rin)**(slope))
+                    if rin==0.0:
+            
+                        # Computation for single slab
+                        '''
+                        In this case the computation is simply
+                        pi*r*r*coldens
+                        since cmax=cmin it does not matter which one is taken
+                        '''
+                        if debug: print('Single slab component used')
+                        
+                        mass=np.pi *cmax*(rout*self.au)*(rout*self.au)*mass_single_mol/unit
+                        
+                    else:
+                        # Computation for temperature power law
+                        '''
+                        clow=cmin*(min_lim/tmin)**slope
+                        chigh=cmin*(max_lim/tmin)**slope
+        
+                        if debug: print('clow',clow,'chigh',chigh)
+                        
+                        if debug: print('rlow',rlow,'rhigh',rhigh)
+        
+                        mass=np.pi*(clow*rhigh*rhigh-chigh*rlow*rlow)
+                        '''
+
+                        if debug: print('Temperature power law used')
+                        #determining the lower and upper boundries
+                        rlow=(min_lim/tmin)**(1/self.variables['q_emis'])*rout
+                        rhigh=(max_lim/tmin)**(1/self.variables['q_emis'])*rout
+        
+                        #mass=cmax*2*np.pi/((rin*self.au)**(exp_integral-2))*(((rlow)**(exp_integral))/exp_integral-((rhigh)**(exp_integral))/exp_integral)
+                        #inbetween=np.log10(np.pi) + np.log10(cmax)+ np.log10(mass_single_mol/unit) + np.log10((rlow**(slope+2)-rhigh**(slope+2)))-np.log10(slope+2)
+                        #first=((rlow)**(slope+2)-(rhigh)**(slope+2))
+                        
+                        #inbetween2=inbetween+np.log10((rin*self.au))*(-slope)
+                        #mass=10.0**inbetween2
+                        mass=self.au*self.au*np.pi *cmax*(rin)**(-slope)*(rlow**(slope+2)-rhigh**(slope+2))/(slope+2)*mass_single_mol/unit
+                        
+                        if debug:
+                            print('limits',limits)
+                            print('rlow in au',rlow/self.au)
+                            print('rhigh in au',rhigh/self.au)
+                            print('cmax',cmax)
+                            print('dens at rlow calculate',cmax*(rlow/self.au/rin)**(slope))
+                            print('dens at rhigh calculate',cmax*(rhigh/self.au/rin)**(slope))
                 if debug: print('mass',mass,unit_name)
                 mass_list.append(mass)
             mass_dict[mol]={'mass_list':mass_list,
@@ -4327,3 +4351,33 @@ def check_if_all_radii(slab_prior_dict,fixed_dict):
 
     print('------------------------------------')
     print('------------------------------------')
+
+
+# dictionary with molecular masses to calculate total emitting mass
+# these numbers come from HITRAN and only account for the main isotopologue
+mol_mass_dict={'H2O':18.010565,
+               'LamH2O':18.010565,
+               'CO2':43.989830,
+               'CO2_II':43.989830,
+               'CO':27.994915,
+               'hotCO':27.994915,
+               'CH4':16.031300,
+               'CH4_I':16.031300,
+               'C2H2':26.015650,
+               'C2H2_I':26.015650,
+               'C2H4':28.031300,
+               'C2H4_I':28.031300,
+               'C2H6':30.046950,
+               'C2H6_I':30.046950,
+               'C3H4':40.06,
+               'C3H4_I':40.06,
+               'C4H2':50.015650,
+               'C4H2_I':50.015650,
+               'C6H6':78.114,
+               'CH3':15.023475,
+               'HC3N':51.010899,
+               'HCN':27.010899,
+               'NH3':17.026549,
+               'OH':17.002740,
+               'SiO':44.08
+               }

@@ -263,7 +263,8 @@ Additionally, it accepts a large range of options to specify your plotting needs
 - all: this option will automatically run the other two plotting routines as well
 - all_plus: this option also runs the two other plotting routines and overplots the posterior in plot_mol_contributions-input.py as well.  
 - savetxt: this option will save all the model components (median fluxes with standard deviations) in txt files. If plot_dust=True it will also save all the individual dust components.  
-- write_flux: handing down the write flux option to plot_mol_contributions-input
+- write_flux: handing down the write flux option to plot_mol_contributions-input. 
+- mol_mass: This option calculates the mass of every gas component using the emitting area and column density law and adds them to the posterior txt file.
 
 Hopefully, this will plot/save you all the data you are interested in.  
 
