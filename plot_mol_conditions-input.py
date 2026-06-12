@@ -1078,6 +1078,9 @@ else:
         plt.ylim([np.log10(temp_range[0]),np.log10(temp_range[1])]) 
     else:
         plt.ylim([temp_range[0],temp_range[1]]) 
+
+    custom_lines.append(Line2D([0], [0], color='grey', lw=2))
+    custom_labels.append(r'$70\,\mathrm{\%}$ Emission')  
     plt.legend(custom_lines,custom_labels,loc=(-0.1,1.05),ncol=max(len(custom_lines)//2,1))
     plt.savefig(prefix_fig+'_molecular_conditions_temp_by_radius_contour_version.pdf',bbox_inches='tight')
 
@@ -1362,6 +1365,9 @@ else:
     if no_sigma:
         plt.ylabel('$\log_{10} N$ [cm$^{-2}$]')
     plt.ylim([coldens_range[0],coldens_range[1]]) 
+
+    custom_lines.append(Line2D([0], [0], color='grey', lw=2))
+    custom_labels.append(r'$70\,\mathrm{\%}$ Emission')  
     plt.legend(custom_lines,custom_labels,loc=(-0.1,1.05),ncol=max(len(custom_lines)//2,1))
     plt.savefig(prefix_fig+'_molecular_conditions_coldens_by_radius_contour_version.pdf',bbox_inches='tight')
 
