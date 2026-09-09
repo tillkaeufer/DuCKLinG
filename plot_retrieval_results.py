@@ -2132,7 +2132,10 @@ if fit_obs_err:
             sig_obs_full
         except NameError:
             sig_obs_full=np.ones_like(lam_obs_full)*sig_obs
-    elif 'log_sigma_obs_frac' in fixed_dict:
+else:
+
+    # this is the case that no sig_obs(_full) is defined and also no sigma is fitted
+    if 'log_sigma_obs_frac' in fixed_dict:
         sig_obs=10**fixed_dict['log_sigma_obs_frac']*sig_obs.copy()
         sig_obs_full=10**fixed_dict['log_sigma_obs_frac']*sig_obs_full.copy()
     elif 'sigma_obs_frac' in fixed_dict:
