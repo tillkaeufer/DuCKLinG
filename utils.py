@@ -4209,7 +4209,7 @@ def calc_weights(lam_obs,target_res=2500,to_wave=True):
 def check_if_priors_in_linedata(slab_prior_dict,fixed_dict,slab_folder='./LineData/', slab_prefix='1_',log_coldens=True):
     print('------------------------------------')
     print('------------------------------------')
-    print('Checking if all priors are in the line data')
+    print('Checking if all priors are in the line data...')
     for mol in slab_prior_dict:
         if '_comp' in mol:
             idx_comp=mol.find('_comp')
@@ -4295,24 +4295,61 @@ def check_if_priors_in_linedata(slab_prior_dict,fixed_dict,slab_folder='./LineDa
         col_test=np.array(col_test)
         temp_test=np.array(temp_test)
         if np.max(temp_test)>np.max(temp_grid):
+
+            print('-----------------------------------')
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print('-----------------------------------')
             print('Temperature prior not in grid for',mol)
             print('Max grid',np.max(temp_grid))
             print('Max prior',np.max(temp_test))
+
+            print('======This stops the code!!!=======')
+            print('You can decrease the prior size  or')
+            print('check if you have a larger slab grid')
+            print('-----------------------------------')
+            print('-----------------------------------')
             exit()
         if np.min(temp_test)<np.min(temp_grid):
+
+            print('-----------------------------------')
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print('-----------------------------------')
             print('Temperature prior not in grid for',mol)
             print('Min grid',np.min(temp_grid))
-            print('Min prior',np.min(temp_test))
+            print('Min prior',np.min(temp_test))          
+            print('======This stops the code!!!=======')
+            print('You can decrease the prior size  or')
+            print('check if you have a larger slab grid')
+            print('-----------------------------------')
+            print('-----------------------------------')
             exit()
         if np.max(col_test)>np.max(col_grid):
+
+            print('-----------------------------------')
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print('-----------------------------------')
             print('Column density prior not in grid for',mol)
             print('Max grid',np.max(col_grid))
             print('Max prior',np.max(col_test))
+            print('======This stops the code!!!=======')
+            print('You can decrease the prior size  or')
+            print('check if you have a larger slab grid')
+            print('-----------------------------------')
+            print('-----------------------------------')
             exit()
         if np.min(col_test)<np.min(col_grid):
+
+            print('-----------------------------------')
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print('-----------------------------------')
             print('Column density prior not in grid for',mol)
             print('Min grid',np.min(col_grid))
             print('Min prior',np.min(col_test))
+            print('======This stops the code!!!=======')
+            print('You can decrease the prior size  or')
+            print('check if you have a larger slab grid')
+            print('-----------------------------------')
+            print('-----------------------------------')
             exit()
     print('All priors are within the line data!')
     print('------------------------------------')
